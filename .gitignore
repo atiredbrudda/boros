@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.testmondata
+.mypy_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+dist/
+.vitest/
+
+# Runtime state (gitignored)
+state/*.sqlite
+state/*.sqlite-wal
+state/*.sqlite-shm
+logs/
+data/raw/
+data/parquet/*.parquet
+data/parquet/**/*.parquet
+
+# Secrets
+.env
+.env.keys
+.env.local
+
+# Editor
+.DS_Store
+.idea/
+.vscode/

@@ -1,0 +1,32 @@
+{
+  "name": "boros-hands",
+  "version": "0.0.1",
+  "type": "module",
+  "packageManager": "pnpm@10.33.2",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:changed": "vitest run --changed",
+    "lint": "biome check src tests",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@pendle/sdk-boros": "1.1.44",
+    "viem": "2.44.4",
+    "socket.io-client": "^4",
+    "pino": "^9",
+    "ulid": "^2.3",
+    "zeromq": "^6",
+    "better-sqlite3": "^11",
+    "zod": "^3.23",
+    "dotenv": "^16"
+  },
+  "devDependencies": {
+    "typescript": "5.6",
+    "tsx": "4.21",
+    "vitest": "^2",
+    "@biomejs/biome": "^1.9",
+    "@types/node": "^24",
+    "@types/better-sqlite3": "^7"
+  }
+}
