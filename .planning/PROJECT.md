@@ -34,6 +34,9 @@ A personal, single-user Python + TypeScript bot that captures **Pendle Boros Lim
 - [ ] **Paper trading harness (2–4 weeks)** — live feeds, no capital; log every decision and counterfactual; reconcile against backtest
 - [ ] **Live, one market, $100 collateral, minimum order size** — observe 2 weeks, scale only if live matches paper within statistical noise
 - [ ] **Merkle claim scheduler** — poll distributor contract, claim weekly when Merkle root updates
+- [ ] **LLM Wiki integration as canonical knowledge/strategy base** — `boros` workspace under `../LLM Wiki/workspaces/boros/` is the persistent knowledge base; any research task checks the wiki first, any discovery/decision/failed hypothesis is filed as a wiki page before the task closes. Wiki is authoritative over PRs/PLAN.md for "have we seen this before?"
+- [ ] **Maintained dependency / state-chain diagram** — a single living artifact (Mermaid-based, stored at `docs/ARCHITECTURE.md`) that maps every module/function/command/config knob and the edges between them so upstream/downstream effects of a change are visible at a glance. **Consult before every code change, update atomically with the change.** Diagram drift is a code review blocker.
+- [ ] **Strategy + knobs stamped into every run log** — every bot run (backtest, paper, live) emits a `RUN_MANIFEST` at log start containing: git commit SHA, strategy version tag, the full set of active knobs (their names + values), market, wallet, timestamp, run ID. Downstream log lines carry the run ID. A log without its manifest sidecar is unreadable by design — no silent parameter drift possible.
 
 ### Out of Scope
 
@@ -79,6 +82,35 @@ A personal, single-user Python + TypeScript bot that captures **Pendle Boros Lim
 
 **Known markets as of April 2026:** BTC, ETH, SOL, XRP, HYPE + XAU/XAG/oil/S&P500 across Hyperliquid, Binance, OKX, Bybit, Lighter. Maturities 24-Apr through 25-Sep 2026. ETH Binance markets share `cloLower=9300, cloUpper=9500`. BTC Binance markets `cloLower=309.69, cloUpper=316.35`. Markets with `clo=0` are not incentivized.
 
+## Engineering Protocols
+
+Three cross-cutting protocols apply to every phase, every plan, every code change. These are enforcement rules, not suggestions — an agent (human or AI) that skips them is producing broken work.
+
+### 1. LLM Wiki — canonical knowledge/strategy base (check first, write back)
+
+- **Location:** `../LLM Wiki/workspaces/boros/` (skeleton seeded 2026-04-23).
+- **Tooling:** the shared `LLM Wiki/src/` pipeline (`python src/ingest/url_fetcher.py … -w boros`, `python src/process/wiki_generator.py … -w boros`, `python -m src.lint.lint_engine -w boros --no-external`). See `../LLM Wiki/CLAUDE.md` for full tooling contract.
+- **Check-first rule:** before any research task (phase research, spike, debug, design question), the agent reads `workspaces/boros/wiki/index.md` and any pages keyed by the topic. Answers and plans cite `[[page-name]]` so the provenance is visible.
+- **Write-back rule:** any decision, discovery, surprise, failed hypothesis, or calibrated number must be filed as a wiki page (or append to an existing page) **before the task closes**. Each page carries a `**Status:**` field (`Current` / `Current — <condition>` / `Historical — <reason>`).
+- **Seeding obligation:** Phase 0 / Phase 1 work includes turning the existing `boros_bot_guide.md`, `boros_consolidated_plan.md`, and `plan_comparison.md` into wiki pages. The seeding plan in `workspaces/boros/wiki/index.md` enumerates candidate pages.
+- **Supersedence discipline:** when a new finding overrides an old one, grep the wiki for pages that restate the old claim and update them in the same commit. Stale claims in forgotten pages are worse than gaps.
+
+### 2. Dependency / state-chain diagram — consult before change, update atomically
+
+- **Location:** `docs/ARCHITECTURE.md` (to be created in Phase 1). Single Mermaid diagram + an accompanying machine-readable manifest (`docs/architecture.yml`) that lists every module, public function, command, config knob, and the edges between them. The YAML is what lint / pre-commit hooks parse; the Mermaid is what humans read.
+- **Before any change, the agent MUST:** open `docs/ARCHITECTURE.md`, trace upstream (what feeds this node) and downstream (what this node feeds) to enumerate the blast radius of the proposed change.
+- **After any change, in the same commit, the agent MUST:** update both the Mermaid diagram and `architecture.yml` so the graph matches the code. Commits that modify code but not the diagram are rejected at review (or by a pre-commit hook, to be added in Phase 1).
+- **Node granularity:** module, public function, CLI command, long-lived background task, external dependency (Boros REST, Arbitrum RPC, Send Txs Bot, Merkle distributor contract), and every named config knob/env var. Edges are typed: `calls`, `reads`, `writes`, `emits-event`, `subscribes-to`, `depends-on-config`.
+- **Review gate:** any PR / plan that touches code checks the "blast radius" box by linking the graph nodes it affects. A plan that cannot name its affected nodes has not been thought through.
+
+### 3. Run manifest — strategy + knobs stamped into every log
+
+- Every bot run (backtest, paper, live) starts by emitting a `RUN_MANIFEST` record (first line of the log, also written as a sidecar `<run_id>.manifest.json`). Fields: `run_id` (ULID), `started_at`, `mode` (backtest/paper/live), `git_sha`, `git_dirty` (bool), `strategy_version` (semver tag), `market_id`, `side`, `wallet_address_hash`, and **the complete config tree of knobs with their active values** (nothing elided — if a knob exists, it's in the manifest).
+- Every subsequent log line carries the same `run_id` (structured JSON log, not free text, so logs can be grepped / joined on `run_id`).
+- On strategy-version bumps or knob changes mid-run, a new `RUN_MANIFEST` block is emitted with a new `run_id` and a `parent_run_id` pointer. No silent drift.
+- **Knob inventory is authoritative:** the config schema (Pydantic / Zod) is the single source of truth for what counts as a knob. Adding a new knob without adding it to the config schema is a bug.
+- **Reader contract:** any tool that analyzes logs (P&L plot, calibration chart, postmortem) must load the manifest first and surface the strategy version + key knobs alongside the analysis. Plots without provenance are not shipped.
+
 ## Constraints
 
 - **Budget**: $100 starting collateral, real money the operator can afford to lose. Scale only if live proves economics beat stablecoin alternatives. — Implication: sub-cap regime on every market (1000% cap never binds at $100), always size at protocol minimum, single market, one side at a time until proven.
@@ -107,6 +139,9 @@ A personal, single-user Python + TypeScript bot that captures **Pendle Boros Lim
 | Build engine with `voluntary_cancel_forfeits_accumulated` flag, run both branches in backtest | Phase 0 question still open; sensitivity analysis tells us whether the answer gates paper trading or is moot | — Pending |
 | Local deployment for v0.5 | $100 doesn't justify a VPS; re-evaluate at scale-up if live observation shows cancel latency dominates | — Pending |
 | Personal, single-user bot — no multi-tenancy | Keeps scope tight; one wallet, one operator, CLI + notebooks only | — Pending |
+| LLM Wiki (`../LLM Wiki/workspaces/boros/`) is the canonical knowledge/strategy base — check first, write back | Planning docs drift; a maintained wiki with `[[links]]` and Status fields gives persistent context across sessions and prevents re-litigating resolved questions | — Pending |
+| Single maintained dependency/state-chain diagram (`docs/ARCHITECTURE.md` + `architecture.yml`); consult before every change, update atomically with the change | Explicit blast-radius review before editing, and no drift between diagram and code; works as a review gate + hookable lint target | — Pending |
+| Every run emits `RUN_MANIFEST` (git SHA, strategy version, full knob tree) stamped into logs + sidecar JSON; log lines carry the `run_id` | Makes every log fully self-describing — any decision, P&L point, or bug can be traced back to the exact strategy + knob values that produced it, across backtest, paper, and live | — Pending |
 
 ## Evolution
 
