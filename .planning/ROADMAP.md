@@ -29,17 +29,17 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Depends on**: Nothing (first phase)
 **Requirements**: P0-01, P0-02, P0-03, P0-04, P0-05, P0-06
 **Scope**:
-  - Trace `cancelOrder()` in `pendle-finance/boros-core-public` reward distributor to determine whether voluntary cancel forfeits accumulated epoch time-weight; record answer as wiki page and flip `voluntary_cancel_forfeits_accumulated` config knob accordingly (P0-01, absorbs pitfall A1 Phase-0 portion).
-  - Confirm actual protocol minimum order size against live `/markets` endpoint, SDK `getMarketConfig()`, and Discord if needed; halt project if min > $100-collateral-equivalent on every candidate market (P0-02, existential).
-  - Verify Boros WebSocket URL, subscription schema, heartbeat/reconnect semantics, and whether a per-account fill channel exists; if absent, promote the 1 Hz REST diff poll from backup to primary (P0-03, absorbs Phase-8 C-category pitfall portion).
-  - Verify whether `@pendle/sdk-boros` 1.1.44 exposes sign-only (no-submit) primitive for cancel calldata; document the two implementation paths for Phase 6 (P0-04).
-  - Run `eventIndex`-coverage probe across all candidate markets; flag any missing markets as price-touch fallback with documented degradation (P0-05, absorbs pitfall B2 Phase-0 portion).
-  - Enumerate full fee schedule (maker bps, taker bps, settlement fee per payment period, market entrance fee, gas per place/cancel/close at Arbitrum p95) per candidate market; unknown fees block paper trading (P0-06, absorbs pitfall A6 Phase-0 portion).
+  - ~~Trace `cancelOrder()` in `pendle-finance/boros-core-public` reward distributor to determine whether voluntary cancel forfeits accumulated epoch time-weight~~ **RESOLVED 2026-04-23**: Boros official team statement confirms voluntary cancel does NOT forfeit accumulated LO reward ("accumulated rewards won't go to zero even if users cancel"). Wiki page filed at [[Voluntary cancel reward behavior]]; `voluntary_cancel_forfeits_accumulated = False` in Phase 1 config schema. Follow-up contract trace is opportunistic only, not a blocker (P0-01, absorbs pitfall A1 Phase-0 portion).
+  - ~~Confirm actual protocol minimum order size~~ **RESOLVED 2026-04-23** ([[Minimum order size]]): docs state "No minimum order size requirement." Existential halt condition is off the table (P0-02).
+  - ~~Verify Boros WebSocket URL, subscription schema, heartbeat/reconnect semantics, per-account fill channel~~ **RESOLVED 2026-04-23** ([[Boros WebSocket API]]): `wss://api.boros.finance/pendle-dapp-v3` via **Socket.IO** (stack change: `socket.io-client` replaces `ws 8.20`), per-account channel `account-updates:ROOT` emits `order-update` with `efs` fill-size + `os` status. REST poll stays as reconciliation backup. Heartbeat/event-replay-on-reconnect verified empirically in Phase 1 implementation (P0-03).
+  - ~~Verify @pendle/sdk-boros sign-only primitive~~ **RESOLVED 2026-04-23** ([[Sign-only cancel primitive]] + [[Send Txs Bot integration]]): Send Txs Bot is the mandatory submission lane via `POST /v2/agent/bulk-direct-call` (multi) and `/v2/agent/direct-call` (single), v2 only. Pre-signing the cancel calldata at placement time remains the correct optimization (saves one hot-path roundtrip). Direct-to-chain submit ruled out as a design goal — the `submission_path` knob is dropped from Phase 6 scope (P0-04).
+  - ~~Run `eventIndex`-coverage probe across candidate markets~~ **SPOT-CONFIRMED 2026-04-23** ([[eventIndex coverage]]): present on ETHUSDT sample + on WS `order-update` field `ei`. Cross-market probe absorbed into Phase-1 ingester DATA-01 / DATA-08; missing-market fallback to price-touch already specified (P0-05).
+  - ~~Enumerate full fee schedule~~ **MOSTLY RESOLVED 2026-04-23** ([[Boros fee schedule]]): maker 0, taker ~0.05% per-market (`MarketConfig.takerFee`) formula `|Size|×Rate×TimeToMaturity` discountable, settlement `|Size|×Rate×Period` non-discountable, entrance ~$1/market one-time, no protocol cancel fee. Gas measured empirically per DECIDE-03 (P0-06).
   - Engineering Protocols 1 (wiki) and 3 (manifest) apply — each answer lands as a wiki page with `Status: Current`; Protocol 2 (diagram) N/A at this phase since no code exists yet.
 **Success Criteria** (what must be TRUE):
-  1. Each of the six P0 questions has a wiki page filed at `../LLM Wiki/workspaces/boros/wiki/` with `Status: Current` and a concrete answer (or `Status: Current — OPEN` with a documented fallback if the protocol truly doesn't expose the answer).
-  2. The `voluntary_cancel_forfeits_accumulated` boolean is set (or left as `unknown` with both-branch sensitivity flagged for Phase 5 backtest) in the config schema that will be created in Phase 1.
-  3. The minimum-order-size check has produced a go/no-go decision: either at least one candidate market has min ≤ $100-collateral-equivalent (project continues) or the project halts with a written kill report.
+  1. Each of the six P0 questions has a wiki page filed at `../LLM Wiki/workspaces/boros/wiki/` with `Status: Current` and a concrete answer (or `Status: Current — PARTIAL` with a documented fallback if the protocol truly doesn't expose the answer). **Status 2026-04-23:** P0-01, P0-02, P0-03, P0-04, P0-06 resolved; P0-05 spot-confirmed with cross-market probe absorbed into Phase 1 ingester.
+  2. The `voluntary_cancel_forfeits_accumulated` boolean is set to `False` in the Phase 1 config schema per P0-01 resolution 2026-04-23 ([[Voluntary cancel reward behavior]]). Phase 5 backtest still sweeps both branches as a sanity-check row, not as a blocking gate.
+  3. ~~The minimum-order-size check has produced a go/no-go decision~~ **RESOLVED** — no protocol minimum ([[Minimum order size]]); project proceeds. Economic sizing is a Phase 1 economics-gate concern (DATA-09), not a Phase 0 halt.
   4. The fee schedule is enumerated with concrete numbers per candidate market such that the EV equation's `fee_cost` term will have real inputs in Phase 4.
 **Plans**: TBD
 **UI hint**: no
@@ -129,7 +129,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Requirements**: DECIDE-01, DECIDE-02, DECIDE-03, DECIDE-04, SAFE-01, SAFE-02, SAFE-03, SAFE-04, SAFE-05, SAFE-06, SAFE-07, SAFE-08, SAFE-09, SAFE-10
 **Scope**:
   - `DecisionEngine.evaluate()` implements `EV_hold = R_liq_share_per_epoch × P(no_fill_and_unpurged) − E[loss|fill] × P(fill_this_epoch) − cancel_cost × P(purge)` per side per in-flight order per cycle; cancels iff `EV_hold < 0` (DECIDE-01).
-  - `voluntary_cancel_forfeits_accumulated` boolean (from Phase 0 P0-01) toggles between punitive / benign branches; both covered by tests; Phase 5 backtest sweeps both (DECIDE-02, absorbs pitfall A1).
+  - `voluntary_cancel_forfeits_accumulated` boolean (from Phase 0 P0-01) toggles between punitive / benign branches; **default = `False` (benign, forward-looking cancel)** per P0-01 resolution 2026-04-23 ([[Voluntary cancel reward behavior]]). Punitive branch kept as dead-code fallback; both covered by tests; Phase 5 backtest sweeps both as sanity check (DECIDE-02, absorbs pitfall A1).
   - `cancel_cost` drawn from recent on-chain gas history (measured, not hardcoded) (DECIDE-03).
   - No threshold dials — only knobs are EV-input model parameters + breaker thresholds (DECIDE-04).
   - CLO-shift "stay-out-of-range-for-rest-of-epoch" branch in the EV rule — sometimes better than immediate repost when A1 punitive branch is active (absorbs pitfall A1×A3×C1 compound risk).
@@ -164,7 +164,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   - Cancel-latency sensitivity sweep: backtest runs across L ∈ {0.5s, 1s, 2s, 3s, 5s, 10s}; reports `dP&L/dL` as concrete "is VPS worth it?" answer (BACK-03).
   - Competition sensitivity sweep: synthetic `Q_total_in_range` multipliers; reports `dP&L / dQ_competing` for scaling discipline (BACK-04).
   - Backtest outputs: net P&L per unit collateral annualized, Sharpe-equivalent, max drawdown, calibration plot (predicted P(fill) vs realized), `dP&L/dL` curve, `dP&L/dQ_competing` curve (BACK-05).
-  - Voluntary-cancel sensitivity: runs both branches of `voluntary_cancel_forfeits_accumulated`; reports divergence; material divergence blocks paper trading until P0-01 is definitively resolved (BACK-06).
+  - Voluntary-cancel sensitivity: runs both branches of `voluntary_cancel_forfeits_accumulated` as a sanity-check row; P0-01 resolved 2026-04-23 with flag = `False` ([[Voluntary cancel reward behavior]]), so divergence no longer blocks paper trading — but material divergence flags the EV formula as sensitive to a still-official-only (not contract-traced) finding, warranting opportunistic contract verification (BACK-06).
   - Bootstrap ship-gate: Phase 5 passes only if 5th percentile of bootstrapped annualized P&L exceeds `alternative_yield + all_fees` (BACK-07, absorbs pitfall B7 fragile-P&L-false-positive).
   - Perturbation grid: ±20% individual knob perturbations; sign-flipping on any knob is a fragility flag in the ship-gate report (BACK-08).
   - Historical-vs-current-budget A/B row in backtest outputs (absorbs pitfall B6 look-ahead on reward budget): pre-pipeline data marked as "current-budget synthetic" if historical budget reconstruction is infeasible.
@@ -175,7 +175,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   1. The replay engine processes the candidate market's full trade tape in `eventIndex` order with no out-of-order events, maintains AMM conservation on every snapshot, and produces a P&L number that is reproducible bit-for-bit across reruns with the same `RUN_MANIFEST`.
   2. The `dP&L/dL` cancel-latency sweep and `dP&L/dQ_competing` competition sweep both produce monotonic-in-expected-direction curves (or an explicit anomaly report if they don't), and a calibration plot shows predicted vs realized `P(fill)` within the documented tolerance.
   3. The bootstrap ship-gate evaluates: 5th-percentile annualized P&L from N resamples `>` `alternative_yield + all_fees` (pass → proceed to Phase 6+7) OR `≤` that threshold (fail → strategy kill, project halts with written report).
-  4. The voluntary-cancel sensitivity row shows divergence between punitive/benign branches; if divergence is material and P0-01 is still open, Phase 7 paper is blocked until P0-01 is resolved.
+  4. The voluntary-cancel sensitivity row is produced as a sanity check; P0-01 is resolved (benign branch, flag = `False`), so Phase 7 paper is no longer gated on this. Material divergence between branches, if observed, is logged as a follow-up trigger for opportunistic contract verification — not a blocker.
   5. The perturbation grid report identifies any knob whose ±20% perturbation flips the sign of the ship-gate decision — such knobs are flagged as fragility concerns in the phase-transition note.
 **Plans**: TBD
 **UI hint**: yes
@@ -265,7 +265,7 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 →
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 0. Prerequisite Resolution & Kill Gate | 0/TBD | Not started | - |
-| 1. Foundation (Infra + Data + Economics Gate) | 0/TBD | Not started | - |
+| 1. Foundation (Infra + Data + Economics Gate) | 1/12 | In progress | - |
 | 2. Fill Model (NHPP v0.5) | 0/TBD | Not started | - |
 | 3. Loss & Reward-Share Models + Sizing | 0/TBD | Not started | - |
 | 4. Decision Engine + Predictive Circuit Breakers | 0/TBD | Not started | - |

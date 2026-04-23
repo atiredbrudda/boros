@@ -13,17 +13,19 @@ Requirements for the v0.5 release. Every requirement is testable (either automat
 
 ### Phase 0 — Prerequisites (must close before engineering past Phase 1a)
 
-- [ ] **P0-01**: Operator confirms from Boros docs / `pendle-finance/boros-core-public` repo / reward distributor contract code whether a **voluntary cancel forfeits accumulated reward-time-weight contribution** for the current epoch, and records the answer as a wiki page with `Status: Current` and sets `voluntary_cancel_forfeits_accumulated` in config accordingly.
-- [ ] **P0-02**: Operator confirms the **actual protocol minimum order size** (collateral-equivalent) for the shortlisted markets and records it as a wiki page. If the minimum exceeds $100 on every candidate market, the project halts at Phase 0 as a cheap kill — no capital deployed, no further engineering.
-- [ ] **P0-03**: Operator verifies the **Boros WebSocket URL, subscription message schema, and heartbeat/reconnect semantics** against the live service (or SDK source) and records findings as a wiki page. Includes answer to: "is there a per-account fill channel?" If no, the 1 Hz REST diff poll is promoted from backup to primary.
-- [ ] **P0-04**: Operator verifies whether `@pendle/sdk-boros` v1.1.44 exposes a **sign-only (no-submit) primitive** for cancel calldata, or whether pre-signed cancel calldata must be composed via `POST /calldata/cancel-order` + viem `signTransaction` manually. Wiki page records the answer.
-- [ ] **P0-05**: Operator runs an `eventIndex`-coverage probe across all candidate markets from historical NDJSON and confirms `eventIndex` is present on every trade record. Any market missing it is downgraded to price-touch fallback (and documented as a degradation).
-- [ ] **P0-06**: Operator enumerates the **full fee schedule** — maker fee (0 expected), taker fee, settlement fee per payment period, market entrance fee — for each candidate market and records to the wiki. Unknown fees block paper trading.
+- [x] **P0-01** (resolved 2026-04-23): Boros official team statement — "LO incentives are calculated per block, so accumulated rewards won't go to zero even if users cancel the order." → voluntary cancel does NOT forfeit accumulated contribution. Wiki page filed at `../LLM Wiki/workspaces/boros/wiki/voluntary-cancel-reward-behavior.md` with `Status: Current` ([[Voluntary cancel reward behavior]]). Config flag `voluntary_cancel_forfeits_accumulated = False` (benign branch). Evidence tier is official-team statement, not contract-traced; opportunistic trace of `cancelOrder()` in `pendle-finance/boros-core-public` encouraged when convenient but no longer blocks downstream work.
+- [x] **P0-02** (resolved 2026-04-23, [[Minimum order size]]): Docs state "No minimum order size requirement" and "No lot size restrictions — any decimal amount supported." $100-collateral premise is safe at the protocol level. Economic floor from fees is captured in the economics gate (DATA-09), not a Phase-0 halt.
+- [x] **P0-03** (resolved 2026-04-23, [[Boros WebSocket API]]): WS URL `wss://api.boros.finance/pendle-dapp-v3` via **Socket.IO** (NOT raw WebSocket). Per-account fill channel exists: `account-updates:ROOT_ADDRESS` → `order-update` event with `efs` (event fill size) + `os` (status: 0=Filling, 1=Cancelled, 2=FullyFilled, 3=Expired, 4=Purged) fields. REST 1 Hz poll stays as backup/reconnect-reconciliation, not primary. Stack change: swap `ws 8.20` → `socket.io-client 4.x` in TS `hands`. Heartbeat/reconnect details TBD empirically in Phase 1.
+- [x] **P0-04** (resolved 2026-04-23, [[Sign-only cancel primitive]] + [[Send Txs Bot integration]]): Send Txs Bot is the mandatory submission lane — `POST /v2/agent/bulk-direct-call` and `/v2/agent/direct-call`, v2 only (v3 requires browser session, unusable for API). Pre-signing the cancel calldata at placement time remains the correct optimization (saves one roundtrip on the hot path). Direct-to-chain submit is ruled out as a design goal; Phase 6 `submission_path` knob is dropped.
+- [x] **P0-05** (spot-confirmed 2026-04-23, [[eventIndex coverage]]): `eventIndex` is present on the ETHUSDT `market-trades/` NDJSON sample and on the WS `order-update` event (field `ei`). Cross-market probe across all candidate markets is a cheap Phase-1 ingester task (absorbed into DATA-01 / DATA-08); any market without `eventIndex` degrades to price-touch fallback as originally specified.
+- [x] **P0-06** (mostly resolved 2026-04-23, [[Boros fee schedule]]): maker fee = 0 (explicit). Taker fee ~0.05% per `MarketConfig.takerFee`, formula `|Size| × Rate × TimeToMaturity`, discountable via `takerDisc`. Settlement fee `|Size| × Rate × SettlementPeriod` (period typically 8h ≈ 0.000913 years), non-discountable. Market entrance fee ~$1 per market, one-time (BTC 0.000008 BTC, ETH 0.00027 ETH). No protocol cancel fee. Gas costs on Arbitrum still to be measured empirically from on-chain history — DECIDE-03 already specifies this.
 
 ### Phase 1a — Infrastructure Spine (before any model code)
 
-- [ ] **INFRA-01**: Project repo initializes a monorepo layout with `python/` (bot brain, models, backtest) and `ts/` (hands: SDK, execution, WS listener) + a shared `configs/` and `docs/`.
-- [ ] **INFRA-02**: A single **Pydantic v2 config schema** is the source of truth for every "knob" (strategy params, thresholds, market targets, API URLs, wallet addresses). Config loads once per run; hot-reload not supported for v0.5.
+- [x] **INFRA-01
+**: Project repo initializes a monorepo layout with `python/` (bot brain, models, backtest) and `ts/` (hands: SDK, execution, WS listener) + a shared `configs/` and `docs/`.
+- [x] **INFRA-02
+**: A single **Pydantic v2 config schema** is the source of truth for every "knob" (strategy params, thresholds, market targets, API URLs, wallet addresses). Config loads once per run; hot-reload not supported for v0.5.
 - [ ] **INFRA-03**: A **SQLite database with WAL mode** holds shared cross-process state: in-flight orders, queue-position estimates, reward accrual tracker, recent fills/PnL. Single-writer-per-table discipline is documented and linted.
 - [ ] **INFRA-04**: **DuckDB read-only** layer sits over the NDJSON parquet + SQLite for backtest / analysis queries — no writes, pure analytical reads.
 - [ ] **INFRA-05**: **ZMQ IPC** between Python `brain` and TypeScript `hands` over two sockets: `ipc:///tmp/boros.cmd` (PUSH/PULL, priority lanes so KILL preempts placements) and `ipc:///tmp/boros.events` (PUB/SUB).
@@ -76,7 +78,7 @@ Requirements for the v0.5 release. Every requirement is testable (either automat
 ### Phase 5 — Decision Engine
 
 - [ ] **DECIDE-01**: **EV-based cancel rule** evaluates `EV_hold = R_liq_share_per_epoch × P(no_fill_and_unpurged) − E[loss|fill] × P(fill_this_epoch) − cancel_cost × P(purge)` per side per in-flight order per cycle; cancels iff `EV_hold < 0`.
-- [ ] **DECIDE-02**: The `voluntary_cancel_forfeits_accumulated` boolean flag from P0-01 toggles between punitive / benign branches of the decision rule; both branches are covered by tests and in backtest sensitivity analysis.
+- [ ] **DECIDE-02**: The `voluntary_cancel_forfeits_accumulated` boolean flag from P0-01 toggles between punitive / benign branches of the decision rule; both branches are covered by tests and in backtest sensitivity analysis. **Default value: `False` (benign)** per P0-01 resolution 2026-04-23 ([[Voluntary cancel reward behavior]]). Punitive branch kept as dead-code fallback in case future contract trace contradicts the official-team statement.
 - [ ] **DECIDE-03**: `cancel_cost` is the measured on-chain transaction cost (not a hardcoded estimate) drawn from recent gas history.
 - [ ] **DECIDE-04**: **No threshold dials** — the only knobs are inputs to the EV equation (model parameters) and breaker thresholds. No hand-tuned "cancel when rate drift > X%."
 
@@ -100,22 +102,23 @@ Requirements for the v0.5 release. Every requirement is testable (either automat
 - [ ] **BACK-03**: **Cancel-latency sensitivity sweep** — backtest runs across L ∈ {0.5s, 1s, 2s, 3s, 5s, 10s} and reports `dP&L/dL` as a concrete "is colocation / VPS worth it?" answer.
 - [ ] **BACK-04**: **Competition sensitivity sweep** — backtest runs with synthetic Q_total_in_range multipliers and reports `dP&L / dQ_competing` for scaling discipline.
 - [ ] **BACK-05**: Backtest outputs: net P&L per unit collateral annualized, Sharpe-equivalent, max drawdown, calibration plot (predicted P(fill) vs realized), dP&L/dL curve, dP&L/dQ_competing curve.
-- [ ] **BACK-06**: **Voluntary-cancel sensitivity** — backtest runs both branches of the P0-01 flag (`voluntary_cancel_forfeits_accumulated` true/false) and reports divergence. Material divergence blocks paper trading until P0-01 is definitively resolved.
+- [ ] **BACK-06**: **Voluntary-cancel sensitivity** — backtest runs both branches of the P0-01 flag (`voluntary_cancel_forfeits_accumulated` true/false) and reports divergence as a sanity check. P0-01 is resolved (flag = `False` per 2026-04-23 Boros official statement, [[Voluntary cancel reward behavior]]); this sensitivity row no longer blocks paper trading, but material divergence would indicate the EV formula is sensitive to a still-official-only (not contract-traced) finding — flag for follow-up contract verification in that case.
 - [ ] **BACK-07**: **Bootstrap ship-gate** — Phase 7 passes only if the 5th percentile of bootstrapped annualized P&L exceeds `alternative_yield + all_fees`. Point estimate > alt yield is insufficient; we need distribution tail.
 - [ ] **BACK-08**: **Perturbation grid** — backtest runs with each knob perturbed ±20% individually; sign-flipping on any knob is a fragility flag surfaced in the ship-gate report.
 
 ### Phase 8 — Execution Layer (TypeScript `hands`)
 
 - [ ] **EXEC-01**: **Dual-wallet setup**: root wallet cold (deposits/withdrawals/approvals only), agent wallet hot for trading only, routed through `https://api.boros.finance/send-txs-bot/v2/`.
-- [ ] **EXEC-02**: **Order placement** via `POST /calldata/place-orders-with-rate` using `@pendle/sdk-boros` v1.1.44; order type is `GTC` for reward farming.
-- [ ] **EXEC-03**: **Pre-signed cancel calldata** is generated and cached in memory at order-placement time; on WS fill or decision-engine cancel command, the pre-signed bytes are submitted instantly (no HTTP roundtrip in critical path).
+- [ ] **EXEC-02**: **Order placement** via `POST /calldata/place-orders-with-rate` using `@pendle/sdk-boros` v1.1.44; order type is `GTC` for reward farming. Submission via Send Txs Bot `POST /v2/agent/bulk-direct-call` ([[Send Txs Bot integration]]). Response `calldatas` array is **variable-length** when `autoExitMarket=true` (1 or 2 calldatas — see [[Market entry cap and auto-exit pattern]]); always sign + submit the full array, never index `calldatas[0]` without a `.length` guard (lint rule).
+- [ ] **EXEC-03**: **Pre-signed cancel calldata** is generated and cached in memory at order-placement time; on WS fill or decision-engine cancel command, the pre-signed bytes are POSTed to Send Txs Bot (`POST /v2/agent/bulk-direct-call`) as a `{ requireSuccess: true, calldatas: [close_position, cancel_siblings...] }` bundle ([[Send Txs Bot integration]]). The calldata-generation API roundtrip is off the hot path; only the bot-submit POST remains. Direct-to-chain submit is out of scope per P0-04 resolution.
 - [ ] **EXEC-04**: **Nonce-chain management** — pre-signed cancels use deterministic nonces; operator policy for nonce-chain stalls (timeout → re-sign or resubmit-with-replacement) is documented and implemented. Decision doc committed at `docs/nonce-policy.md`.
 - [ ] **EXEC-05**: **WebSocket fill listener** subscribes per market; on fill event, fires pre-signed close calldata for the fill and fires pre-signed cancels for related orders if policy demands.
 - [ ] **EXEC-06**: **REST fill-diff poller** at 1 Hz polls `/v2/accounts/all-limit-orders` and cross-checks against expected state; discrepancies (fill missed by WS, unexpected cancel) raise alerts and can trigger breakers.
 - [ ] **EXEC-07**: **WS reconnect with exponential backoff + heartbeat** — disconnect triggers cancel-all-orders after a configurable grace period to prevent unsupervised fill exposure.
 - [ ] **EXEC-08**: **Gas-balance three-level monitor** — info (> 3 days cover), warn (1 day), halt (< 1 hr); halt cancels all and alerts operator. Auto-topup not implemented for v0.5 (manual top-up required on warn).
 - [ ] **EXEC-09**: **Self-trade prevention check** — before any order placement, verify no conflicting orders in own book per Boros SDK constraints (NP-01 promotion).
-- [ ] **EXEC-10**: **Immediate market close on fill** — if a fill slips through, `close_position(market_order)` fires unconditionally; no hold-for-reversion branch exists in code (enforced by absence).
+- [ ] **EXEC-10**: **Immediate market close on fill** — if a fill slips through, `close_position(market_order)` fires unconditionally; no hold-for-reversion branch exists in code (enforced by absence). Submitted as part of the same `requireSuccess=true` bundle as sibling cancels so partial-state outcomes ("closed but didn't cancel siblings") are impossible — a revert trips the circuit-breaker path instead ([[Send Txs Bot integration]]).
+- [ ] **EXEC-11**: **API error-shape discriminated union** — Open API (`/open-api/*`) returns `{ errorCode, message, data }`; Send Txs Bot + Stop Orders return legacy `{ statusCode, message }`. TS `hands` defines a `BorosApiError` union narrowed on endpoint family; bare access to `.errorCode` or `.statusCode` without the narrow is a lint fail ([[Send Txs Bot integration]]).
 
 ### Phase 9 — Paper Trading
 
@@ -142,7 +145,8 @@ Requirements for the v0.5 release. Every requirement is testable (either automat
 - [ ] **PROTO-01**: Every run (backtest, paper, live) emits `RUN_MANIFEST` as first log line + sidecar JSON; log lines carry `run_id`. Enforced by INFRA-06.
 - [ ] **PROTO-02**: Every commit that touches `python/` or `ts/` source also updates `docs/ARCHITECTURE.md` + `docs/architecture.yml`; pre-commit hook (INFRA-09) blocks non-compliant commits.
 - [ ] **PROTO-03**: Every research / decision / postmortem commit cites at least one `[[wiki-link]]` into the LLM Wiki boros workspace; pre-commit hook (INFRA-11) blocks non-compliant commits.
-- [ ] **PROTO-04**: Every new "knob" is added to the Pydantic config schema (INFRA-02) — schema is the exhaustive source of truth for `RUN_MANIFEST` field list.
+- [x] **PROTO-04**: Every new "knob" is added to the Pydantic config schema (INFRA-02
+) — schema is the exhaustive source of truth for `RUN_MANIFEST` field list.
 - [ ] **PROTO-05**: Supersedence discipline — when a new wiki page invalidates an older finding, the older page gets `Status: Historical — superseded by [[new-page]]` in the same commit.
 
 ---
@@ -220,12 +224,12 @@ Every v1 requirement is mapped to exactly one phase. Phase names are the consoli
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| P0-01 | Phase 0: Prerequisite Resolution & Kill Gate | Pending |
-| P0-02 | Phase 0: Prerequisite Resolution & Kill Gate | Pending |
-| P0-03 | Phase 0: Prerequisite Resolution & Kill Gate | Pending |
-| P0-04 | Phase 0: Prerequisite Resolution & Kill Gate | Pending |
-| P0-05 | Phase 0: Prerequisite Resolution & Kill Gate | Pending |
-| P0-06 | Phase 0: Prerequisite Resolution & Kill Gate | Pending |
+| P0-01 | Phase 0: Prerequisite Resolution & Kill Gate | **Resolved 2026-04-23** — `voluntary_cancel_forfeits_accumulated = False` ([[Voluntary cancel reward behavior]]) |
+| P0-02 | Phase 0: Prerequisite Resolution & Kill Gate | **Resolved 2026-04-23** — no protocol minimum ([[Minimum order size]]) |
+| P0-03 | Phase 0: Prerequisite Resolution & Kill Gate | **Resolved 2026-04-23** — per-account fill channel exists ([[Boros WebSocket API]]); Socket.IO stack |
+| P0-04 | Phase 0: Prerequisite Resolution & Kill Gate | **Resolved 2026-04-23** — Send Txs Bot mandatory ([[Sign-only cancel primitive]], [[Send Txs Bot integration]]); direct-submit ruled out |
+| P0-05 | Phase 0: Prerequisite Resolution & Kill Gate | Spot-confirmed 2026-04-23 ([[eventIndex coverage]]); cross-market probe in Phase 1 ingester |
+| P0-06 | Phase 0: Prerequisite Resolution & Kill Gate | **Mostly resolved 2026-04-23** — fee schedule extracted ([[Boros fee schedule]]); gas measured empirically per DECIDE-03 |
 | INFRA-01 | Phase 1: Foundation (Infra + Data + Economics Gate) | Pending |
 | INFRA-02 | Phase 1: Foundation (Infra + Data + Economics Gate) | Pending |
 | INFRA-03 | Phase 1: Foundation (Infra + Data + Economics Gate) | Pending |
@@ -301,6 +305,7 @@ Every v1 requirement is mapped to exactly one phase. Phase names are the consoli
 | EXEC-08 | Phase 6: Execution Layer (TypeScript hands) | Pending |
 | EXEC-09 | Phase 6: Execution Layer (TypeScript hands) | Pending |
 | EXEC-10 | Phase 6: Execution Layer (TypeScript hands) | Pending |
+| EXEC-11 | Phase 6: Execution Layer (TypeScript hands) | Pending |
 | PAPER-01 | Phase 7: Paper Trading (2–4 Weeks) | Pending |
 | PAPER-02 | Phase 7: Paper Trading (2–4 Weeks) | Pending |
 | PAPER-03 | Phase 7: Paper Trading (2–4 Weeks) | Pending |
@@ -317,8 +322,8 @@ Every v1 requirement is mapped to exactly one phase. Phase names are the consoli
 | LIVE-08 | Phase 8: Live Rollout | Pending |
 
 **Coverage:**
-- v1 requirements: 95 total (6 P0 + 14 INFRA + 11 DATA + 6 FILL + 3 LOSS + 4 REWARD + 4 DECIDE + 10 SAFE + 8 BACK + 10 EXEC + 6 PAPER + 8 LIVE + 5 PROTO)
-- Mapped to phases: 95
+- v1 requirements: 96 total (6 P0 + 14 INFRA + 11 DATA + 6 FILL + 3 LOSS + 4 REWARD + 4 DECIDE + 10 SAFE + 8 BACK + 11 EXEC + 6 PAPER + 8 LIVE + 5 PROTO) — EXEC-11 added 2026-04-23 (error-shape discriminated union, from best-practices finding)
+- Mapped to phases: 96
 - Unmapped: 0 ✓
 - Orphaned phases: 0 ✓
 - Note: Earlier header count of "87 total" was a drafting undercount; the detailed list above enumerates 95 REQ-IDs and all 95 are now mapped to exactly one phase.
