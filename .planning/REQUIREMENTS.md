@@ -216,29 +216,113 @@ Never for this project. Each is a separate strategy or product entirely.
 
 ## Traceability
 
-Which phases cover which requirements. Populated by roadmapper; roadmap must map every v1 requirement to exactly one phase.
+Every v1 requirement is mapped to exactly one phase. Phase names are the consolidated roadmap titles (see `.planning/ROADMAP.md`).
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| P0-01..P0-06 | Phase 0 | Pending |
-| INFRA-01..INFRA-14 | Phase 1a | Pending |
-| DATA-01..DATA-11 | Phase 1b–d | Pending |
-| FILL-01..FILL-06 | Phase 2 | Pending |
-| LOSS-01..LOSS-03 | Phase 3 | Pending |
-| REWARD-01..REWARD-04 | Phase 4 | Pending |
-| DECIDE-01..DECIDE-04 | Phase 5 | Pending |
-| SAFE-01..SAFE-10 | Phase 6 | Pending |
-| BACK-01..BACK-08 | Phase 7 | Pending |
-| EXEC-01..EXEC-10 | Phase 8 | Pending |
-| PAPER-01..PAPER-06 | Phase 9 | Pending |
-| LIVE-01..LIVE-08 | Phase 10 | Pending |
-| PROTO-01..PROTO-05 | Cross-cutting | Pending |
+| P0-01 | Phase 0: Prerequisite Resolution & Kill Gate | Pending |
+| P0-02 | Phase 0: Prerequisite Resolution & Kill Gate | Pending |
+| P0-03 | Phase 0: Prerequisite Resolution & Kill Gate | Pending |
+| P0-04 | Phase 0: Prerequisite Resolution & Kill Gate | Pending |
+| P0-05 | Phase 0: Prerequisite Resolution & Kill Gate | Pending |
+| P0-06 | Phase 0: Prerequisite Resolution & Kill Gate | Pending |
+| INFRA-01 | Phase 1: Foundation (Infra + Data + Economics Gate) | Pending |
+| INFRA-02 | Phase 1: Foundation (Infra + Data + Economics Gate) | Pending |
+| INFRA-03 | Phase 1: Foundation (Infra + Data + Economics Gate) | Pending |
+| INFRA-04 | Phase 1: Foundation (Infra + Data + Economics Gate) | Pending |
+| INFRA-05 | Phase 1: Foundation (Infra + Data + Economics Gate) | Pending |
+| INFRA-06 | Phase 1: Foundation (Infra + Data + Economics Gate) | Pending |
+| INFRA-07 | Phase 1: Foundation (Infra + Data + Economics Gate) | Pending |
+| INFRA-08 | Phase 1: Foundation (Infra + Data + Economics Gate) | Pending |
+| INFRA-09 | Phase 1: Foundation (Infra + Data + Economics Gate) | Pending |
+| INFRA-10 | Phase 1: Foundation (Infra + Data + Economics Gate) | Pending |
+| INFRA-11 | Phase 1: Foundation (Infra + Data + Economics Gate) | Pending |
+| INFRA-12 | Phase 1: Foundation (Infra + Data + Economics Gate) | Pending |
+| INFRA-13 | Phase 1: Foundation (Infra + Data + Economics Gate) | Pending |
+| INFRA-14 | Phase 1: Foundation (Infra + Data + Economics Gate) | Pending |
+| DATA-01 | Phase 1: Foundation (Infra + Data + Economics Gate) | Pending |
+| DATA-02 | Phase 1: Foundation (Infra + Data + Economics Gate) | Pending |
+| DATA-03 | Phase 1: Foundation (Infra + Data + Economics Gate) | Pending |
+| DATA-04 | Phase 1: Foundation (Infra + Data + Economics Gate) | Pending |
+| DATA-05 | Phase 1: Foundation (Infra + Data + Economics Gate) | Pending |
+| DATA-06 | Phase 1: Foundation (Infra + Data + Economics Gate) | Pending |
+| DATA-07 | Phase 1: Foundation (Infra + Data + Economics Gate) | Pending |
+| DATA-08 | Phase 1: Foundation (Infra + Data + Economics Gate) | Pending |
+| DATA-09 | Phase 1: Foundation (Infra + Data + Economics Gate) | Pending |
+| DATA-10 | Phase 1: Foundation (Infra + Data + Economics Gate) | Pending |
+| DATA-11 | Phase 1: Foundation (Infra + Data + Economics Gate) | Pending |
+| PROTO-01 | Phase 1: Foundation (Infra + Data + Economics Gate) | Pending |
+| PROTO-02 | Phase 1: Foundation (Infra + Data + Economics Gate) | Pending |
+| PROTO-03 | Phase 1: Foundation (Infra + Data + Economics Gate) | Pending |
+| PROTO-04 | Phase 1: Foundation (Infra + Data + Economics Gate) | Pending |
+| PROTO-05 | Phase 1: Foundation (Infra + Data + Economics Gate) | Pending |
+| FILL-01 | Phase 2: Fill Model (NHPP v0.5) | Pending |
+| FILL-02 | Phase 2: Fill Model (NHPP v0.5) | Pending |
+| FILL-03 | Phase 2: Fill Model (NHPP v0.5) | Pending |
+| FILL-04 | Phase 2: Fill Model (NHPP v0.5) | Pending |
+| FILL-05 | Phase 2: Fill Model (NHPP v0.5) | Pending |
+| FILL-06 | Phase 2: Fill Model (NHPP v0.5) | Pending |
+| LOSS-01 | Phase 3: Loss & Reward-Share Models + Sizing | Pending |
+| LOSS-02 | Phase 3: Loss & Reward-Share Models + Sizing | Pending |
+| LOSS-03 | Phase 3: Loss & Reward-Share Models + Sizing | Pending |
+| REWARD-01 | Phase 3: Loss & Reward-Share Models + Sizing | Pending |
+| REWARD-02 | Phase 3: Loss & Reward-Share Models + Sizing | Pending |
+| REWARD-03 | Phase 3: Loss & Reward-Share Models + Sizing | Pending |
+| REWARD-04 | Phase 3: Loss & Reward-Share Models + Sizing | Pending |
+| DECIDE-01 | Phase 4: Decision Engine + Predictive Circuit Breakers | Pending |
+| DECIDE-02 | Phase 4: Decision Engine + Predictive Circuit Breakers | Pending |
+| DECIDE-03 | Phase 4: Decision Engine + Predictive Circuit Breakers | Pending |
+| DECIDE-04 | Phase 4: Decision Engine + Predictive Circuit Breakers | Pending |
+| SAFE-01 | Phase 4: Decision Engine + Predictive Circuit Breakers | Pending |
+| SAFE-02 | Phase 4: Decision Engine + Predictive Circuit Breakers | Pending |
+| SAFE-03 | Phase 4: Decision Engine + Predictive Circuit Breakers | Pending |
+| SAFE-04 | Phase 4: Decision Engine + Predictive Circuit Breakers | Pending |
+| SAFE-05 | Phase 4: Decision Engine + Predictive Circuit Breakers | Pending |
+| SAFE-06 | Phase 4: Decision Engine + Predictive Circuit Breakers | Pending |
+| SAFE-07 | Phase 4: Decision Engine + Predictive Circuit Breakers | Pending |
+| SAFE-08 | Phase 4: Decision Engine + Predictive Circuit Breakers | Pending |
+| SAFE-09 | Phase 4: Decision Engine + Predictive Circuit Breakers | Pending |
+| SAFE-10 | Phase 4: Decision Engine + Predictive Circuit Breakers | Pending |
+| BACK-01 | Phase 5: Event-Driven Backtest (Ship-Gate) | Pending |
+| BACK-02 | Phase 5: Event-Driven Backtest (Ship-Gate) | Pending |
+| BACK-03 | Phase 5: Event-Driven Backtest (Ship-Gate) | Pending |
+| BACK-04 | Phase 5: Event-Driven Backtest (Ship-Gate) | Pending |
+| BACK-05 | Phase 5: Event-Driven Backtest (Ship-Gate) | Pending |
+| BACK-06 | Phase 5: Event-Driven Backtest (Ship-Gate) | Pending |
+| BACK-07 | Phase 5: Event-Driven Backtest (Ship-Gate) | Pending |
+| BACK-08 | Phase 5: Event-Driven Backtest (Ship-Gate) | Pending |
+| EXEC-01 | Phase 6: Execution Layer (TypeScript hands) | Pending |
+| EXEC-02 | Phase 6: Execution Layer (TypeScript hands) | Pending |
+| EXEC-03 | Phase 6: Execution Layer (TypeScript hands) | Pending |
+| EXEC-04 | Phase 6: Execution Layer (TypeScript hands) | Pending |
+| EXEC-05 | Phase 6: Execution Layer (TypeScript hands) | Pending |
+| EXEC-06 | Phase 6: Execution Layer (TypeScript hands) | Pending |
+| EXEC-07 | Phase 6: Execution Layer (TypeScript hands) | Pending |
+| EXEC-08 | Phase 6: Execution Layer (TypeScript hands) | Pending |
+| EXEC-09 | Phase 6: Execution Layer (TypeScript hands) | Pending |
+| EXEC-10 | Phase 6: Execution Layer (TypeScript hands) | Pending |
+| PAPER-01 | Phase 7: Paper Trading (2–4 Weeks) | Pending |
+| PAPER-02 | Phase 7: Paper Trading (2–4 Weeks) | Pending |
+| PAPER-03 | Phase 7: Paper Trading (2–4 Weeks) | Pending |
+| PAPER-04 | Phase 7: Paper Trading (2–4 Weeks) | Pending |
+| PAPER-05 | Phase 7: Paper Trading (2–4 Weeks) | Pending |
+| PAPER-06 | Phase 7: Paper Trading (2–4 Weeks) | Pending |
+| LIVE-01 | Phase 8: Live Rollout | Pending |
+| LIVE-02 | Phase 8: Live Rollout | Pending |
+| LIVE-03 | Phase 8: Live Rollout | Pending |
+| LIVE-04 | Phase 8: Live Rollout | Pending |
+| LIVE-05 | Phase 8: Live Rollout | Pending |
+| LIVE-06 | Phase 8: Live Rollout | Pending |
+| LIVE-07 | Phase 8: Live Rollout | Pending |
+| LIVE-08 | Phase 8: Live Rollout | Pending |
 
 **Coverage:**
-- v1 requirements: 87 total
-- Mapped to phases (placeholder): 87
-- Unmapped: 0 ✓ (will be confirmed by roadmapper)
+- v1 requirements: 95 total (6 P0 + 14 INFRA + 11 DATA + 6 FILL + 3 LOSS + 4 REWARD + 4 DECIDE + 10 SAFE + 8 BACK + 10 EXEC + 6 PAPER + 8 LIVE + 5 PROTO)
+- Mapped to phases: 95
+- Unmapped: 0 ✓
+- Orphaned phases: 0 ✓
+- Note: Earlier header count of "87 total" was a drafting undercount; the detailed list above enumerates 95 REQ-IDs and all 95 are now mapped to exactly one phase.
 
 ---
 *Requirements defined: 2026-04-23*
-*Last updated: 2026-04-23 after initial definition*
+*Last updated: 2026-04-23 — traceability table populated by roadmapper*
