@@ -24,6 +24,7 @@ from typing import Any
 import polars as pl
 import structlog
 
+from .economics_gate import EPOCHS_PER_YEAR
 from .metrics import (
     compute_days_to_maturity,
     compute_depth_at_clo_edge,
@@ -38,6 +39,15 @@ log = structlog.get_logger(__name__)
 
 # T-01-11-03: shortlist cap — roadmap contract is 2-4 markets
 _SHORTLIST_MAX = 4
+
+# WR-02: coarse collateral proxy for r_apr_potential ranking.
+# Units: e_liq_per_epoch is in PENDLE/epoch; dividing by this gives a
+# PENDLE-unit APR estimate. This is intentionally unit-inconsistent
+# (PENDLE != USD) — Phase-3 will replace with config.screener.required_collateral_pendle
+# once a price oracle is wired (see 01-12-PLAN.md <deferred> block).
+# Do NOT replace 100.0 with a USD value without also fixing the unit mismatch.
+# TODO(Phase-3): replace COLLATERAL_PHASE1_PROXY with config.screener.required_collateral_pendle
+COLLATERAL_PHASE1_PROXY = 100.0  # noqa: N816 — intentional placeholder, not a constant
 
 
 @dataclass
@@ -211,7 +221,7 @@ def apply_screener_filters(
         ).fetchone()
         r_apr_potential: float | None = None
         if budget_row is not None:
-            r_apr_potential = float(budget_row[0]) * 52 / 100.0
+            r_apr_potential = float(budget_row[0]) * EPOCHS_PER_YEAR / COLLATERAL_PHASE1_PROXY
 
         results.append(
             MarketScreeningResult(
