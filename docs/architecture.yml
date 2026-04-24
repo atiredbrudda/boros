@@ -774,6 +774,41 @@ nodes:
     path: python/src/boros_brain/fill_model/amm_consumption.py
     public_functions: [compute_amm_share_timeseries, assert_epoch_conservation]
 
+  # ── Phase 2: Fill Model — Plan 02-03 additions ────────────────────────────
+  - id: brain.fill_model.fit
+    type: module
+    process: brain
+    path: python/src/boros_brain/fill_model/fit.py
+    public_functions: [fit_market_side]
+
+  - id: brain.fill_model.predict
+    type: module
+    process: brain
+    path: python/src/boros_brain/fill_model/predict.py
+    public_functions: [predict]
+
+  - id: brain.fill_model.artifact
+    type: module
+    process: brain
+    path: python/src/boros_brain/fill_model/artifact.py
+    public_functions: [write_fit_artifact]
+
+  - id: brain.state.writers.fill_model_fits
+    type: module
+    process: brain
+    path: python/src/boros_brain/state/writers/fill_model_fits.py
+    public_functions: [insert_fit_artifact, get_latest_fit]
+
+  - id: state.fill_model_fits
+    type: storage
+    path: state/state.sqlite
+    notes: "SQLite table fill_model_fits. PK=(market_id, side, fit_window_end_ts). Single writer: brain.state.writers.fill_model_fits."
+
+  - id: parquet.fill_model_artifacts
+    type: storage
+    path: data/parquet/fill_model_artifacts/**/*.parquet
+    notes: "Hive-partitioned: market_id / side / window_end_ts. Parquet sidecar for fit artifact full β dump."
+
 edges:
   # ── brain internal wiring ──────────────────────────────────────────────
   - from: brain
@@ -1598,3 +1633,74 @@ edges:
     to: brain.fill_model.schemas
     type: calls
     notes: "AMMConsumptionIdentityError exception class lives in schemas; re-exported from amm_consumption"
+
+  # ── Phase 2: Fill Model — Plan 02-03 (fit + predict + artifact + writer) ──
+  - from: brain.fill_model.fit
+    to: brain.fill_model.artifact
+    type: calls
+    notes: "write_fit_artifact(artifact, sqlite_path=) — persist=True (default) or skip for bootstrap resamples"
+
+  - from: brain.fill_model.fit
+    to: parquet.fill_features
+    type: reads
+    notes: "consumes feature rows from Plan 02-01 build_features_table output"
+
+  - from: brain.fill_model.artifact
+    to: brain.state.writers.fill_model_fits
+    type: calls
+    notes: "insert_fit_artifact — single-writer-per-table (PROTO-02)"
+
+  - from: brain.fill_model.artifact
+    to: parquet.fill_model_artifacts
+    type: writes
+    notes: "parquet sidecar first (orphan-tolerant), SQLite row second"
+
+  - from: brain.state.writers.fill_model_fits
+    to: state.fill_model_fits
+    type: writes
+    notes: "insert_fit_artifact — upsert on PK (market_id, side, fit_window_end_ts)"
+
+  - from: brain.state.writers.fill_model_fits
+    to: state.fill_model_fits
+    type: reads
+    notes: "get_latest_fit — ORDER BY fit_window_end_ts DESC LIMIT 1"
+
+  - from: brain.fill_model.predict
+    to: brain.state.writers.fill_model_fits
+    type: calls
+    notes: "get_latest_fit — direct SQLite read on 1 Hz hot path"
+
+  - from: brain.fill_model.predict
+    to: brain.fill_model.schemas
+    type: calls
+    notes: "PredictInput/Output + FillModelStaleFeatureError + FillModelNoFreshFitError"
+
+  - from: brain.fill_model.fit
+    to: brain.fill_model.schemas
+    type: calls
+    notes: "FitArtifact construction"
+
+  - from: brain.fill_model.fit
+    to: config.fill_model.min_events_per_param_ratio
+    type: depends-on-config
+    notes: "_passes_health_gate: nobs/n_params < min_events_per_param_ratio → degraded"
+
+  - from: brain.fill_model.predict
+    to: config.fill_model.fit_warn_staleness_s
+    type: depends-on-config
+    notes: "fit_age_s > fit_warn_staleness_s → output fit_status='stale' (warning only)"
+
+  - from: brain.fill_model.predict
+    to: config.fill_model.fit_max_staleness_s
+    type: depends-on-config
+    notes: "fit_age_s > fit_max_staleness_s → FillModelNoFreshFitError (hard gate)"
+
+  - from: brain.fill_model.predict
+    to: config.fill_model.covariate_whitelist
+    type: depends-on-config
+    notes: "validates current_features keys against whitelist; NaN → FillModelStaleFeatureError"
+
+  - from: brain.fill_model.predict
+    to: brain.data.chain_time
+    type: depends-on
+    notes: "predict() is sync — does NOT call chain_time directly. Callers (refit_loop, DecisionEngine in Phase 4) MUST supply current_chain_ts from chain_time.now_cached(). Edge documents the data-flow dependency."
