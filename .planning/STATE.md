@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-10-PLAN.md — AMM conservation assertion (DATA-05) + ELiqPoller (DATA-11) + A6 spike
-last_updated: "2026-04-24T03:50:00.000Z"
+stopped_at: Completed 01-11-PLAN.md (DATA-08 market screener)
+last_updated: "2026-04-24T03:21:29.027Z"
 last_activity: 2026-04-24
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 12
-  completed_plans: 9
-  percent: 75
+  completed_plans: 11
+  percent: 92
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-23)
 ## Current Position
 
 Phase: 01 (foundation-infrastructure-spine-data-pipeline-economics-gate) — EXECUTING
-Plan: 10 of 12
+Plan: 11 of 12
 Status: Ready to execute
 Last activity: 2026-04-24
 
-Progress: [████████░░] 75%
+Progress: [█████████░] 92%
 
 ## Performance Metrics
 
@@ -61,6 +61,7 @@ Progress: [████████░░] 75%
 | Phase 01 P01-07 | 11 | 2 tasks | 13 files |
 | Phase 01 P08 | 9 | 3 tasks | 22 files |
 | Phase 01 P01-09 | unknown | 3 tasks | 16 files |
+| Phase 01 P11 | 35 | 3 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -114,6 +115,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - CLI manifest fallback: write sidecar JSON when SQLite not yet initialized — enables ingest-first runs before state DB setup
 - Use imData.symbol as clo_history.market_id string key (API marketId is int); all poller cache + KNOWN_ORACLES dict use symbol e.g. BINANCE-ETHUSDT-29MAY2026
 - decode_findex_bytes uses val>>48 (discard 6-byte lower zero-pad) per boros_bot_guide.md L206 — RESEARCH.md raw[-26:] snippet was wrong direction
+- now kwarg on apply_screener_filters: INFRA-14 bans time.time() in screener/; offline batch uses datetime.now(UTC).timestamp() as default; callers with chain_time SHOULD pass chain-time value
+- A8 outside_range_wall_flag is a Phase-2 covariate warning, NOT a hard filter — markets with ratio > 2 remain in shortlist
+- SCALE calibration non-blocking: InsufficientCalibrationData caught silently, scale=None, market still rankable by 6 metrics
 
 ### Pending Todos
 
@@ -128,8 +132,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-24T03:50:00.000Z
-Stopped at: Completed 01-10-PLAN.md — AMM conservation assertion (DATA-05) + ELiqPoller (DATA-11) + A6 spike
+Last session: 2026-04-24T03:21:29.023Z
+Stopped at: Completed 01-11-PLAN.md (DATA-08 market screener)
 Resume file: None
 
 **Planned Phase:** 01 (Foundation (Infrastructure Spine + Data Pipeline + Economics Gate)) — 12 plans — 2026-04-23T20:08:16.743Z

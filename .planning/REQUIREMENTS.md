@@ -67,9 +67,11 @@ Requirements for the v0.5 release. Every requirement is testable (either automat
 **: `GET /markets` live poller (every ~30s) detects `cloLowerThresh`/`cloUpperThresh` changes and writes a timestamped row to `clo_history` table in SQLite.
 - [x] **DATA-07
 **: `fIndexOracle.getLatestFIndex()` on-chain reader decodes the packed `bytes26 → bytes32` payload per `boros_bot_guide.md` L203-213 and returns `fTime`, `floatingIndex`, `feeIndex`. `latestAnnualizedRate()` returns current spot rate. Both cached ≤1s.
-- [ ] **DATA-08**: **Market screener** computes per candidate market: total trades last 60d, inter-arrival CV using `eventIndex`-ordered intervals, mid-rate realized vol (pp/5min last 14d), mid-rate reversal count (last 3d), order-book depth at incentivized range, `cloLowerThresh`/`cloUpperThresh` both non-zero, time-to-maturity ≥ 30d. Outputs a shortlist of 2–4 markets.
+- [x] **DATA-08
+**: **Market screener** computes per candidate market: total trades last 60d, inter-arrival CV using `eventIndex`-ordered intervals, mid-rate realized vol (pp/5min last 14d), mid-rate reversal count (last 3d), order-book depth at incentivized range, `cloLowerThresh`/`cloUpperThresh` both non-zero, time-to-maturity ≥ 30d. Outputs a shortlist of 2–4 markets.
 - [ ] **DATA-09**: **Reward-share economics gate** computes `R_apr_on_collateral = R_share_per_epoch × epochs_per_year / required_collateral` per shortlisted market. Markets below `alternative_yield + estimated_fill_loss_rate` are dropped. Empty shortlist after this filter = cheap kill, project halts with a written kill report.
-- [ ] **DATA-10**: **Daily automated market re-screen** reruns DATA-08 + DATA-09 and flags any markets newly entering or exiting the shortlist to operator.
+- [x] **DATA-10**: **Daily automated market re-screen** reruns DATA-08
+ + DATA-09 and flags any markets newly entering or exiting the shortlist to operator.
 - [x] **DATA-11
 **: **`E_liq_per_epoch` + Long/Short split polling** every cycle (1–5s) during live/paper operation; values written to `reward_budget_history` in SQLite (feeds DF-04 sizing + A2 rebalance detection).
 
@@ -170,7 +172,8 @@ Requirements for the v0.5 release. Every requirement is testable (either automat
 ) blocks non-compliant commits.
 - [x] **PROTO-04**: Every new "knob" is added to the Pydantic config schema (INFRA-02
 ) — schema is the exhaustive source of truth for `RUN_MANIFEST` field list.
-- [ ] **PROTO-05**: Supersedence discipline — when a new wiki page invalidates an older finding, the older page gets `Status: Historical — superseded by [[new-page]]` in the same commit.
+- [x] **PROTO-05
+**: Supersedence discipline — when a new wiki page invalidates an older finding, the older page gets `Status: Historical — superseded by [[new-page]]` in the same commit.
 
 ---
 
