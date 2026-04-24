@@ -14,20 +14,22 @@ A personal, single-user Python + TypeScript bot that captures **Pendle Boros Lim
 
 <!-- Shipped and confirmed valuable. -->
 
-(None yet — ship to validate)
+- [x] **Conditional loss model** — OU on basis `B(t) = Implied − Underlying` with closed-form `E[loss|fill]`; empirical post-fill `(depth, τ)` grid replay with 3-tier fallback (exact → nearest-neighbour → coarse_bound); OU-on-basis scaffold for v1.0 drop-in (LOSS-01, LOSS-02, LOSS-03) — Validated in Phase 3
+- [x] **Reward share model** — capped pro-rata with live polling of `E_liq_per_epoch` and Long/Short budget split; 1000% APR cap handled; `CompetitionTracker` + `MarketRewardCalibration` (operator-calibrated, LOCKED D-01) (REWARD-01, REWARD-02) — Validated in Phase 3
+- [x] **Sizing optimizer** — `Q_me_target = argmax R_capped − E[loss|fill] × P(fill)` over `[Q_min, Q_max]`; sub-cap at $100 collateral confirmed deterministic (`Q_min`); cap-binding code exists and tested at $5k scale-up (REWARD-03, REWARD-04) — Validated in Phase 3
 
 ### Active
 
 <!-- Current scope. Building toward these. Derived from the consolidated plan v0.5 → v1.0 path. -->
 
-- [ ] **Phase 0 prerequisites closed** — cancel-behavior (voluntary-cancel reward preservation) and actual minimum order size confirmed from Boros docs/SDK/Discord before engineering past Phase 1
+- [ ] **Phase 0 prerequisites closed** — All six P0 questions resolved or spot-confirmed as of 2026-04-23: P0-01 ([[Voluntary cancel reward behavior]]), P0-02 ([[Minimum order size]]), P0-03 ([[Boros WebSocket API]]), P0-04 ([[Sign-only cancel primitive]] — Send Txs Bot mandatory, pre-signing still valuable, direct-to-chain ruled out), P0-05 spot-confirmed ([[eventIndex coverage]] — cross-market probe in Phase 1 ingester), P0-06 ([[Boros fee schedule]] — gas measured empirically per DECIDE-03). Phase 0 is effectively clear to close pending the Phase-1 `eventIndex` cross-market probe + the LLM Wiki seeding from planning docs (INFRA-10).
 - [ ] **Data pipeline + market screener** — ingest `market-trades/`, raw + combined order books, underlying APRs; rank markets by CV, vol, reversal count, depth, time-to-maturity, CLO activity
 - [ ] **Reward-share economics gate** — compute `R_apr_on_collateral` (capped at 1000% APR) per shortlisted market; drop the market if below alternative yield + estimated fill-loss rate
 - [ ] **Per-market fill model** — v0.5: non-homogeneous Poisson (NHPP) with covariates (basis, time-since-settlement, imbalance, EWMA vol, dRate/dt, t-to-maturity); v1.0: add Hawkes for CV > 1.5, renewal process for CV < 0.7
 - [ ] **Queue position + AMM consumption tracker** — replay trade tape from hourly `raw/` snapshots, subtract AMM share from `combined_*`, use `eventIndex` for intra-block ordering
 - [ ] **Conditional loss model** — OU on basis `B(t) = Implied − Underlying` with closed-form `E[loss|fill]`; empirical post-fill replay as cross-check
 - [ ] **Reward share model** — capped pro-rata with live polling of `E_liq_per_epoch` and Long/Short budget split; honor 1000% APR per-account cap
-- [ ] **EV-based decision engine** — cancel iff `R_liq_share_per_epoch × P(no_fill_and_unpurged) − E[loss|fill] × P(fill) − cancel_cost × P(purge) < 0`, parameterized by `voluntary_cancel_forfeits_accumulated` flag until confirmed
+- [ ] **EV-based decision engine** — cancel iff `R_liq_share_per_epoch × P(no_fill_and_unpurged) − E[loss|fill] × P(fill) − cancel_cost × P(purge) < 0`; `voluntary_cancel_forfeits_accumulated = False` confirmed 2026-04-23 (benign branch, forward-looking cancel rule — see [[Voluntary cancel reward behavior]]). Punitive-branch code kept as dead-code fallback behind the flag in case future contract trace contradicts.
 - [ ] **Predictive circuit breakers** — margin trajectory, oracle staleness (`fTime > 0.7 × maxUpdateDelay`), CLO removal/shift, fill-rate runaway, competition collapse, maturity migration
 - [ ] **Event-driven backtest** — queue-aware, AMM-aware, cancel-latency-aware replay on per-trade data; Sharpe-equivalent, max DD, calibration plot, dP&L/dL sensitivity
 - [ ] **Execution layer** — dual-wallet (root cold, agent hot) via Send Txs Bot; pre-sign cancel calldata at placement time; WebSocket-driven fill detection
@@ -76,9 +78,13 @@ A personal, single-user Python + TypeScript bot that captures **Pendle Boros Lim
 
 **Prior work on this repo:** Three planning documents already exist in the project root — `boros_bot_guide.md` (platform reference + risk framework), `boros_consolidated_plan.md` (final superseding 10-phase spec, treat as source of truth), `boros_alternative_plan.md`, `boros_model_recommendation.md`, `plan_comparison.md` (rebuttal/synthesis). The consolidated plan explicitly supersedes the others.
 
-**Open Phase 0 questions still blocking Phase 1+ engineering:**
-1. Voluntary cancel behavior — are accumulated reward contributions preserved on cancel, or voided? Resolution path: (1) check `pendle-finance/boros-core-public` repo + reward distributor contract, (2) then Pendle Discord. Worst-case assumption = forfeited until confirmed. Build engine with `voluntary_cancel_forfeits_accumulated` boolean flag; Phase 7 backtest reports sensitivity to both branches.
-2. Actual protocol minimum order size — working assumption $100 collateral-equivalent. **Existentially important** at the user's $100 starting capital: if the true minimum is higher, the operator cannot participate at all. Must verify before paper trading.
+**Phase 0 open questions — resolution status as of 2026-04-23:**
+1. ~~Voluntary cancel behavior~~ **RESOLVED** ([[Voluntary cancel reward behavior]]): Boros official team — "LO incentives are calculated per block, so accumulated rewards won't go to zero even if users cancel the order." → `voluntary_cancel_forfeits_accumulated = False`. Side-finding: per-block (~250ms) reward granularity. Evidence tier: official team statement, not contract-traced. EV cancel rule is purely forward-looking; punitive branch = dead-code fallback.
+2. ~~Actual protocol minimum order size~~ **RESOLVED** ([[Minimum order size]]): docs state "No minimum order size requirement" and "No lot size restrictions." $100-collateral premise is safe at the protocol level. Effective floor is fee-amortization driven, captured in the economics gate (DATA-09), not a halt condition.
+3. ~~WebSocket URL + per-account fill channel~~ **RESOLVED** ([[Boros WebSocket API]]): `wss://api.boros.finance/pendle-dapp-v3`, Socket.IO (NOT raw WS — stack change: `socket.io-client` instead of `ws`). Per-account channel `account-updates:ROOT_ADDRESS` → `order-update` event with `efs` fill-size + `os` status fields. REST poll stays as backup / reconnect reconciliation, not primary. Heartbeat / event-replay on reconnect not documented — verify empirically in Phase 1.
+4. ~~`@pendle/sdk-boros` sign-only primitive~~ **RESOLVED 2026-04-23** ([[Sign-only cancel primitive]], tightened after /Backend/best-practices). Send Txs Bot is the mandatory submission lane: `POST /v2/agent/bulk-direct-call` (multi-calldata) and `/v2/agent/direct-call` (single). v2 is required for API integrations (v3 requires browser session). Pre-signing the *calldata* at placement time still eliminates one roundtrip on the hot path — keep that optimization. Direct-to-chain submit dropped as a design goal. Phase 6 `submission_path` knob removed from scope.
+5. ~~`eventIndex` coverage~~ **SPOT-CONFIRMED** ([[eventIndex coverage]]): present on the ETHUSDT sample, also present on WS `order-update` as field `ei`. Cross-market probe is a cheap Phase 1 ingester task (DATA-01, DATA-08).
+6. ~~Fee schedule~~ **MOSTLY RESOLVED** ([[Boros fee schedule]]): maker 0, taker ~0.05% (per-market via `MarketConfig.takerFee`, discountable), settlement `|Size|×Rate×SettlementPeriod` (non-discountable), market entrance ~$1 per market one-time, cancel has no protocol fee. Gas costs on Arbitrum still to be measured empirically (DECIDE-03 already requires this).
 
 **Known markets as of April 2026:** BTC, ETH, SOL, XRP, HYPE + XAU/XAG/oil/S&P500 across Hyperliquid, Binance, OKX, Bybit, Lighter. Maturities 24-Apr through 25-Sep 2026. ETH Binance markets share `cloLower=9300, cloUpper=9500`. BTC Binance markets `cloLower=309.69, cloUpper=316.35`. Markets with `clo=0` are not incentivized.
 
@@ -136,7 +142,7 @@ Three cross-cutting protocols apply to every phase, every plan, every code chang
 | `eventIndex` (not `blockTimestamp`) for intra-block ordering | Arbitrum block ~250ms; multiple trades per block are common; `blockTimestamp` ties at the second | — Pending |
 | Pre-sign cancel calldata at order-placement time | Biggest leverage point on fill avoidance; removes HTTP roundtrip from the critical path | — Pending |
 | Python (models/backtest) + TypeScript (SDK/execution) split | Python has the quant library ecosystem; Boros SDK is TypeScript-native; splitting along that boundary avoids fighting either side | — Pending |
-| Build engine with `voluntary_cancel_forfeits_accumulated` flag, run both branches in backtest | Phase 0 question still open; sensitivity analysis tells us whether the answer gates paper trading or is moot | — Pending |
+| Build engine with `voluntary_cancel_forfeits_accumulated` flag, run both branches in backtest | Phase 0 question still open; sensitivity analysis tells us whether the answer gates paper trading or is moot | **Resolved 2026-04-23** — flag = `False` per Boros official team statement ([[Voluntary cancel reward behavior]]); backtest still runs both branches as sanity check but no longer blocks Phase 7 |
 | Local deployment for v0.5 | $100 doesn't justify a VPS; re-evaluate at scale-up if live observation shows cancel latency dominates | — Pending |
 | Personal, single-user bot — no multi-tenancy | Keeps scope tight; one wallet, one operator, CLI + notebooks only | — Pending |
 | LLM Wiki (`../LLM Wiki/workspaces/boros/`) is the canonical knowledge/strategy base — check first, write back | Planning docs drift; a maintained wiki with `[[links]]` and Status fields gives persistent context across sessions and prevents re-litigating resolved questions | — Pending |
@@ -161,4 +167,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-23 after initialization*
+*Last updated: 2026-04-24 — Phase 3 complete (LossModel, RewardShareModel, Sizer, wiring)*
