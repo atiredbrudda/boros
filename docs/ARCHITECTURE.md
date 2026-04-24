@@ -280,8 +280,8 @@ flowchart TB
     brain -- "eth_call fIndexOracle" --> ext_rpc
     brain -- "NDJSON download market-trades, order-book" --> ext_hist
 
-    %% Phase 2 Fill Model (Plans 02-01 + 02-02 + 02-03)
-    subgraph fill_model["Fill Model (Phase 2, Plans 02-01/02/03)"]
+    %% Phase 2 Fill Model (Plans 02-01 + 02-02 + 02-03 + 02-04)
+    subgraph fill_model["Fill Model (Phase 2, Plans 02-01/02/03/04)"]
         fill_features_mod["fill_model/features.py<br/>build_features_table (FILL-02)"]
         fill_config_mod["fill_model/config.py<br/>FillModelConfig (11 knobs)"]
         fill_constants_mod["fill_model/constants.py<br/>ALLOWED_COVARIATES + DEFAULT_*"]
@@ -307,6 +307,20 @@ flowchart TB
         FillFitsWriter -->|writes| StateFillFits
         PredictMod -->|reads| FillFitsWriter
         parquet_fill_features -->|consumed by| FitMod
+        CalibrationMod["fill_model/calibration.py<br/>gof_rosenblatt + bootstrap_gof_threshold + run_calibration (FILL-06)"]
+        RefitLoopMod["fill_model/refit_loop.py<br/>refit_once (async boot) + run_fill_model_refit_loop"]
+        ReportMod["fill_model/report.py<br/>write_fill_model_report"]
+        CliMod["fill_model/cli.py + __main__.py<br/>fit/predict/calibration-report/force-degrade (MANIFEST-FIRST)"]
+        CalibrationMod -->|calls| FitMod
+        CalibrationMod -->|calls| PredictMod
+        CalibrationMod -->|reads| FillFitsWriter
+        RefitLoopMod -->|calls| fill_features_mod
+        RefitLoopMod -->|calls| FitMod
+        ReportMod -->|reads| FillFitsWriter
+        CliMod -->|calls| RefitLoopMod
+        CliMod -->|calls| PredictMod
+        CliMod -->|calls| ReportMod
+        CliMod -->|calls| FitMod
     end
 
     parquet_mt -->|"DuckDB market_trades view"| fill_features_mod
@@ -321,7 +335,7 @@ flowchart TB
     parquet_ob_comb -->|"per-tick combined size"| fill_amm_consumption
 ```
 
-### Phase 2 Fill Model (Plans 02-01 + 02-02 + 02-03)
+### Phase 2 Fill Model (Plans 02-01 + 02-02 + 02-03 + 02-04)
 
 The fill model consumes Phase 1's data pipeline outputs through a DuckDB-joined
 feature table. `build_features_table` (in `brain.fill_model.features`) produces
@@ -352,12 +366,26 @@ insert_fit_artifact` (single-writer-per-table; only module allowed to INSERT).
 calls at 1 Hz; NaN covariates raise `FillModelStaleFeatureError` (never silent
 fallback; see [[known-issues-nan-covariate-silent-fallback-do-not]]); stale fits
 raise `FillModelNoFreshFitError`. The `fill_model_fits` SQLite schema is
-installed via Alembic migration `0003_fill_model_fits`. Plan 02-04 adds the
-GoF calibration loop on top.
+installed via Alembic migration `0003_fill_model_fits`.
+
+**Plan 02-04 additions:** `calibration.py` implements Rosenblatt's time-change
+theorem — the KS statistic between integrated-compensator inter-arrival gaps and
+Exp(1) (`scipy.stats.kstest`). `bootstrap_gof_threshold` derives the 5th-
+percentile LR threshold from 100 in-sample resamples rather than an
+intuition-picked constant (PITFALL #8). `fill_model.fit_degraded` is emitted
+when `gof_ks_pval < gof_ks_pval_threshold` — grepp-able by `run_id` and
+surfaced by `force-degrade` smoke test. `refit_loop.py` exposes `refit_once`
+(async coroutine awaited at brain boot to guarantee an artifact before the 1 Hz
+loop starts) and `run_fill_model_refit_loop` (15-min cadence asyncio task spawned
+from `brain.main.run()`). `cli.py` / `__main__.py` provide the operator CLI
+(`python -m boros_brain.fill_model fit|predict|calibration-report|force-degrade`)
+with MANIFEST-FIRST boot (PROTO-01).
 
 See [[fill-model-library-decision-tick-vs-statsmodels]], [[covariate-selection-v05]],
 [[queue-tracker-algorithm-v05]], [[amm-consumption-model-v05]],
-[[nhpp-log-linear-glm-fit-procedure]], and [[fill-model-predict-contract]].
+[[nhpp-log-linear-glm-fit-procedure]], [[fill-model-predict-contract]],
+[[fill-model-goodness-of-fit-rosenblatt-time-change]], and
+[[rolling-14-day-refit-cadence-and-staleness]].
 
 ## What's declared in `docs/architecture.yml`
 

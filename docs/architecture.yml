@@ -809,6 +809,31 @@ nodes:
     path: data/parquet/fill_model_artifacts/**/*.parquet
     notes: "Hive-partitioned: market_id / side / window_end_ts. Parquet sidecar for fit artifact full β dump."
 
+  # ── Phase 2: Fill Model — Plan 02-04 (calibration + refit_loop + report + cli) ──
+  - id: brain.fill_model.calibration
+    type: module
+    process: brain
+    path: python/src/boros_brain/fill_model/calibration.py
+    public_functions: [gof_rosenblatt, bootstrap_gof_threshold, run_calibration]
+
+  - id: brain.fill_model.refit_loop
+    type: module
+    process: brain
+    path: python/src/boros_brain/fill_model/refit_loop.py
+    public_functions: [refit_once, run_fill_model_refit_loop]
+
+  - id: brain.fill_model.report
+    type: module
+    process: brain
+    path: python/src/boros_brain/fill_model/report.py
+    public_functions: [write_fill_model_report]
+
+  - id: brain.fill_model.cli
+    type: module
+    process: brain
+    path: python/src/boros_brain/fill_model/cli.py
+    public_functions: [main, build_parser]
+
 edges:
   # ── brain internal wiring ──────────────────────────────────────────────
   - from: brain
@@ -1704,3 +1729,73 @@ edges:
     to: brain.data.chain_time
     type: depends-on
     notes: "predict() is sync — does NOT call chain_time directly. Callers (refit_loop, DecisionEngine in Phase 4) MUST supply current_chain_ts from chain_time.now_cached(). Edge documents the data-flow dependency."
+
+  # ── Phase 2 Plan 02-04 edges ───────────────────────────────────────────────
+  - from: brain.fill_model.calibration
+    to: brain.fill_model.fit
+    type: calls
+
+  - from: brain.fill_model.calibration
+    to: brain.fill_model.predict
+    type: calls
+
+  - from: brain.fill_model.calibration
+    to: state.fill_model_fits
+    type: reads
+
+  - from: brain.fill_model.refit_loop
+    to: brain.fill_model.features
+    type: calls
+    notes: "build_features_table per (market, side)"
+
+  - from: brain.fill_model.refit_loop
+    to: brain.fill_model.fit
+    type: calls
+
+  - from: brain.fill_model.refit_loop
+    to: brain.data.chain_time
+    type: calls
+    notes: "refit_once awaits chain_time.now_cached() for window end-ts (INFRA-14)"
+
+  - from: brain.fill_model.refit_loop
+    to: config.fill_model.refit_cadence_s
+    type: depends-on-config
+
+  - from: brain.fill_model.refit_loop
+    to: config.fill_model.window_days
+    type: depends-on-config
+
+  - from: brain.fill_model.report
+    to: brain.state.writers.fill_model_fits
+    type: calls
+    notes: "get_latest_fit rollup"
+
+  - from: brain.fill_model.cli
+    to: brain.manifest.writer
+    type: calls
+    notes: "PROTO-01 MANIFEST-FIRST on every CLI invocation"
+
+  - from: brain.fill_model.cli
+    to: brain.fill_model.refit_loop
+    type: calls
+    notes: "fit subcommand calls refit_once"
+
+  - from: brain.fill_model.cli
+    to: brain.fill_model.predict
+    type: calls
+    notes: "predict subcommand"
+
+  - from: brain.fill_model.cli
+    to: brain.fill_model.report
+    type: calls
+    notes: "calibration-report subcommand"
+
+  - from: brain.fill_model.cli
+    to: brain.fill_model.fit
+    type: calls
+    notes: "force-degrade subcommand"
+
+  - from: brain.main
+    to: brain.fill_model.refit_loop
+    type: calls
+    notes: "refit_once synchronous at boot + run_fill_model_refit_loop spawned as asyncio.create_task"
