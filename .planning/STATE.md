@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: milestone
 status: ready_to_plan
-stopped_at: Completed 01-12-PLAN.md (DATA-09 economics kill-switch + DATA-10 daily re-screen)
-last_updated: "2026-04-24T03:43:47.055Z"
+stopped_at: "Phase 01 UAT in progress — tests 1/4/5/7 PASS, tests 2/3/6 pending live credentials"
+last_updated: "2026-04-24T07:30:00Z"
 last_activity: 2026-04-24
 progress:
   total_phases: 9
@@ -135,8 +135,16 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-24T03:43:47.050Z
-Stopped at: Completed 01-12-PLAN.md (DATA-09 economics kill-switch + DATA-10 daily re-screen)
+Last session: 2026-04-24T07:30:00Z
+Stopped at: Phase 01 UAT — 4/7 tests done (1/4/5/7 PASS), 3 remaining require live credentials
 Resume file: None
 
-**Planned Phase:** 01 (Foundation (Infrastructure Spine + Data Pipeline + Economics Gate)) — 12 plans — 2026-04-23T20:08:16.743Z
+**Next action:** Complete Phase 01 UAT tests 2, 3, 6 (live environment):
+- Test 2 (launchd): `dotenvx run -- launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.boros.brain.plist` — verify RUN_MANIFEST first log line + SIGKILL restart
+- Test 3 (live RUN_MANIFEST): initialize state DB + run brain with real Arbitrum RPC — verify chain_drift ≤5s, sidecar JSON, run_manifests SQLite row
+- Test 6 (live poller ~5 min): verify clo_history + reward_budget_history rows accumulate with real market data
+- See .planning/phases/01-.../01-HUMAN-UAT.md for full expected/result spec
+
+**After UAT complete:** Phase 01 fully done → plan Phase 02 (Fill Model — NHPP v0.5)
+
+**Credentials status (2026-04-24):** dotenvx installed, .env encrypted with agent wallet key, strategy/v0.5-default.yaml has wallet addresses (gitignored). Keychain step (security add-generic-password) NOT yet done — needed for launchd test.
