@@ -467,6 +467,17 @@ nodes:
     notes: "pre-commit hook: rejects time.time() in brain/{decision,data,screener}/ (INFRA-14 / PITFALLS §C7)"
     path: scripts/no_time_time_lint.py
 
+  # ── INFRA-04 DuckDB analytical layer (01-07 Task 2) ────────────────────
+  - id: brain.duckdb_layer.setup
+    type: module
+    process: brain
+    path: python/src/boros_brain/duckdb_layer/setup.py
+    public_functions: [open_analytical_conn, attach_sqlite_readonly, register_parquet_views]
+
+  - id: brain.duckdb_layer.views_sql
+    type: storage
+    path: python/src/boros_brain/duckdb_layer/views.sql
+
 edges:
   # ── brain internal wiring ──────────────────────────────────────────────
   - from: brain
@@ -774,3 +785,14 @@ edges:
     to: brain
     type: calls
     notes: "pre-commit hook: rejects time.time() in brain/{decision,data,screener}/ (PITFALLS §C7)"
+
+  # ── INFRA-04 DuckDB analytical layer edges (01-07) ──────────────────────
+  - from: brain.duckdb_layer.setup
+    to: state.clo_history
+    type: reads
+    notes: "sqlite_scanner attach — reads all 8 SQLite tables read-only for analytics"
+
+  - from: brain.duckdb_layer.setup
+    to: brain.duckdb_layer.views_sql
+    type: reads
+    notes: "register_parquet_views() reads views.sql DDL at runtime"

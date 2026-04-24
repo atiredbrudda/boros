@@ -52,6 +52,7 @@ flowchart TB
         brain_log_redaction["logging/redaction.py<br/>redact_sensitive (01-06)"]
         brain_data_rpc["data/rpc_client.py<br/>make_arbitrum_rpc, get_latest_block_timestamp (01-07)"]
         brain_data_chain_time["data/chain_time.py<br/>ChainTimeCache, now_cached, startup_check,<br/>drift_monitor_tick (INFRA-14, 01-07)"]
+        brain_duckdb_setup["duckdb_layer/setup.py<br/>open_analytical_conn (INFRA-04, 01-07)<br/>ANALYTICAL ONLY — not on hot path"]
         brain_bus_cmd["bus/cmd.py<br/>CmdBus (ZMQ PUSH)"]
         brain_bus_events["bus/events.py<br/>EventBus (ZMQ PUB/SUB)"]
         brain_bus_heartbeat["bus/heartbeat.py<br/>HeartbeatMonitor"]
@@ -108,6 +109,10 @@ flowchart TB
     brain_data_rpc -- "AsyncHTTPProvider(rpc_url_arbitrum)" --> ext_rpc
     brain_data_chain_time -- "halt_callback → KILL lane on drift > 30s" --> brain_bus_cmd
     no_time_time -- "pre-commit: rejects time.time() in brain/{decision,data,screener}" --> brain
+
+    %% DuckDB analytical layer (01-07 INFRA-04)
+    brain_duckdb_setup -- "sqlite_scanner read-only attach" --> state_clo
+    brain_duckdb_setup -- "reads views.sql DDL at runtime" --> brain_duckdb_setup
 
     %% brain wiring
     brain_main --> brain_cfg_loader --> brain_cfg_schema
