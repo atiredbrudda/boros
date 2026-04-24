@@ -4,14 +4,14 @@ milestone: v0.5
 milestone_name: milestone
 status: ready_to_plan
 stopped_at: Phase 01 UAT complete (5/7 PASS, 1 PARTIAL). Ready to plan Phase 02 (Fill Model — NHPP v0.5).
-last_updated: "2026-04-24T10:18:59.379Z"
-last_activity: 2026-04-24 -- Phase 02 execution started
+last_updated: "2026-04-24T21:24:27.245Z"
+last_activity: 2026-04-24 -- Phase 03 execution started
 progress:
   total_phases: 9
-  completed_phases: 2
-  total_plans: 16
-  completed_plans: 12
-  percent: 22
+  completed_phases: 3
+  total_plans: 20
+  completed_plans: 16
+  percent: 33
 ---
 
 # Project State
@@ -21,11 +21,11 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-23)
 
 **Core value:** Earn net-positive yield on $100 collateral from the Boros Limit Order Liquidity Rewards pool that beats stablecoin alternatives, after gas and fill-loss — on a live, single-market deployment. If -EV, detect cheaply and kill; do not limp.
-**Current focus:** Phase 02 — fill-model-nhpp-v0-5
+**Current focus:** Phase 03 — loss-reward-share-models-sizing
 
 ## Current Position
 
-Phase: 3
+Phase: 4
 Plan: Not started
 Status: Ready to plan
 Last activity: 2026-04-24
@@ -36,7 +36,7 @@ Progress: [██████████] 100%
 
 **Velocity:**
 
-- Total plans completed: 16
+- Total plans completed: 20
 - Average duration: — min
 - Total execution time: 0 hours
 
@@ -46,6 +46,7 @@ Progress: [██████████] 100%
 |-------|-------|-------|----------|
 | 01 | 12 | - | - |
 | 02 | 4 | - | - |
+| 03 | 4 | - | - |
 
 **Recent Trend:**
 
@@ -161,4 +162,4 @@ Resume file: None
 **Next action:**
 /clear then `/gsd-plan-phase 2` — Phase 02: Fill Model (NHPP v0.5)
 
-**Planned Phase:** 2 (Fill Model (NHPP v0.5)) — 4 plans — 2026-04-24T09:56:57.583Z
+**Planned Phase:** 3 (Loss & Reward-Share Models + Sizing) — 4 plans — 2026-04-24T21:10:28.792Z
