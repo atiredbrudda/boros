@@ -1,0 +1,8 @@
+version: 1
+nodes:
+  - id: test.a
+    type: module
+    process: test
+    path: scripts/tests/fixtures/arch_drift/test/a.py
+    public_functions: [greet]
+edges: []
