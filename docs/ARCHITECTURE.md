@@ -38,6 +38,7 @@ flowchart TB
         brain_wrapper["scripts.boros_brain_wrapper<br/>boros-brain-wrapper.sh"]
         hands_wrapper["scripts.boros_hands_wrapper<br/>boros-hands-wrapper.sh"]
         no_plain_keys["scripts.no_plain_keys<br/>no_plain_keys.py<br/>pre-commit hook"]
+        no_time_time["scripts.no_time_time_lint<br/>no_time_time_lint.py<br/>pre-commit hook (INFRA-14)"]
     end
 
     subgraph brain["brain — Python process (asyncio, 1 Hz)"]
@@ -49,6 +50,8 @@ flowchart TB
         brain_log_setup["logging/structlog_setup.py<br/>configure_logging, get_logger"]
         brain_log_schema["logging/schema.py<br/>LogRecord"]
         brain_log_redaction["logging/redaction.py<br/>redact_sensitive (01-06)"]
+        brain_data_rpc["data/rpc_client.py<br/>make_arbitrum_rpc, get_latest_block_timestamp (01-07)"]
+        brain_data_chain_time["data/chain_time.py<br/>ChainTimeCache, now_cached, startup_check,<br/>drift_monitor_tick (INFRA-14, 01-07)"]
         brain_bus_cmd["bus/cmd.py<br/>CmdBus (ZMQ PUSH)"]
         brain_bus_events["bus/events.py<br/>EventBus (ZMQ PUB/SUB)"]
         brain_bus_heartbeat["bus/heartbeat.py<br/>HeartbeatMonitor"]
@@ -99,6 +102,12 @@ flowchart TB
 
     %% redaction processor (01-06) — node declared in brain subgraph above
     brain_log_redaction -- "extra_processor before JSONRenderer" --> brain_log_setup
+
+    %% chain-time + RPC client (01-07 INFRA-14)
+    brain_data_chain_time -- "get_latest_block_timestamp()" --> brain_data_rpc
+    brain_data_rpc -- "AsyncHTTPProvider(rpc_url_arbitrum)" --> ext_rpc
+    brain_data_chain_time -- "halt_callback → KILL lane on drift > 30s" --> brain_bus_cmd
+    no_time_time -- "pre-commit: rejects time.time() in brain/{decision,data,screener}" --> brain
 
     %% brain wiring
     brain_main --> brain_cfg_loader --> brain_cfg_schema

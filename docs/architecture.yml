@@ -449,6 +449,24 @@ nodes:
     path: python/src/boros_brain/logging/redaction.py
     public_functions: [redact_sensitive]
 
+  # ── INFRA-14 chain-time + shared RPC client (01-07 Task 1) ─────────────
+  - id: brain.data.rpc_client
+    type: module
+    process: brain
+    path: python/src/boros_brain/data/rpc_client.py
+    public_functions: [make_arbitrum_rpc, get_latest_block_timestamp]
+
+  - id: brain.data.chain_time
+    type: module
+    process: brain
+    path: python/src/boros_brain/data/chain_time.py
+    public_functions: [install, now_cached, startup_check, drift_monitor_tick]
+
+  - id: scripts.no_time_time_lint
+    type: external
+    notes: "pre-commit hook: rejects time.time() in brain/{decision,data,screener}/ (INFRA-14 / PITFALLS §C7)"
+    path: scripts/no_time_time_lint.py
+
 edges:
   # ── brain internal wiring ──────────────────────────────────────────────
   - from: brain
@@ -715,3 +733,44 @@ edges:
     to: brain
     type: calls
     notes: "pre-commit hook: greps staged diff, blocks plaintext private keys (INFRA-12 T-01-06-01)"
+
+  # ── INFRA-14 chain-time edges (01-07) ──────────────────────────────────
+  - from: brain.data.chain_time
+    to: brain.data.rpc_client
+    type: calls
+    notes: "get_latest_block_timestamp() — fetches eth.get_block('latest').timestamp"
+
+  - from: brain.data.chain_time
+    to: brain.bus.cmd
+    type: emits-event
+    notes: "halt_callback invoked on drift > chain_drift_halt_s; main.py wires CmdBus.send_kill (priority lane)"
+
+  - from: brain.data.rpc_client
+    to: ext.arbitrum_rpc
+    type: calls
+    notes: "AsyncHTTPProvider(rpc_url_arbitrum) — eth_getBlockByNumber('latest')"
+
+  - from: brain.data.chain_time
+    to: config.data.chain_time_cache_ttl_s
+    type: depends-on-config
+    notes: "now_cached() reads chain_time_cache_ttl_s for TTL check"
+
+  - from: brain.data.chain_time
+    to: config.infra.chain_drift_warn_s
+    type: depends-on-config
+    notes: "startup_check() + drift_monitor_tick() read chain_drift_warn_s"
+
+  - from: brain.data.chain_time
+    to: config.infra.chain_drift_halt_s
+    type: depends-on-config
+    notes: "drift_monitor_tick() reads chain_drift_halt_s for halt threshold"
+
+  - from: brain.data.rpc_client
+    to: config.data.rpc_url_arbitrum
+    type: depends-on-config
+    notes: "make_arbitrum_rpc() reads rpc_url_arbitrum — never logged (T-01-07-02)"
+
+  - from: scripts.no_time_time_lint
+    to: brain
+    type: calls
+    notes: "pre-commit hook: rejects time.time() in brain/{decision,data,screener}/ (PITFALLS §C7)"
