@@ -1,0 +1,639 @@
+# ========================================================================
+# Boros architecture manifest — machine-readable single source of truth.
+# Parsed by scripts/architecture_lint.py at every commit.
+# Consult BEFORE every code change (blast radius enumeration).
+# Update IN THE SAME COMMIT as source changes.
+# ========================================================================
+version: 1
+# Phase 1 seed — plans 01-01/02/03 landed these nodes. Phase 2+ extends.
+
+nodes:
+  # ── Processes ──────────────────────────────────────────────────────────
+  - id: brain
+    type: process
+    language: python
+    entrypoint: python/src/boros_brain/main.py
+
+  - id: hands
+    type: process
+    language: typescript
+    entrypoint: ts/src/boros_hands/main.ts
+
+  # ── Python modules (from 01-01 / 01-02 / 01-03) ───────────────────────
+  - id: brain.main
+    type: module
+    process: brain
+    path: python/src/boros_brain/main.py
+    public_functions: [build_parser, run, main]
+
+  - id: brain.config.schema
+    type: module
+    process: brain
+    path: python/src/boros_brain/config/schema.py
+    public_functions: []   # Pydantic models only — no top-level functions
+
+  - id: brain.config.loader
+    type: module
+    process: brain
+    path: python/src/boros_brain/config/loader.py
+    public_functions: [load_config]
+
+  - id: brain.state.db
+    type: module
+    process: brain
+    path: python/src/boros_brain/state/db.py
+    public_functions: [open_connection, enable_wal_mode, ensure_permissions_0600]
+
+  - id: brain.state.writers.open_orders
+    type: module
+    process: brain
+    path: python/src/boros_brain/state/writers/open_orders.py
+    public_functions: [insert_open_order, update_open_order_status]
+
+  - id: brain.state.writers.decisions
+    type: module
+    process: brain
+    path: python/src/boros_brain/state/writers/decisions.py
+    public_functions: [insert_decision]
+
+  - id: brain.state.writers.tx_receipts
+    type: module
+    process: brain
+    path: python/src/boros_brain/state/writers/tx_receipts.py
+    public_functions: [insert_tx_receipt]
+
+  - id: brain.state.writers.queue_positions
+    type: module
+    process: brain
+    path: python/src/boros_brain/state/writers/queue_positions.py
+    public_functions: [insert_queue_position]
+
+  - id: brain.state.writers.run_manifests
+    type: module
+    process: brain
+    path: python/src/boros_brain/state/writers/run_manifests.py
+    public_functions: [insert_run_manifest]
+
+  - id: brain.state.writers.epoch_rewards
+    type: module
+    process: brain
+    path: python/src/boros_brain/state/writers/epoch_rewards.py
+    public_functions: [insert_epoch_reward, mark_claim_tx]
+
+  - id: brain.state.writers.clo_history
+    type: module
+    process: brain
+    path: python/src/boros_brain/state/writers/clo_history.py
+    public_functions: [insert_clo_snapshot]
+
+  - id: brain.state.writers.reward_budget_history
+    type: module
+    process: brain
+    path: python/src/boros_brain/state/writers/reward_budget_history.py
+    public_functions: [insert_reward_budget]
+
+  - id: brain.manifest.schema
+    type: module
+    process: brain
+    path: python/src/boros_brain/manifest/schema.py
+    public_functions: []   # Pydantic model only
+
+  - id: brain.manifest.writer
+    type: module
+    process: brain
+    path: python/src/boros_brain/manifest/writer.py
+    public_functions: [build_run_manifest, write_manifest]
+
+  - id: brain.logging.structlog_setup
+    type: module
+    process: brain
+    path: python/src/boros_brain/logging/structlog_setup.py
+    public_functions: [configure_logging, get_logger]
+
+  - id: brain.logging.schema
+    type: module
+    process: brain
+    path: python/src/boros_brain/logging/schema.py
+    public_functions: []   # Pydantic model only
+
+  - id: brain.bus.messages
+    type: module
+    process: brain
+    path: python/src/boros_brain/bus/messages.py
+    public_functions: []   # Pydantic models only
+
+  - id: brain.bus.cmd
+    type: module
+    process: brain
+    path: python/src/boros_brain/bus/cmd.py
+    public_functions: []   # CmdBus class only
+
+  - id: brain.bus.events
+    type: module
+    process: brain
+    path: python/src/boros_brain/bus/events.py
+    public_functions: []   # EventBus class only
+
+  - id: brain.bus.heartbeat
+    type: module
+    process: brain
+    path: python/src/boros_brain/bus/heartbeat.py
+    public_functions: []   # HeartbeatMonitor class only
+
+  # ── TypeScript modules (from 01-01 / 01-02 / 01-03) ───────────────────
+  - id: hands.main
+    type: module
+    process: hands
+    path: ts/src/boros_hands/main.ts
+    public_functions: []
+
+  - id: hands.config
+    type: module
+    process: hands
+    path: ts/src/boros_hands/config.ts
+    public_functions: []
+
+  - id: hands.logger
+    type: module
+    process: hands
+    path: ts/src/boros_hands/logger.ts
+    public_functions: [configureHandsLogger, log]
+
+  - id: hands.state.sqlite_writer
+    type: module
+    process: hands
+    path: ts/src/boros_hands/state/sqlite_writer.ts
+    public_functions: [openHandsDb, upsertOpenOrder, insertTxReceipt]
+
+  - id: hands.bus.messages
+    type: module
+    process: hands
+    path: ts/src/boros_hands/bus/messages.ts
+    public_functions: []
+
+  - id: hands.bus.cmd_listener
+    type: module
+    process: hands
+    path: ts/src/boros_hands/bus/cmd_listener.ts
+    public_functions: []
+
+  - id: hands.bus.event_publisher
+    type: module
+    process: hands
+    path: ts/src/boros_hands/bus/event_publisher.ts
+    public_functions: []
+
+  - id: hands.bus.heartbeat
+    type: module
+    process: hands
+    path: ts/src/boros_hands/bus/heartbeat.ts
+    public_functions: []
+
+  # ── SQLite tables (8 tables from 01-02 schema) ─────────────────────────
+  - id: state.open_orders
+    type: storage
+    path: state/state.sqlite#open_orders
+
+  - id: state.decisions
+    type: storage
+    path: state/state.sqlite#decisions
+
+  - id: state.tx_receipts
+    type: storage
+    path: state/state.sqlite#tx_receipts
+
+  - id: state.queue_positions
+    type: storage
+    path: state/state.sqlite#queue_positions
+
+  - id: state.run_manifests
+    type: storage
+    path: state/state.sqlite#run_manifests
+
+  - id: state.epoch_rewards
+    type: storage
+    path: state/state.sqlite#epoch_rewards
+
+  - id: state.clo_history
+    type: storage
+    path: state/state.sqlite#clo_history
+
+  - id: state.reward_budget_history
+    type: storage
+    path: state/state.sqlite#reward_budget_history
+
+  # ── Config knobs — one node per BotConfig leaf field ───────────────────
+  # BotConfig top-level fields
+  - id: config.mode
+    type: config_knob
+    pydantic_path: BotConfig.mode
+    default: null   # required, no default
+
+  - id: config.strategy_version
+    type: config_knob
+    pydantic_path: BotConfig.strategy_version
+    default: null   # required
+
+  - id: config.market_id
+    type: config_knob
+    pydantic_path: BotConfig.market_id
+    default: null   # required
+
+  - id: config.side
+    type: config_knob
+    pydantic_path: BotConfig.side
+    default: null   # required
+
+  - id: config.root_wallet_address
+    type: config_knob
+    pydantic_path: BotConfig.root_wallet_address
+    default: null   # required
+
+  - id: config.agent_wallet_address
+    type: config_knob
+    pydantic_path: BotConfig.agent_wallet_address
+    default: null   # required
+
+  # StrategyConfig knobs
+  - id: config.strategy.voluntary_cancel_forfeits_accumulated
+    type: config_knob
+    pydantic_path: BotConfig.strategy.voluntary_cancel_forfeits_accumulated
+    default: false
+
+  - id: config.strategy.target_share
+    type: config_knob
+    pydantic_path: BotConfig.strategy.target_share
+    default: 0.05
+
+  # ExecutionConfig knobs
+  - id: config.execution.cancel_latency_budget_s
+    type: config_knob
+    pydantic_path: BotConfig.execution.cancel_latency_budget_s
+    default: 5.0
+
+  - id: config.execution.require_success_default
+    type: config_knob
+    pydantic_path: BotConfig.execution.require_success_default
+    default: true
+
+  - id: config.execution.agent_wallet_gas_warn_multiples
+    type: config_knob
+    pydantic_path: BotConfig.execution.agent_wallet_gas_warn_multiples
+    default: 50
+
+  - id: config.execution.agent_wallet_gas_halt_multiples
+    type: config_knob
+    pydantic_path: BotConfig.execution.agent_wallet_gas_halt_multiples
+    default: 20
+
+  - id: config.execution.agent_wallet_gas_emergency_multiples
+    type: config_knob
+    pydantic_path: BotConfig.execution.agent_wallet_gas_emergency_multiples
+    default: 5
+
+  # DataConfig knobs
+  - id: config.data.markets_poll_interval_s
+    type: config_knob
+    pydantic_path: BotConfig.data.markets_poll_interval_s
+    default: 30.0
+
+  - id: config.data.e_liq_poll_interval_s
+    type: config_knob
+    pydantic_path: BotConfig.data.e_liq_poll_interval_s
+    default: 5.0
+
+  - id: config.data.chain_time_cache_ttl_s
+    type: config_knob
+    pydantic_path: BotConfig.data.chain_time_cache_ttl_s
+    default: 1.0
+
+  - id: config.data.rpc_url_arbitrum
+    type: config_knob
+    pydantic_path: BotConfig.data.rpc_url_arbitrum
+    default: null   # required
+
+  - id: config.data.boros_rest_base
+    type: config_knob
+    pydantic_path: BotConfig.data.boros_rest_base
+    default: "https://api.boros.finance/open-api/v1"
+
+  # InfraConfig knobs
+  - id: config.infra.sqlite_path
+    type: config_knob
+    pydantic_path: BotConfig.infra.sqlite_path
+    default: "state/state.sqlite"
+
+  - id: config.infra.logs_dir
+    type: config_knob
+    pydantic_path: BotConfig.infra.logs_dir
+    default: "logs"
+
+  - id: config.infra.zmq_cmd_endpoint
+    type: config_knob
+    pydantic_path: BotConfig.infra.zmq_cmd_endpoint
+    default: "ipc:///tmp/boros.cmd"
+
+  - id: config.infra.zmq_events_brain_endpoint
+    type: config_knob
+    pydantic_path: BotConfig.infra.zmq_events_brain_endpoint
+    default: "ipc:///tmp/boros.events.brain"
+
+  - id: config.infra.zmq_events_hands_endpoint
+    type: config_knob
+    pydantic_path: BotConfig.infra.zmq_events_hands_endpoint
+    default: "ipc:///tmp/boros.events.hands"
+
+  - id: config.infra.zmq_kill_endpoint
+    type: config_knob
+    pydantic_path: BotConfig.infra.zmq_kill_endpoint
+    default: "ipc:///tmp/boros.cmd.kill"
+
+  - id: config.infra.heartbeat_interval_s
+    type: config_knob
+    pydantic_path: BotConfig.infra.heartbeat_interval_s
+    default: 5.0
+
+  - id: config.infra.heartbeat_timeout_misses
+    type: config_knob
+    pydantic_path: BotConfig.infra.heartbeat_timeout_misses
+    default: 3
+
+  - id: config.infra.chain_drift_warn_s
+    type: config_knob
+    pydantic_path: BotConfig.infra.chain_drift_warn_s
+    default: 5.0
+
+  - id: config.infra.chain_drift_halt_s
+    type: config_knob
+    pydantic_path: BotConfig.infra.chain_drift_halt_s
+    default: 30.0
+
+  # ScreenerConfig knobs
+  - id: config.screener.min_time_to_maturity_days
+    type: config_knob
+    pydantic_path: BotConfig.screener.min_time_to_maturity_days
+    default: 30
+
+  - id: config.screener.trades_window_days
+    type: config_knob
+    pydantic_path: BotConfig.screener.trades_window_days
+    default: 60
+
+  - id: config.screener.realized_vol_window_days
+    type: config_knob
+    pydantic_path: BotConfig.screener.realized_vol_window_days
+    default: 14
+
+  - id: config.screener.reversal_count_window_days
+    type: config_knob
+    pydantic_path: BotConfig.screener.reversal_count_window_days
+    default: 3
+
+  - id: config.screener.alt_yield
+    type: config_knob
+    pydantic_path: BotConfig.screener.alt_yield
+    default: 0.05
+
+  - id: config.screener.fill_loss_coarse_bound
+    type: config_knob
+    pydantic_path: BotConfig.screener.fill_loss_coarse_bound
+    default: 0.02
+
+  # ── External dependencies ───────────────────────────────────────────────
+  - id: ext.boros_rest
+    type: external
+    url: "https://api.boros.finance/open-api/v1"
+
+  - id: ext.arbitrum_rpc
+    type: external
+    url: "https://arb1.arbitrum.io/rpc"
+
+  - id: ext.boros_historical_data
+    type: external
+    url: "https://historical-data.boros.finance"
+
+edges:
+  # ── brain internal wiring ──────────────────────────────────────────────
+  - from: brain
+    to: brain.main
+    type: calls
+    notes: "entrypoint dispatch"
+
+  - from: brain.main
+    to: brain.config.loader
+    type: calls
+
+  - from: brain.config.loader
+    to: brain.config.schema
+    type: calls
+    notes: "BotConfig.model_validate(yaml)"
+
+  - from: brain.main
+    to: brain.manifest.writer
+    type: calls
+
+  - from: brain.manifest.writer
+    to: brain.config.schema
+    type: reads
+    notes: "model_dump(mode='json') reflection — every knob surfaces in manifest"
+
+  - from: brain.manifest.writer
+    to: brain.manifest.schema
+    type: calls
+    notes: "builds RunManifest Pydantic object"
+
+  - from: brain.manifest.writer
+    to: brain.state.writers.run_manifests
+    type: calls
+
+  - from: brain.state.writers.run_manifests
+    to: state.run_manifests
+    type: writes
+
+  - from: brain.state.writers.open_orders
+    to: state.open_orders
+    type: writes
+
+  - from: brain.state.writers.decisions
+    to: state.decisions
+    type: writes
+
+  - from: brain.state.writers.tx_receipts
+    to: state.tx_receipts
+    type: writes
+
+  - from: brain.state.writers.queue_positions
+    to: state.queue_positions
+    type: writes
+
+  - from: brain.state.writers.epoch_rewards
+    to: state.epoch_rewards
+    type: writes
+
+  - from: brain.state.writers.clo_history
+    to: state.clo_history
+    type: writes
+
+  - from: brain.state.writers.reward_budget_history
+    to: state.reward_budget_history
+    type: writes
+
+  - from: brain.main
+    to: brain.logging.structlog_setup
+    type: calls
+
+  - from: brain.logging.structlog_setup
+    to: brain.logging.schema
+    type: reads
+
+  - from: brain.main
+    to: brain.bus.cmd
+    type: calls
+
+  - from: brain.main
+    to: brain.bus.events
+    type: calls
+
+  - from: brain.main
+    to: brain.bus.heartbeat
+    type: calls
+
+  - from: brain.bus.cmd
+    to: brain.bus.messages
+    type: reads
+
+  - from: brain.bus.events
+    to: brain.bus.messages
+    type: reads
+
+  - from: brain.bus.heartbeat
+    to: brain.bus.messages
+    type: reads
+
+  # ── hands internal wiring ──────────────────────────────────────────────
+  - from: hands.main
+    to: hands.logger
+    type: calls
+
+  - from: hands.main
+    to: hands.config
+    type: reads
+
+  - from: hands.main
+    to: hands.bus.cmd_listener
+    type: calls
+
+  - from: hands.main
+    to: hands.bus.event_publisher
+    type: calls
+
+  - from: hands.main
+    to: hands.bus.heartbeat
+    type: calls
+
+  - from: hands.bus.cmd_listener
+    to: hands.bus.messages
+    type: reads
+
+  - from: hands.bus.event_publisher
+    to: hands.bus.messages
+    type: reads
+
+  - from: hands.bus.heartbeat
+    to: hands.bus.messages
+    type: reads
+
+  - from: hands.main
+    to: hands.state.sqlite_writer
+    type: calls
+
+  - from: hands.state.sqlite_writer
+    to: state.open_orders
+    type: writes
+
+  - from: hands.state.sqlite_writer
+    to: state.tx_receipts
+    type: writes
+
+  # ── Cross-process ZMQ edges ────────────────────────────────────────────
+  - from: brain.bus.cmd
+    to: hands.bus.cmd_listener
+    type: emits-event
+    notes: "ZMQ PUSH on ipc:///tmp/boros.cmd"
+
+  - from: brain.bus.cmd
+    to: hands.bus.cmd_listener
+    type: emits-event
+    notes: "ZMQ PUSH on ipc:///tmp/boros.cmd.kill (KILL priority lane)"
+
+  - from: hands.bus.event_publisher
+    to: brain.bus.events
+    type: emits-event
+    notes: "ZMQ PUB on ipc:///tmp/boros.events.hands"
+
+  - from: brain.bus.events
+    to: hands.bus.event_publisher
+    type: emits-event
+    notes: "ZMQ PUB on ipc:///tmp/boros.events.brain"
+
+  # ── External dependency edges (stubs for pollers landing in later plans) ─
+  - from: brain
+    to: ext.boros_rest
+    type: calls
+    notes: "HTTPS GET /markets, /epoch-rewards — actual poller modules land in Phase 1 DATA-* plans"
+
+  - from: brain
+    to: ext.arbitrum_rpc
+    type: calls
+    notes: "eth_call fIndexOracle — actual reader lands in Phase 1 DATA-07"
+
+  - from: brain
+    to: ext.boros_historical_data
+    type: calls
+    notes: "NDJSON download market-trades, order-book — data ingester lands in Phase 1 DATA-01..04"
+
+  # ── Config knob dependency edges (sparse at Phase 1 — fill in as consumers land) ─
+  - from: brain.config.schema
+    to: config.infra.zmq_cmd_endpoint
+    type: depends-on-config
+    notes: "CmdBus reads zmq_cmd_endpoint at init"
+
+  - from: brain.config.schema
+    to: config.infra.zmq_kill_endpoint
+    type: depends-on-config
+    notes: "CmdBus reads zmq_kill_endpoint for KILL priority lane"
+
+  - from: brain.config.schema
+    to: config.infra.zmq_events_brain_endpoint
+    type: depends-on-config
+    notes: "EventBus reads zmq_events_brain_endpoint"
+
+  - from: brain.config.schema
+    to: config.infra.zmq_events_hands_endpoint
+    type: depends-on-config
+    notes: "EventBus reads zmq_events_hands_endpoint"
+
+  - from: brain.config.schema
+    to: config.infra.heartbeat_interval_s
+    type: depends-on-config
+    notes: "HeartbeatMonitor reads heartbeat_interval_s"
+
+  - from: brain.config.schema
+    to: config.infra.heartbeat_timeout_misses
+    type: depends-on-config
+    notes: "HeartbeatMonitor reads heartbeat_timeout_misses"
+
+  - from: brain.config.schema
+    to: config.infra.sqlite_path
+    type: depends-on-config
+    notes: "open_connection reads sqlite_path"
+
+  - from: brain.config.schema
+    to: config.data.rpc_url_arbitrum
+    type: depends-on-config
+    notes: "ext.arbitrum_rpc poller reads rpc_url_arbitrum"
+
+  - from: brain.config.schema
+    to: config.data.boros_rest_base
+    type: depends-on-config
+    notes: "ext.boros_rest poller reads boros_rest_base"
