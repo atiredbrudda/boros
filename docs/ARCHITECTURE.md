@@ -280,15 +280,21 @@ flowchart TB
     brain -- "eth_call fIndexOracle" --> ext_rpc
     brain -- "NDJSON download market-trades, order-book" --> ext_hist
 
-    %% Phase 2 Fill Model (Plan 02-01)
-    subgraph fill_model["Fill Model (Phase 2, Plan 02-01)"]
+    %% Phase 2 Fill Model (Plans 02-01 + 02-02)
+    subgraph fill_model["Fill Model (Phase 2, Plans 02-01/02-02)"]
         fill_features_mod["fill_model/features.py<br/>build_features_table (FILL-02)"]
         fill_config_mod["fill_model/config.py<br/>FillModelConfig (11 knobs)"]
         fill_constants_mod["fill_model/constants.py<br/>ALLOWED_COVARIATES + DEFAULT_*"]
         parquet_fill_features[("parquet/fill_features<br/>market_id / side")]
+        fill_queue_tracker["fill_model/queue_tracker.py<br/>QueueTracker + compute_drift_diagnostic (FILL-03)"]
+        fill_amm_consumption["fill_model/amm_consumption.py<br/>compute_amm_share_timeseries + assert_epoch_conservation (FILL-04)"]
+        fill_schemas["fill_model/schemas.py<br/>ReplayResult + EpochFlowSnapshot + AMMConsumptionIdentityError"]
 
         fill_features_mod -->|writes| parquet_fill_features
         fill_config_mod -->|reads| fill_constants_mod
+        fill_queue_tracker -->|calls| fill_amm_consumption
+        fill_queue_tracker -->|uses| fill_schemas
+        fill_amm_consumption -->|uses| fill_schemas
     end
 
     parquet_mt -->|"DuckDB market_trades view"| fill_features_mod
@@ -297,9 +303,13 @@ flowchart TB
     state_clo -->|"sqlite_scanner read-only"| fill_features_mod
     fill_features_mod -->|"open_analytical_conn"| brain_duckdb_setup
     brain_cfg_schema -->|"BotConfig.fill_model attach-point"| fill_config_mod
+    parquet_mt -->|"eventIndex-ordered replay"| fill_queue_tracker
+    parquet_ob_raw -->|"hourly anchors"| fill_queue_tracker
+    parquet_ob_raw -->|"per-tick raw size"| fill_amm_consumption
+    parquet_ob_comb -->|"per-tick combined size"| fill_amm_consumption
 ```
 
-### Phase 2 Fill Model (Plan 02-01)
+### Phase 2 Fill Model (Plans 02-01 + 02-02)
 
 The fill model consumes Phase 1's data pipeline outputs through a DuckDB-joined
 feature table. `build_features_table` (in `brain.fill_model.features`) produces
@@ -307,10 +317,21 @@ per-(market, side, bin) rows with 5 covariates: `basis_spread`, `imbalance`,
 `sin_settlement`, `cos_settlement`, `ewma_vol`. The EWMA uses a strict
 left-closed window (`ROWS BETWEEN 5 PRECEDING AND 1 PRECEDING`) — no
 look-ahead (T-02-F-02). `FillModelConfig` carries 11 knobs; all auto-surface
-in RUN_MANIFEST via reflection (T-02-R-01). Subsequent plans (02-02/03/04) add
-QueueTracker, AMMConsumption, Poisson GLM fit, predict, and the refit loop.
+in RUN_MANIFEST via reflection (T-02-R-01).
 
-See [[fill-model-library-decision-tick-vs-statsmodels]] and [[covariate-selection-v05]].
+**Plan 02-02 additions:** `QueueTracker` runs a tri-track replay
+(pessimistic / realized / optimistic) on `(blockTimestamp, eventIndex)`-ordered
+market-trades, reconciling against hourly `order_book_raw` snapshots. Drift
+diagnostic and bracket-width warnings are emitted as
+`fill_model.queue_drift_reconciliation` and `fill_model.bracket_width_warn`
+log events. `AMMConsumption` is the runtime analogue of Phase 1's `DATA-05`
+ingest-time assertion — per-tick `amm_share = max(combined - raw, 0.0)` and a
+per-epoch flow-identity check that raises `AMMConsumptionIdentityError` on
+violation. PITFALLS §B1 (queue-drift blindness) and §B3 (AMM double-count) are
+defused. Subsequent plans (02-03/04) add Poisson GLM fit, predict, and the refit loop.
+
+See [[fill-model-library-decision-tick-vs-statsmodels]], [[covariate-selection-v05]],
+[[queue-tracker-algorithm-v05]], and [[amm-consumption-model-v05]].
 
 ## What's declared in `docs/architecture.yml`
 

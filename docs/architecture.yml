@@ -755,6 +755,25 @@ nodes:
     pydantic_path: BotConfig.fill_model.min_events_per_param_ratio
     default: 10
 
+  # ── Phase 2: Fill Model — Plan 02-02 (queue tracker + amm consumption + schemas) ──
+  - id: brain.fill_model.schemas
+    type: module
+    process: brain
+    path: python/src/boros_brain/fill_model/schemas.py
+    public_functions: []   # ReplayResult, EpochFlowSnapshot, AMMConsumptionIdentityError are classes
+
+  - id: brain.fill_model.queue_tracker
+    type: module
+    process: brain
+    path: python/src/boros_brain/fill_model/queue_tracker.py
+    public_functions: [compute_drift_diagnostic]   # QueueTracker is a class
+
+  - id: brain.fill_model.amm_consumption
+    type: module
+    process: brain
+    path: python/src/boros_brain/fill_model/amm_consumption.py
+    public_functions: [compute_amm_share_timeseries, assert_epoch_conservation]
+
 edges:
   # ── brain internal wiring ──────────────────────────────────────────────
   - from: brain
@@ -1533,3 +1552,49 @@ edges:
     to: config.fill_model.covariate_whitelist
     type: depends-on-config
     notes: "Plan 02-03 fitter consults covariate_whitelist to select columns from the feature table"
+
+  # ── Phase 2 Plan 02-02 edges ───────────────────────────────────────────────
+  - from: brain.fill_model.queue_tracker
+    to: parquet.market_trades
+    type: reads
+    notes: "eventIndex-ordered tape replay — (blockTimestamp, eventIndex) sort"
+
+  - from: brain.fill_model.queue_tracker
+    to: parquet.order_book_raw
+    type: reads
+    notes: "hourly replay anchors — snapshot_ts sorted per (market_id, side)"
+
+  - from: brain.fill_model.queue_tracker
+    to: brain.fill_model.amm_consumption
+    type: calls
+    notes: "imports assert_epoch_conservation for runtime identity check; also imports AMMConsumptionIdentityError via schemas"
+
+  - from: brain.fill_model.queue_tracker
+    to: brain.fill_model.schemas
+    type: calls
+    notes: "ReplayResult dataclass — returned by replay_window"
+
+  - from: brain.fill_model.queue_tracker
+    to: config.fill_model.bracket_width_warn_multiplier
+    type: depends-on-config
+    notes: "triggers fill_model.bracket_width_warn log event when bracket exceeds multiplier * hourly_mean_queue"
+
+  - from: brain.fill_model.queue_tracker
+    to: config.fill_model.queue_tracker_bias_mode
+    type: depends-on-config
+    notes: "pessimistic (default) | optimistic | realized — selects which track feeds PredictInput.queue_ahead_wei"
+
+  - from: brain.fill_model.amm_consumption
+    to: parquet.order_book_raw
+    type: reads
+    notes: "per-tick raw size for amm_share = max(combined - raw, 0.0)"
+
+  - from: brain.fill_model.amm_consumption
+    to: parquet.order_book_combined
+    type: reads
+    notes: "per-tick combined (raw + AMM liquidity) size for amm_share computation"
+
+  - from: brain.fill_model.amm_consumption
+    to: brain.fill_model.schemas
+    type: calls
+    notes: "AMMConsumptionIdentityError exception class lives in schemas; re-exported from amm_consumption"
