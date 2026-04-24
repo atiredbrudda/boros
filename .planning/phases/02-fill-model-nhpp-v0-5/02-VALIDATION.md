@@ -58,7 +58,7 @@ created: 2026-04-24
 | T-02-C-01 | 02-04 calibration | 3 | FILL-05 | — | Calibration-plot predicted P(fill) matches realized within ±5pp per decile on hold-out | integration | `uv run pytest tests/test_fill_model_calibration_gof.py::test_calibration_on_holdout -x` | ❌ W0 | ⬜ pending |
 | T-02-C-02 | 02-04 calibration | 3 | FILL-06 | — | Rolling 14-day refit loop produces a new fit artifact each cadence | integration | `uv run pytest tests/test_fill_model_calibration_gof.py::test_refit_loop_writes_artifact -x` | ❌ W0 | ⬜ pending |
 | T-02-C-03 | 02-04 calibration | 3 | FILL-06 | — | GoF (Rosenblatt-KS) below bootstrap threshold triggers `fit_degraded` log line grep-able by `run_id` | unit | `uv run pytest tests/test_fill_model_calibration_gof.py::test_degraded_warning_on_regime_shift -x` | ❌ W0 | ⬜ pending |
-| T-02-R-01 | 02-01 feature-pipeline | 1 | PROTO-04 (RUN_MANIFEST) | V14 Configuration | All `fill_model` knobs appear in RUN_MANIFEST (reflection-driven) | integration | `uv run pytest tests/test_manifest_reflection.py::test_manifest_contains_fill_model_knobs -x` | ❌ W0 | ⬜ pending |
+| T-02-R-01 | 02-01 feature-pipeline | 1 | PROTO-04 (RUN_MANIFEST) | V14 Configuration | All `fill_model` knobs appear in RUN_MANIFEST (reflection-driven) | integration | `uv run pytest tests/test_manifest_contains_all_knobs.py::test_fill_model_leaves_surfaced -x` | ✅ extend existing file | ⬜ pending |
 | T-02-L-01 | 02-04 calibration | 3 | PROTO-02 (architecture.yml) | — | `architecture.yml` contains every new node + edge declared by Phase 2 | lint | `uv run pytest tests/test_architecture_lint.py -x` | ❌ W0 (hook exists, test stub new) | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
@@ -75,7 +75,7 @@ Wave 0 is a prerequisite feature — before any FILL-XX code is written, these t
 - [ ] `python/tests/test_fill_model_fit_basic.py` — FILL-01 GLM convergence + degraded-fit handling
 - [ ] `python/tests/test_fill_model_predict_contract.py` — FILL-05 predict contract (unit interval, NaN raise, monotonicity)
 - [ ] `python/tests/test_fill_model_calibration_gof.py` — FILL-06 Rosenblatt-KS GoF + refit loop
-- [ ] `python/tests/test_manifest_reflection.py` — PROTO-04 (add fill_model knob assertion to existing manifest tests)
+- [ ] `python/tests/test_manifest_contains_all_knobs.py` — PROTO-04 (extend existing file with `test_fill_model_leaves_surfaced` assertion; no new file)
 - [ ] `python/tests/test_architecture_lint.py` — PROTO-02 (stub test invoking `scripts/architecture_lint.py` as a subprocess)
 - [ ] `python/tests/fixtures/fill_model_tiny_tape.ndjson` — synthetic 100-trade tape for queue replay (hand-verifiable)
 - [ ] `python/tests/fixtures/fill_model_synthetic_poisson.parquet` — known-β Poisson realization for fit regression
