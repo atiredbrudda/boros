@@ -26,6 +26,9 @@ data/parquet/**/*.parquet
 .env.keys
 .env.local
 
+# Operator config (wallet addresses — keep local, never commit)
+strategy/v0.5-default.yaml
+
 # Editor
 .DS_Store
 .idea/

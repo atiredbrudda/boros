@@ -18,6 +18,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from structlog.contextvars import get_contextvars
+
 # Resolve template path: prefer CWD-relative (production), fall back to repo-root
 # discovery (test environments that run pytest from python/ subdirectory).
 _THIS_FILE = Path(__file__).resolve()
@@ -47,7 +49,7 @@ def write_kill_report(
     *,
     config: Any,  # BotConfig (avoid circular import by typing as Any)
     threshold: float,
-    run_id: str = "<current_run_id>",
+    run_id: str | None = None,
     template_path: Path | None = None,
     output_dir: Path | None = None,
 ) -> Path:
@@ -63,8 +65,8 @@ def write_kill_report(
     threshold:
         Computed alt_yield + fill_loss_coarse_bound value (decimal fraction).
     run_id:
-        Active run_id from contextvar (passed in by caller; defaults to placeholder
-        for contexts where no run_id is bound yet).
+        Active run_id. If None, reads from structlog contextvars (bound by
+        configure_logging). Falls back to placeholder if neither is set.
     template_path:
         Override the template path (useful in tests). Defaults to auto-discovery.
     output_dir:
@@ -74,6 +76,7 @@ def write_kill_report(
     -------
     Path to the written kill-report file.
     """
+    resolved_run_id = run_id or get_contextvars().get("run_id", "<current_run_id>")
     resolved_template = template_path or _find_template()
     template = resolved_template.read_text()
     today = datetime.now(UTC)
@@ -108,7 +111,7 @@ def write_kill_report(
     rendered = template.format(
         timestamp_iso=today.isoformat(),
         git_sha=git_sha,
-        run_id=run_id,
+        run_id=resolved_run_id,
         rows=row_md,
         threshold=threshold,
         knob_tree_json=json.dumps(config.model_dump(mode="json"), indent=2),
