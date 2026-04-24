@@ -10,6 +10,7 @@ Contract:
 Design-locked. Any change to this signature is a Phase-4 breaking change.
 See [[fill-model-predict-contract]] and [[known-issues-nan-covariate-silent-fallback-do-not]].
 """
+
 from __future__ import annotations
 
 import math
@@ -63,7 +64,7 @@ def predict(req: PredictInput, *, sqlite_path: Path, config: BotConfig) -> Predi
         name
         for name in whitelist
         if name not in req.current_features
-        or not isinstance(req.current_features[name], (int, float))
+        or not isinstance(req.current_features[name], int | float)
         or math.isnan(float(req.current_features[name]))
     ]
     if missing:
@@ -88,6 +89,21 @@ def predict(req: PredictInput, *, sqlite_path: Path, config: BotConfig) -> Predi
 
     # 3. Staleness check
     fit_age_s = float(req.current_chain_ts - fit.fit_window_end_ts)
+    if fit_age_s < 0:
+        # fit_window_end_ts is in the future relative to current_chain_ts —
+        # possible if the chain clock rolled back or a bootstrap artifact was
+        # persisted with a future window end (e.g. drifted machine clock).
+        # Log a warning and treat as age=0 (fresh). Do not raise — the operator
+        # warning is the appropriate signal here.
+        log.warning(
+            "fill_model.predict_future_dated_fit",
+            market_id=req.market_id,
+            side=req.side,
+            fit_window_end_ts=fit.fit_window_end_ts,
+            current_chain_ts=req.current_chain_ts,
+            fit_age_s=fit_age_s,
+        )
+        fit_age_s = 0.0
     if fit_age_s > config.fill_model.fit_max_staleness_s:
         log.warning(
             "fill_model.no_fresh_fit",
