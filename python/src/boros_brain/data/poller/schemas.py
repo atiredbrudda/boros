@@ -25,12 +25,10 @@ from pydantic import BaseModel, ConfigDict, Field
 class SyncStatus(BaseModel):
     """Freshness indicator returned at top level."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
 
     block_number: int = Field(alias="blockNumber")
     timestamp: int
-
-    model_config = ConfigDict(extra="allow", populate_by_name=True)
 
 
 class MarketImData(BaseModel):
