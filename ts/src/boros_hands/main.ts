@@ -1,26 +1,35 @@
 /**
- * Boros hands entrypoint skeleton.
+ * Boros hands entrypoint.
  *
- * Wave-0 shim: boots, prints a single line, awaits SIGTERM, exits 0.
+ * Boot contract (matches the Python MANIFEST-FIRST protocol on the brain side):
+ *   1. Read BOROS_RUN_ID + BOROS_LOGS_DIR from env (brain spawns hands with these set).
+ *   2. configureHandsLogger opens the log file.
+ *   3. Wrap the coroutine in ctxStore.run so `run_id` propagates via AsyncLocalStorage.
+ *   4. (Plan 01-03 Task 2) wire CmdListener + EventPublisher + heartbeat.
+ *   5. Await SIGTERM / SIGINT.
  *
- * // ZMQ bus wired by plan 01-03 (INFRA-05).
- * // pino logger wired by plan 01-03 (INFRA-07).
+ * // ZMQ bus wired by plan 01-03 Task 2 (INFRA-05).
  * // Socket.IO listener wired by Phase 6 (EXEC / WS).
  */
 
+import { configureHandsLogger, ctxStore } from './logger.js';
+
 export async function main(): Promise<number> {
-  const runId = process.env.BOROS_RUN_ID ?? '<unassigned>';
-  // eslint-disable-next-line no-console
-  console.log(`boros-hands booted run_id=${runId}`);
+  const run_id = process.env.BOROS_RUN_ID ?? '<unassigned>';
+  const logsDir = process.env.BOROS_LOGS_DIR ?? 'logs';
+  const logger = configureHandsLogger(run_id, logsDir);
 
   return new Promise<number>((resolve) => {
-    const shutdown = (): void => {
-      // eslint-disable-next-line no-console
-      console.log('boros-hands received SIGTERM — exiting');
-      resolve(0);
-    };
-    process.once('SIGTERM', shutdown);
-    process.once('SIGINT', shutdown);
+    ctxStore.run({ run_id, tier: 'hands' }, () => {
+      logger.info({ event: 'hands_booted' });
+
+      const shutdown = (): void => {
+        logger.info({ event: 'hands_shutdown' });
+        resolve(0);
+      };
+      process.once('SIGTERM', shutdown);
+      process.once('SIGINT', shutdown);
+    });
   });
 }
 

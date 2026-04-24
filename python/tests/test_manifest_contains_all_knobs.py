@@ -11,10 +11,26 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from alembic import command
+from alembic.config import Config
 from pydantic import BaseModel
 
 from boros_brain.config.schema import BotConfig
 from boros_brain.manifest.writer import build_run_manifest
+from boros_brain.state.db import open_connection
+
+_ROOT = Path(__file__).resolve().parents[2]
+_ALEMBIC_INI = _ROOT / "python" / "src" / "boros_brain" / "state" / "migrations" / "alembic.ini"
+
+
+def _upgrade(db_path: Path) -> None:
+    """Apply the `run_manifests` table migration to a fresh sqlite file."""
+    with open_connection(db_path):
+        pass
+    cfg = Config(str(_ALEMBIC_INI))
+    cfg.set_main_option("script_location", str(_ALEMBIC_INI.parent))
+    cfg.set_main_option("sqlalchemy.url", f"sqlite:///{db_path}")
+    command.upgrade(cfg, "head")
 
 _EXPECTED_TOP_LEVEL_FIELDS = {
     "run_id",
@@ -120,6 +136,7 @@ def test_first_log_line_is_manifest_and_sidecar_written(
 
     logs_dir = tmp_path / "logs"
     sqlite_path = tmp_path / "state.sqlite"
+    _upgrade(sqlite_path)
 
     # Build + write manifest (sidecar + SQLite row).
     manifest = build_run_manifest(default_config)
