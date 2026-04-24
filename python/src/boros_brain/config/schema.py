@@ -14,9 +14,12 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from ..fill_model.config import FillModelConfig
+from ..loss_model.config import LossModelConfig
+from ..pricing.config import PricingConfig
+from ..reward_model.config import RewardShareModelConfig
 
 
 class StrictBase(BaseModel):
@@ -102,8 +105,50 @@ class ScreenerConfig(StrictBase):
     fill_loss_coarse_bound: float = Field(0.02, ge=0.0, le=1.0)
 
 
+class MarketRewardCalibration(StrictBase):
+    """LOCKED D-01 (2026-04-24): operator-manual per-market reward-budget calibration.
+
+    Refreshed at daily re-screen via the calibrate CLI subcommand. Mirrored into
+    the new state.market_reward_calibration SQLite table with
+    `data_source='operator'` CHECK constraint (see
+    python/src/boros_brain/state/writers/market_reward_calibration.py).
+
+    Replaces the Phase 1 UAT ELiqPoller carried concern — `liquidityRewardPerEpoch`,
+    `longBudget`, `shortBudget` are NOT in the live `/open-api/v1/markets`
+    response; the operator pastes values from Pendle docs / dApp UI / team
+    announcements. See [[e-liq-per-epoch-source-decision]] for the full evidence
+    log and [[market-reward-calibration-operator-workflow]] for the runbook.
+    """
+
+    e_liq_per_epoch_pendle: float = Field(..., ge=0.0)
+    long_side_split: float = Field(..., ge=0.0, le=1.0)
+    short_side_split: float = Field(..., ge=0.0, le=1.0)
+    calibrated_at_utc: str   # ISO8601
+    source: Literal["dapp_ui", "team_statement", "pendle_docs"] = "dapp_ui"
+
+    @field_validator("short_side_split")
+    @classmethod
+    def _splits_sum_to_one(cls, v: float, info) -> float:
+        """P3-4 operator-error guard. long + short MUST equal 1.0 (1e-9 tolerance)."""
+        long = info.data.get("long_side_split")
+        if long is not None and abs(long + v - 1.0) > 1e-9:
+            raise ValueError(
+                f"long_side_split + short_side_split must == 1.0 "
+                f"(got {long} + {v} = {long + v}). "
+                "P3-4 operator-error guard."
+            )
+        return v
+
+
 class MarketCalibration(StrictBase):
-    """Per-market calibration (OU params + CLO bands + oracle addr + maturity)."""
+    """Per-market calibration (OU params + CLO bands + oracle addr + maturity).
+
+    Plan 03-02 added `reward_calibration` (Optional MarketRewardCalibration)
+    for the LOCKED D-01 operator-manual reward-budget calibration. Until the
+    operator runs `python -m boros_brain.reward_model calibrate ...`, this
+    field stays None and downstream Sizer (Plan 03-03) reads from
+    state.market_reward_calibration directly.
+    """
 
     market_id: str
     scale: float
@@ -112,6 +157,7 @@ class MarketCalibration(StrictBase):
     clo_upper_thresh: float
     fIndex_oracle_address: str
     maturity_ts: int
+    reward_calibration: MarketRewardCalibration | None = None   # NEW Plan 03-02
 
 
 class BotConfig(StrictBase):
@@ -134,4 +180,8 @@ class BotConfig(StrictBase):
     infra: InfraConfig = Field(default_factory=InfraConfig)  # type: ignore
     screener: ScreenerConfig = Field(default_factory=ScreenerConfig)  # type: ignore
     fill_model: FillModelConfig = Field(default_factory=FillModelConfig)  # type: ignore
+    loss_model: LossModelConfig = Field(default_factory=LossModelConfig)  # type: ignore
+    reward_share_model: RewardShareModelConfig = Field(default_factory=RewardShareModelConfig)  # type: ignore
+    pricing: PricingConfig = Field(default_factory=PricingConfig)  # type: ignore
+    # sizer: SizerConfig = Field(default_factory=SizerConfig)  # Plan 03-03 will attach; deferred to avoid forward-import order issues
     markets: list[MarketCalibration] = Field(default_factory=list, max_length=1)

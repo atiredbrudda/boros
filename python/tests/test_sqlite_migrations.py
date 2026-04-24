@@ -49,6 +49,7 @@ def test_all_8_tables_exist_after_migration(tmp_path: Path) -> None:
 
     Originally 8 tables; Plan 02-03 adds fill_model_fits as table 9.
     Plan 03-01 adds loss_grid_artifacts as table 10.
+    Plan 03-02 adds competition_history (table 11) and market_reward_calibration (table 12).
     """
     db_path = tmp_path / "mig.sqlite"
     # Pre-create file with WAL + FKs (mirrors production open_connection contract).
@@ -72,6 +73,8 @@ def test_all_8_tables_exist_after_migration(tmp_path: Path) -> None:
         "reward_budget_history",
         "fill_model_fits",
         "loss_grid_artifacts",
+        "competition_history",
+        "market_reward_calibration",
         "alembic_version",
     }
     # sqlite_sequence is an internal SQLite table created automatically when any

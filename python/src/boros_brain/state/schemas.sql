@@ -246,3 +246,59 @@ CREATE TABLE IF NOT EXISTS loss_grid_artifacts (
 
 CREATE INDEX IF NOT EXISTS ix_loss_grid_artifacts_market_side_end
     ON loss_grid_artifacts(market_id, side, window_end_ts DESC);
+
+-- ---------------------------------------------------------------------------
+-- competition_history  (brain-owned) — REWARD-02 Σ_others tracker (Plan 03-02)
+-- ---------------------------------------------------------------------------
+-- Single writer: brain.state.writers.competition_history.
+-- Read by:       brain.reward_model.r_capped, brain.sizer.optimizer (Plan 03-03).
+--
+-- One row per CompetitionTracker.run_one_cycle per market. data_source enum:
+--   'live'                     — REST + parquet both healthy
+--   'fallback_parquet_only'    — N consecutive REST failures; q_me estimated
+--                                from state.open_orders + Σ_others read from
+--                                parquet.order_book_raw (AMM share excluded
+--                                per T-03-06).
+--
+-- AMM share is EXCLUDED by reading parquet.order_book_raw (NOT order_book_combined)
+-- — AMMs do not compete for LO Liquidity Rewards.
+CREATE TABLE IF NOT EXISTS competition_history (
+    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    polled_at_utc       TEXT NOT NULL,
+    chain_ts            INTEGER,
+    market_id           TEXT NOT NULL,
+    q_me_pendle         REAL NOT NULL,
+    sigma_others_pendle REAL NOT NULL,
+    data_source         TEXT NOT NULL CHECK(data_source IN ('live','fallback_parquet_only')),
+    run_id              TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_competition_history_market_polled
+    ON competition_history (market_id, polled_at_utc DESC);
+
+-- ---------------------------------------------------------------------------
+-- market_reward_calibration  (brain-owned) — LOCKED D-01 operator-manual E_liq source
+-- ---------------------------------------------------------------------------
+-- Single writer: brain.state.writers.market_reward_calibration.
+-- Read by:       brain.reward_model.r_capped, brain.sizer.optimizer (Plan 03-03).
+--
+-- LOCKED D-01 (2026-04-24) per user decision: supersedes ELiqPoller's polling
+-- of liquidityRewardPerEpoch / longBudget / shortBudget from GET /markets — those
+-- fields are absent from the live API. Operator pastes values from Pendle docs /
+-- dApp UI / team announcements via the calibrate CLI subcommand.
+--
+-- data_source CHECK enforces ONLY 'operator' — single lineage marker.
+-- See [[e-liq-per-epoch-source-decision]] for the full evidence log and
+-- [[market-reward-calibration-operator-workflow]] for the runbook.
+CREATE TABLE IF NOT EXISTS market_reward_calibration (
+    id                      INTEGER PRIMARY KEY AUTOINCREMENT,
+    market_id               TEXT NOT NULL,
+    e_liq_per_epoch_pendle  REAL NOT NULL CHECK(e_liq_per_epoch_pendle >= 0.0),
+    long_side_split         REAL NOT NULL CHECK(long_side_split BETWEEN 0.0 AND 1.0),
+    short_side_split        REAL NOT NULL CHECK(short_side_split BETWEEN 0.0 AND 1.0),
+    calibrated_at_utc       TEXT NOT NULL,
+    data_source             TEXT NOT NULL CHECK(data_source = 'operator'),
+    source                  TEXT NOT NULL CHECK(source IN ('dapp_ui','team_statement','pendle_docs')),
+    run_id                  TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_market_reward_calibration_market_calibrated
+    ON market_reward_calibration (market_id, calibrated_at_utc DESC);
