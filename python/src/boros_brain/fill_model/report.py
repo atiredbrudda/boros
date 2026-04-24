@@ -6,6 +6,7 @@ so operator attention is immediately drawn to degraded markets.
 
 [[rolling-14-day-refit-cadence-and-staleness]]
 """
+
 from __future__ import annotations
 
 import json
@@ -27,28 +28,30 @@ def write_fill_model_report(
     out_json_path: Path,
     *,
     out_markdown_path: Path | None = None,
-) -> dict:
+) -> dict[str, object]:
     """Aggregate fit rows across config.markets × (long, short); write JSON (+ Markdown).
 
     Returns the payload dict (for inline display in the force-degrade smoke path).
     Degraded rows sort first so the operator sees them at the top.
     """
-    fits: list[dict] = []
+    fits: list[dict[str, object]] = []
     for mkt in config.markets:
         for side in ("long", "short"):
             fit = get_latest_fit(Path(config.infra.sqlite_path), mkt.market_id, side)
             if fit is not None:
-                fits.append({
-                    "market_id": fit.market_id,
-                    "side": fit.side,
-                    "fit_window_end_ts": fit.fit_window_end_ts,
-                    "fit_status": fit.fit_status,
-                    "n_observations": fit.n_observations,
-                    "converged": fit.converged,
-                    "log_likelihood": fit.log_likelihood,
-                    "aic": fit.aic,
-                    "event_index_coverage": fit.event_index_coverage,
-                })
+                fits.append(
+                    {
+                        "market_id": fit.market_id,
+                        "side": fit.side,
+                        "fit_window_end_ts": fit.fit_window_end_ts,
+                        "fit_status": fit.fit_status,
+                        "n_observations": fit.n_observations,
+                        "converged": fit.converged,
+                        "log_likelihood": fit.log_likelihood,
+                        "aic": fit.aic,
+                        "event_index_coverage": fit.event_index_coverage,
+                    }
+                )
     # Sort degraded rows first
     fits.sort(key=lambda f: (f["fit_status"] != "degraded", f["market_id"], f["side"]))
 
@@ -75,8 +78,8 @@ def write_fill_model_report(
         for f in fits:
             ll = f["log_likelihood"]
             aic = f["aic"]
-            ll_str = f"{ll:.2f}" if isinstance(ll, (int, float)) and not (ll != ll) else "nan"  # NaN check
-            aic_str = f"{aic:.2f}" if isinstance(aic, (int, float)) and not (aic != aic) else "nan"
+            ll_str = f"{ll:.2f}" if isinstance(ll, int | float) and ll == ll else "nan"  # NaN check
+            aic_str = f"{aic:.2f}" if isinstance(aic, int | float) and aic == aic else "nan"
             lines.append(
                 f"| {f['market_id']} | {f['side']} | {f['fit_status']} | {f['n_observations']} | "
                 f"{f['converged']} | {ll_str} | {aic_str} | {f['event_index_coverage']} |"
