@@ -168,7 +168,7 @@ def build_per_fill_pnl_from_frame(
     *,
     config: BotConfig,
     market_id: str,
-    pendle_price_usd: float = 1.0,
+    pendle_price_usd: float | None = None,
 ) -> list[PerFillPnL]:
     """Compute PerFillPnL rows from a polars DataFrame matching the replay SQL output.
 
@@ -179,12 +179,18 @@ def build_per_fill_pnl_from_frame(
     — the Phase-1 parquet does not yet carry it; the screener tick helper lands in
     Plan 03-04. For test fixtures, callers pass it through directly.
 
+    ``pendle_price_usd`` defaults to ``config.pricing.pendle_price_usd`` when
+    omitted (Plan 03-04 wiring). Tests may pass an explicit value to exercise
+    edge cases without rebuilding a full BotConfig.
+
     Fee terms (PENDLE-units) per [[fee-cost-term-in-expected-loss]]:
         fee_taker = size × fill_rate × (tau_days / 365) × fees.taker_fee_rate
         fee_settlement = size × fill_rate × (settlement_period_s / 86400 / 365) × settlement_fee_rate
         fee_entrance = market_entrance_fee_usd / pendle_price_usd / 100.0  (100-fill amortization)
         fee_gas = (gas_place + gas_cancel + gas_close) × gas_price × 1e-9 / pendle_price_usd
     """
+    if pendle_price_usd is None:
+        pendle_price_usd = config.pricing.pendle_price_usd
     fees = _get_loss_model_config(config).fees
     maturity_ts = _maturity_ts_for_market(config, market_id)
 
