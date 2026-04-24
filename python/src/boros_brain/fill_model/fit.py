@@ -1,0 +1,203 @@
+"""FILL-01: NHPP log-linear fit via statsmodels.GLM(Poisson, log, exposure).
+
+Per RESEARCH §Code Examples #2 (canonical recipe). The critical-path learner
+for v0.5. `tick` is kept in the stack for simulation + v1.0 Hawkes staging ONLY
+— see [[fill-model-library-decision-tick-vs-statsmodels]].
+
+Note: the wall-clock call is banned in fill_model/ by no_time_time_lint.py (INFRA-14).
+The `created_at` field is set to sentinel 0 here; artifact.write_fit_artifact
+stamps the real timestamp via datetime.now(UTC).timestamp() before the SQLite write.
+"""
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Literal
+
+import numpy as np
+import pandas as pd
+import polars as pl
+import statsmodels.api as sm
+import structlog
+
+from ..config.schema import BotConfig
+from .artifact import write_fit_artifact
+from .schemas import FitArtifact
+
+log = structlog.get_logger(__name__)
+
+__all__ = ["fit_market_side"]
+
+
+def _passes_health_gate(
+    results: sm.GLMResultsWrapper,
+    config: BotConfig,
+) -> tuple[bool, str]:
+    """Return (passes, reason). reason='ok' iff passes; else one of
+    'not_converged' | 'too_few_events' | 'stderr_inflated'."""
+    if not bool(results.converged):
+        return False, "not_converged"
+    n_params = len(results.params)
+    if n_params == 0 or results.nobs / n_params < config.fill_model.min_events_per_param_ratio:
+        return False, "too_few_events"
+    # stderr-inflation: any |bse / params| > 10.0, guarded against params == 0
+    params = np.array(results.params)
+    bse = np.array(results.bse)
+    safe_params = np.where(np.abs(params) < 1e-12, 1e-12, np.abs(params))
+    if np.any(np.abs(bse) / safe_params > 10.0):
+        return False, "stderr_inflated"
+    return True, "ok"
+
+
+def fit_market_side(
+    features_df: pl.DataFrame,
+    market_id: str,
+    side: Literal["long", "short"],
+    config: BotConfig,
+    run_id: str,
+    sqlite_path: Path,
+    event_index_coverage: Literal["full", "degraded"] = "full",
+    *,
+    persist: bool = True,
+) -> FitArtifact:
+    """Fit log λ = β₀ + β·x via statsmodels.GLM(Poisson, log, exposure).
+
+    Persists via write_fit_artifact when persist=True (default). Callers that
+    need throw-away fits (e.g. bootstrap_gof_threshold in calibration.py)
+    must pass persist=False — otherwise 100 bootstrap resamples per invocation
+    would pollute state.fill_model_fits and silently degrade get_latest_fit()
+    lookups. Returns the FitArtifact (never raises on sparse data — tags
+    fit_status='degraded' instead).
+
+    Note: created_at=0 is a sentinel. artifact.write_fit_artifact stamps the
+    real datetime.now(UTC) timestamp before the SQLite/parquet write.
+    """
+    whitelist = list(config.fill_model.covariate_whitelist)
+
+    df = features_df.filter(
+        (pl.col("market_id") == market_id) & (pl.col("side") == side)
+    ).drop_nulls(subset=whitelist + ["trade_count", "bin_duration_s"])
+
+    # Convert to pandas for statsmodels interop via numpy (pyarrow not in project deps)
+    needed_cols = whitelist + ["trade_count", "bin_duration_s"] + (["bin_start"] if "bin_start" in df.columns else [])
+    pdf = pd.DataFrame({col: df[col].to_numpy() for col in needed_cols if col in df.columns})
+    if pdf.empty:
+        # Emit a degraded artifact rather than raising — matches RESEARCH §Common Pitfalls #3
+        artifact = FitArtifact(
+            run_id=run_id,
+            fit_window_start_ts=0,
+            fit_window_end_ts=0,
+            market_id=market_id,
+            side=side,
+            covariate_whitelist=whitelist,
+            beta=[0.0] * (1 + len(whitelist)),
+            beta_stderr=[float("inf")] * (1 + len(whitelist)),
+            log_likelihood=float("nan"),
+            deviance=float("nan"),
+            aic=float("nan"),
+            n_observations=0,
+            converged=False,
+            fit_status="degraded",
+            event_index_coverage=event_index_coverage,
+            created_at=0,  # sentinel — stamped by artifact.write_fit_artifact
+        )
+        log.warning(
+            "fill_model.fit_degraded",
+            market_id=market_id,
+            side=side,
+            reason="no_data",
+        )
+        if persist:
+            write_fit_artifact(artifact, sqlite_path=sqlite_path)
+        return artifact
+
+    exog_raw = pdf[whitelist].values
+    exog = sm.add_constant(exog_raw, has_constant="add")  # always prepend β₀
+    endog = pdf["trade_count"].values
+    exposure = pdf["bin_duration_s"].values
+
+    model = sm.GLM(
+        endog=endog,
+        exog=exog,
+        family=sm.families.Poisson(link=sm.families.links.Log()),
+        exposure=exposure,
+    )
+    try:
+        results = model.fit(method="IRLS", maxiter=100)
+    except Exception as exc:  # noqa: BLE001 — statsmodels convergence failures
+        log.warning(
+            "fill_model.fit_degraded",
+            market_id=market_id,
+            side=side,
+            reason="fit_exception",
+            err=str(exc),
+        )
+        artifact = FitArtifact(
+            run_id=run_id,
+            fit_window_start_ts=int(pdf["bin_start"].min()) if "bin_start" in pdf.columns else 0,
+            fit_window_end_ts=int(pdf["bin_start"].max()) if "bin_start" in pdf.columns else 0,
+            market_id=market_id,
+            side=side,
+            covariate_whitelist=whitelist,
+            beta=[0.0] * (1 + len(whitelist)),
+            beta_stderr=[float("inf")] * (1 + len(whitelist)),
+            log_likelihood=float("nan"),
+            deviance=float("nan"),
+            aic=float("nan"),
+            n_observations=int(len(endog)),
+            converged=False,
+            fit_status="degraded",
+            event_index_coverage=event_index_coverage,
+            created_at=0,  # sentinel
+        )
+        if persist:
+            write_fit_artifact(artifact, sqlite_path=sqlite_path)
+        return artifact
+
+    passes, reason = _passes_health_gate(results, config)
+    fit_status: Literal["ok", "degraded"] = "ok" if passes else "degraded"
+
+    fit_window_start_ts = int(pdf["bin_start"].min()) if "bin_start" in pdf.columns else 0
+    fit_window_end_ts = int(pdf["bin_start"].max()) if "bin_start" in pdf.columns else 0
+    artifact = FitArtifact(
+        run_id=run_id,
+        fit_window_start_ts=fit_window_start_ts,
+        fit_window_end_ts=fit_window_end_ts,
+        market_id=market_id,
+        side=side,
+        covariate_whitelist=whitelist,
+        beta=list(map(float, results.params)),
+        beta_stderr=list(map(float, results.bse)),
+        log_likelihood=float(results.llf),
+        deviance=float(results.deviance),
+        aic=float(results.aic),
+        n_observations=int(results.nobs),
+        converged=bool(results.converged),
+        fit_status=fit_status,
+        event_index_coverage=event_index_coverage,
+        created_at=0,  # sentinel — stamped by artifact.write_fit_artifact
+    )
+
+    log.info(
+        "fill_model.fit_completed",
+        market_id=market_id,
+        side=side,
+        fit_window_end_ts=fit_window_end_ts,
+        n_observations=int(results.nobs),
+        converged=bool(results.converged),
+        fit_status=fit_status,
+        log_likelihood=float(results.llf),
+        aic=float(results.aic),
+    )
+    if fit_status == "degraded":
+        log.warning(
+            "fill_model.fit_degraded",
+            market_id=market_id,
+            side=side,
+            reason=reason,
+            n_observations=int(results.nobs),
+            n_params=int(len(results.params)),
+        )
+
+    if persist:
+        write_fit_artifact(artifact, sqlite_path=sqlite_path)
+    return artifact

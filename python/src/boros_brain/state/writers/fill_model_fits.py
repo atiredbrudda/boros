@@ -16,7 +16,7 @@ import structlog
 
 from boros_brain.state.db import open_connection
 
-from ..fill_model.schemas import FitArtifact
+from ...fill_model.schemas import FitArtifact
 
 log = structlog.get_logger(__name__)
 
