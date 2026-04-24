@@ -43,10 +43,14 @@ class MarketsPoller:
         config: Live BotConfig. Reads data.markets_poll_interval_s and infra.sqlite_path.
         http: Pre-built httpx.AsyncClient (base_url already set to boros_rest_base).
         run_id: Active run ID from the RUN_MANIFEST (carried in log context).
+        w3: Shared AsyncWeb3 instance (caller owns lifecycle). Used to lazily construct
+            FIndexReader instances for markets not pre-wired via findex_readers. If None
+            and a market is encountered without a pre-wired reader, RuntimeError is raised.
+            Pass an AsyncWeb3 from make_arbitrum_rpc() — do NOT create one per call (WR-04).
         findex_readers: Optional pre-built per-market FIndexReader instances keyed by
             imData.symbol (e.g. "BINANCE-ETHUSDT-29MAY2026"). Supplied explicitly by
             tests (mockable) and by main.py when wiring is centralized. If None, the
-            poller lazily creates a reader per market on first encounter.
+            poller lazily creates a reader per market using w3 on first encounter.
         backoff_base_s: Base backoff delay for exponential retry on 5xx (default 0.5s;
             set to 0.01s in tests to keep test suite fast).
     """
@@ -56,12 +60,14 @@ class MarketsPoller:
         config: BotConfig,
         http: httpx.AsyncClient,
         run_id: str,
+        w3: object | None = None,
         findex_readers: dict[str, FIndexReader] | None = None,
         backoff_base_s: float = 0.5,
     ) -> None:
         self.config = config
         self.http = http
         self.run_id = run_id
+        self._w3 = w3  # shared AsyncWeb3 — caller owns lifecycle (WR-04)
         # Cache: market symbol → (clo_lower_thresh, clo_upper_thresh, f_index_raw)
         self._last: dict[str, tuple[float, float, int | None]] = {}
         self._findex_readers: dict[str, FIndexReader] = dict(findex_readers or {})
@@ -147,13 +153,17 @@ class MarketsPoller:
             if findex_oracle_addr and findex_oracle_addr != "0x0000000000000000000000000000000000000000":
                 reader = self._findex_readers.get(symbol)
                 if reader is None:
-                    # Lazy-create reader. In production, main.py wires a shared w3 instance.
-                    # Here we import inline to avoid top-level circular deps.
-                    from boros_brain.data.rpc_client import make_arbitrum_rpc
-
-                    w3 = await make_arbitrum_rpc(self.config)
+                    # Lazy-create reader using the shared w3 instance (WR-04).
+                    # w3 must be provided at construction time — creating one per market
+                    # leaks one aiohttp session per unique symbol (never closed).
+                    if self._w3 is None:
+                        raise RuntimeError(
+                            f"MarketsPoller: no w3 wired for market {symbol!r}. "
+                            "Pass w3=<AsyncWeb3> to MarketsPoller.__init__ or "
+                            "pre-populate findex_readers for every market. (WR-04)"
+                        )
                     reader = FIndexReader(
-                        w3=w3,
+                        w3=self._w3,
                         oracle_address=findex_oracle_addr,
                         ttl_s=self.config.data.chain_time_cache_ttl_s,
                     )
@@ -197,9 +207,16 @@ async def run_markets_poller(config: BotConfig, run_id: str) -> None:
 
     Loops forever at config.data.markets_poll_interval_s cadence.
     Exceptions from tick() are caught and logged; the loop continues.
+
+    A single AsyncWeb3 instance is created here and shared across all FIndexReader
+    instances for the lifetime of the poller (WR-04: prevents one leaked aiohttp
+    session per market symbol encountered for the first time).
     """
+    from boros_brain.data.rpc_client import make_arbitrum_rpc
+
+    w3 = await make_arbitrum_rpc(config)
     async with make_boros_rest_client(config) as http:
-        poller = MarketsPoller(config, http, run_id)
+        poller = MarketsPoller(config, http, run_id, w3=w3)
         while True:
             try:
                 await poller.tick()
