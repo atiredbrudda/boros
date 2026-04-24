@@ -39,7 +39,8 @@ Requirements for the v0.5 release. Every requirement is testable (either automat
 **: `docs/ARCHITECTURE.md` is created with a Mermaid diagram + `docs/architecture.yml` machine-readable manifest listing every module, public function, CLI command, and config knob with typed edges (`calls`, `reads`, `writes`, `emits-event`, `subscribes-to`, `depends-on-config`).
 - [x] **INFRA-09
 **: A **pre-commit hook** runs `scripts/architecture_lint.py` that parses `architecture.yml`, walks the source tree, and fails the commit if code changes don't touch the architecture manifest when they should (or vice versa). This is the mechanical enforcement of Engineering Protocol #2.
-- [ ] **INFRA-10**: LLM Wiki boros workspace is seeded with the initial page set derived from existing planning docs (`boros_bot_guide.md`, `boros_consolidated_plan.md`, `plan_comparison.md`, the four research docs). Every seed page has `**Status:**` set. `index.md` thematic map + alphabetical listing are both populated.
+- [x] **INFRA-10
+**: LLM Wiki boros workspace is seeded with the initial page set derived from existing planning docs (`boros_bot_guide.md`, `boros_consolidated_plan.md`, `plan_comparison.md`, the four research docs). Every seed page has `**Status:**` set. `index.md` thematic map + alphabetical listing are both populated.
 - [x] **INFRA-11
 **: A **wiki-cite pre-commit hook** fails any commit that introduces a new `research/`, `decisions/`, or `postmortem/` markdown file without at least one `[[wiki-link]]` cite — mechanical enforcement of Engineering Protocol #1 write-back.
 - [ ] **INFRA-12**: Secrets (agent wallet private key, RPC URLs, API keys) are loaded via **`dotenvx`** encrypted envs, never committed plaintext. `.env.vault` is committed; `.env.keys` is gitignored and stored in macOS Keychain.
