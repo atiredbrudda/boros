@@ -35,10 +35,13 @@ Requirements for the v0.5 release. Every requirement is testable (either automat
 **: A **RUN_MANIFEST writer** emits the manifest as (a) first log record, (b) `<run_id>.manifest.json` sidecar. Fields: `run_id` (ULID), `started_at`, `mode` (backtest/paper/live), `git_sha`, `git_dirty`, `strategy_version`, `market_id`, `side`, `wallet_address_hash`, full config tree. Mid-run knob change triggers a new `run_id` with `parent_run_id` pointer.
 - [x] **INFRA-07
 **: A **structured JSON logger** (`structlog`) emits one record per event. Every log line carries the active `run_id` for join-on-grep. Log files written to `logs/<YYYY-MM-DD>/<run_id>.log.jsonl`.
-- [ ] **INFRA-08**: `docs/ARCHITECTURE.md` is created with a Mermaid diagram + `docs/architecture.yml` machine-readable manifest listing every module, public function, CLI command, and config knob with typed edges (`calls`, `reads`, `writes`, `emits-event`, `subscribes-to`, `depends-on-config`).
-- [ ] **INFRA-09**: A **pre-commit hook** runs `scripts/architecture_lint.py` that parses `architecture.yml`, walks the source tree, and fails the commit if code changes don't touch the architecture manifest when they should (or vice versa). This is the mechanical enforcement of Engineering Protocol #2.
+- [x] **INFRA-08
+**: `docs/ARCHITECTURE.md` is created with a Mermaid diagram + `docs/architecture.yml` machine-readable manifest listing every module, public function, CLI command, and config knob with typed edges (`calls`, `reads`, `writes`, `emits-event`, `subscribes-to`, `depends-on-config`).
+- [x] **INFRA-09
+**: A **pre-commit hook** runs `scripts/architecture_lint.py` that parses `architecture.yml`, walks the source tree, and fails the commit if code changes don't touch the architecture manifest when they should (or vice versa). This is the mechanical enforcement of Engineering Protocol #2.
 - [ ] **INFRA-10**: LLM Wiki boros workspace is seeded with the initial page set derived from existing planning docs (`boros_bot_guide.md`, `boros_consolidated_plan.md`, `plan_comparison.md`, the four research docs). Every seed page has `**Status:**` set. `index.md` thematic map + alphabetical listing are both populated.
-- [ ] **INFRA-11**: A **wiki-cite pre-commit hook** fails any commit that introduces a new `research/`, `decisions/`, or `postmortem/` markdown file without at least one `[[wiki-link]]` cite — mechanical enforcement of Engineering Protocol #1 write-back.
+- [x] **INFRA-11
+**: A **wiki-cite pre-commit hook** fails any commit that introduces a new `research/`, `decisions/`, or `postmortem/` markdown file without at least one `[[wiki-link]]` cite — mechanical enforcement of Engineering Protocol #1 write-back.
 - [ ] **INFRA-12**: Secrets (agent wallet private key, RPC URLs, API keys) are loaded via **`dotenvx`** encrypted envs, never committed plaintext. `.env.vault` is committed; `.env.keys` is gitignored and stored in macOS Keychain.
 - [ ] **INFRA-13**: **Process supervision via `launchd`** plist (macOS native) — separate plists for `brain` and `hands`, each auto-restarts on crash, logs to `logs/supervisor/`.
 - [ ] **INFRA-14**: An **NTP / chain-time drift monitor** runs in `brain` and logs delta between `time.time()` and Arbitrum block time every minute; excessive drift (>5s) triggers a warning, >30s a halt.
@@ -148,8 +151,10 @@ Requirements for the v0.5 release. Every requirement is testable (either automat
 
 - [x] **PROTO-01**: Every run (backtest, paper, live) emits `RUN_MANIFEST` as first log line + sidecar JSON; log lines carry `run_id`. Enforced by INFRA-06
 .
-- [ ] **PROTO-02**: Every commit that touches `python/` or `ts/` source also updates `docs/ARCHITECTURE.md` + `docs/architecture.yml`; pre-commit hook (INFRA-09) blocks non-compliant commits.
-- [ ] **PROTO-03**: Every research / decision / postmortem commit cites at least one `[[wiki-link]]` into the LLM Wiki boros workspace; pre-commit hook (INFRA-11) blocks non-compliant commits.
+- [x] **PROTO-02**: Every commit that touches `python/` or `ts/` source also updates `docs/ARCHITECTURE.md` + `docs/architecture.yml`; pre-commit hook (INFRA-09
+) blocks non-compliant commits.
+- [x] **PROTO-03**: Every research / decision / postmortem commit cites at least one `[[wiki-link]]` into the LLM Wiki boros workspace; pre-commit hook (INFRA-11
+) blocks non-compliant commits.
 - [x] **PROTO-04**: Every new "knob" is added to the Pydantic config schema (INFRA-02
 ) — schema is the exhaustive source of truth for `RUN_MANIFEST` field list.
 - [ ] **PROTO-05**: Supersedence discipline — when a new wiki page invalidates an older finding, the older page gets `Status: Historical — superseded by [[new-page]]` in the same commit.

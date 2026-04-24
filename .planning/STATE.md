@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-03-PLAN.md — RUN_MANIFEST writer + structlog/pino contract + ZMQ bus (INFRA-05/06/07 + PROTO-01)
-last_updated: "2026-04-24T00:32:30.109Z"
+stopped_at: Completed 01-04-PLAN.md — architecture-lint + wiki-cite-lint + pre-commit Engineering Protocol enforcement hooks
+last_updated: "2026-04-24T01:02:01.522Z"
 last_activity: 2026-04-24
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 12
-  completed_plans: 3
-  percent: 25
+  completed_plans: 4
+  percent: 33
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-23)
 ## Current Position
 
 Phase: 01 (foundation-infrastructure-spine-data-pipeline-economics-gate) — EXECUTING
-Plan: 3 of 12
+Plan: 4 of 12
 Status: Ready to execute
 Last activity: 2026-04-24
 
-Progress: [███░░░░░░░] 25%
+Progress: [███░░░░░░░] 33%
 
 ## Performance Metrics
 
@@ -55,6 +55,7 @@ Progress: [███░░░░░░░] 25%
 | Phase 01 P01-01 | 41 | 2 tasks | 28 files |
 | Phase 01 P01-02 | 16 | 2 tasks | 23 files |
 | Phase 01 P01-03 | 38 | 2 tasks | 17 files |
+| Phase 01 P01-04 | 22 | 3 tasks | 82 files |
 
 ## Accumulated Context
 
@@ -90,6 +91,10 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [2026-04-24 01-03] HeartbeatMonitor fire-once LostSibling — emits exactly one event after 3 missed intervals; recovery (record_peer_heartbeat within window) resets flag for re-fire. 5s default interval / 15s threshold per BotConfig; test compresses to 0.1s / 0.3s. PUB/SUB slow-joiner settle time = 0.3s (tests) — production 5s interval is well past that.
 - [2026-04-24 01-03] Cross-language schema mirror = hand-written Pydantic + Zod with a round-trip test (test_zmq_schema_mirror) that invokes Python's model_dump(mode='json') via subprocess and Zod-parses every message type — T-03-03 drift guard. Code-gen (Pydantic → Zod) deferred to v1.0 if hand-mirror drift recurs.
 - [2026-04-24 01-03] ipc_dir pytest fixture = /tmp-rooted short path under macOS's 103-byte sockaddr_un.sun_path limit — pytest's default tmp_path under /private/var/folders/… overflows and breaks ZMQ ipc:// binds. Added to conftest for all future ZMQ tests.
+- Bootstrap commit uses --no-verify exactly once for docs/architecture.yml creation (circular dep). Logged in docs/override-log.md with #override: bootstrap tag. Pattern is the approved exception per 01-04 plan.
+- architecture_lint skips __init__.py files and migrations/ directory. Catches drift in both directions: undeclared code modules AND orphaned yml declarations AND undeclared public functions.
+- pre-commit hooks use python3 (not python) for system-language local hooks — macOS has no bare python in PATH.
+- mypy uses --no-warn-unused-ignores to handle Pydantic default_factory type: ignore comments that may or may not trigger depending on pydantic mypy plugin availability.
 
 ### Pending Todos
 
@@ -104,8 +109,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-24T00:32:30.103Z
-Stopped at: Completed 01-03-PLAN.md — RUN_MANIFEST writer + structlog/pino contract + ZMQ bus (INFRA-05/06/07 + PROTO-01)
+Last session: 2026-04-24T01:02:01.518Z
+Stopped at: Completed 01-04-PLAN.md — architecture-lint + wiki-cite-lint + pre-commit Engineering Protocol enforcement hooks
 Resume file: None
 
 **Planned Phase:** 01 (Foundation (Infrastructure Spine + Data Pipeline + Economics Gate)) — 12 plans — 2026-04-23T20:08:16.743Z
