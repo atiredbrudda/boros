@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+          "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.boros.rescreen</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/opt/homebrew/bin/bash</string>
+        <string>-c</string>
+        <string>cd /Users/macbookair/Documents/project/test/rerun7/boros &amp;&amp; /Users/macbookair/.local/bin/uv run python -m boros_brain.screener.rescreen</string>
+    </array>
+
+    <!-- Run daily at 03:00 UTC (TZ=UTC via EnvironmentVariables) -->
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>3</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>TZ</key>
+        <string>UTC</string>
+    </dict>
+
+    <!-- One-shot daily job: do NOT restart on exit -->
+    <key>KeepAlive</key>
+    <false/>
+
+    <!-- Do NOT run immediately on load (launchd loads at login) -->
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/macbookair/Documents/project/test/rerun7/boros/logs/supervisor/com.boros.rescreen.out</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/macbookair/Documents/project/test/rerun7/boros/logs/supervisor/com.boros.rescreen.err</string>
+</dict>
+</plist>
