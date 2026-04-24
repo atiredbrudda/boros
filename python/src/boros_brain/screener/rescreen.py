@@ -54,12 +54,12 @@ def _run_ingest_stage(config_path: str) -> None:
             [
                 sys.executable,
                 "-m",
-                "boros_brain.data.ingester",
+                "boros_brain.data.ingester.cli",
                 "--kind",
                 kind,
                 "--src",
                 "data/raw/",
-                "--dest",
+                "--out",  # was --dest (CR-02 fix)
                 "data/parquet/",
                 "--config",
                 config_path,
