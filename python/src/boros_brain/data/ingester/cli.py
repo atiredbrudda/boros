@@ -104,7 +104,12 @@ def main(argv: list[str] | None = None) -> int:
     elif args.kind == "order_book_combined":
         if not args.market_id or not args.tick_size:
             p.error("--market-id and --tick-size are required for --kind order_book_combined")
-        result = ingest_order_book_combined(args.src, args.market_id, args.tick_size, out_root)
+        result = ingest_order_book_combined(
+            args.src,
+            market_id=args.market_id,
+            tick_size=args.tick_size,
+            out_root=out_root,
+        )
 
     elif args.kind == "underlying_apr":
         if not args.exchange:
