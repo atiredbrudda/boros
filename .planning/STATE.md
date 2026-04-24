@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-08-PLAN.md — NDJSON ingester framework (DATA-01..04)
-last_updated: "2026-04-24T02:02:20.954Z"
+stopped_at: Completed 01-09-PLAN.md — /markets poller (DATA-06) + fIndexOracle reader (DATA-07)
+last_updated: "2026-04-24T02:24:23.474Z"
 last_activity: 2026-04-24
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 12
-  completed_plans: 8
-  percent: 67
+  completed_plans: 9
+  percent: 75
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-23)
 ## Current Position
 
 Phase: 01 (foundation-infrastructure-spine-data-pipeline-economics-gate) — EXECUTING
-Plan: 8 of 12
+Plan: 9 of 12
 Status: Ready to execute
 Last activity: 2026-04-24
 
-Progress: [███████░░░] 67%
+Progress: [████████░░] 75%
 
 ## Performance Metrics
 
@@ -60,6 +60,7 @@ Progress: [███████░░░] 67%
 | Phase 01 P01-06 | 9 | 3 tasks | 17 files |
 | Phase 01 P01-07 | 11 | 2 tasks | 13 files |
 | Phase 01 P08 | 9 | 3 tasks | 22 files |
+| Phase 01 P01-09 | unknown | 3 tasks | 16 files |
 
 ## Accumulated Context
 
@@ -111,6 +112,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - Used polars pl.PartitionBy + sink_parquet for Hive-partitioned parquet — pyarrow not in project deps; PartitionBy produces identical layout and is streaming-native
 - snapshot_ts stored as Utf8 partition col in order_book parquet — PartitionBy requires string partition values; join on (snapshot_ts, tick) consistent across both sides
 - CLI manifest fallback: write sidecar JSON when SQLite not yet initialized — enables ingest-first runs before state DB setup
+- Use imData.symbol as clo_history.market_id string key (API marketId is int); all poller cache + KNOWN_ORACLES dict use symbol e.g. BINANCE-ETHUSDT-29MAY2026
+- decode_findex_bytes uses val>>48 (discard 6-byte lower zero-pad) per boros_bot_guide.md L206 — RESEARCH.md raw[-26:] snippet was wrong direction
 
 ### Pending Todos
 
@@ -125,8 +128,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-24T02:02:20.950Z
-Stopped at: Completed 01-08-PLAN.md — NDJSON ingester framework (DATA-01..04)
+Last session: 2026-04-24T02:23:39.625Z
+Stopped at: Completed 01-09-PLAN.md — /markets poller (DATA-06) + fIndexOracle reader (DATA-07)
 Resume file: None
 
 **Planned Phase:** 01 (Foundation (Infrastructure Spine + Data Pipeline + Economics Gate)) — 12 plans — 2026-04-23T20:08:16.743Z
