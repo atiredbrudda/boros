@@ -61,7 +61,8 @@ Requirements for the v0.5 release. Every requirement is testable (either automat
 **: NDJSON ingester downloads `underlying-apr/` funding-rate series per relevant CEX-asset pair.
 - [x] **DATA-04
 **: NDJSON ingester downloads `settlement/` and `market-data/` records for the same markets.
-- [ ] **DATA-05**: An **AMM-conservation assertion** runs on every combined snapshot: `combined_size(δ) − raw_book_size(δ) ≥ 0` per tick; violations fail ingest loud.
+- [x] **DATA-05
+**: An **AMM-conservation assertion** runs on every combined snapshot: `combined_size(δ) − raw_book_size(δ) ≥ 0` per tick; violations fail ingest loud.
 - [x] **DATA-06
 **: `GET /markets` live poller (every ~30s) detects `cloLowerThresh`/`cloUpperThresh` changes and writes a timestamped row to `clo_history` table in SQLite.
 - [x] **DATA-07
@@ -69,7 +70,8 @@ Requirements for the v0.5 release. Every requirement is testable (either automat
 - [ ] **DATA-08**: **Market screener** computes per candidate market: total trades last 60d, inter-arrival CV using `eventIndex`-ordered intervals, mid-rate realized vol (pp/5min last 14d), mid-rate reversal count (last 3d), order-book depth at incentivized range, `cloLowerThresh`/`cloUpperThresh` both non-zero, time-to-maturity ≥ 30d. Outputs a shortlist of 2–4 markets.
 - [ ] **DATA-09**: **Reward-share economics gate** computes `R_apr_on_collateral = R_share_per_epoch × epochs_per_year / required_collateral` per shortlisted market. Markets below `alternative_yield + estimated_fill_loss_rate` are dropped. Empty shortlist after this filter = cheap kill, project halts with a written kill report.
 - [ ] **DATA-10**: **Daily automated market re-screen** reruns DATA-08 + DATA-09 and flags any markets newly entering or exiting the shortlist to operator.
-- [ ] **DATA-11**: **`E_liq_per_epoch` + Long/Short split polling** every cycle (1–5s) during live/paper operation; values written to `reward_budget_history` in SQLite (feeds DF-04 sizing + A2 rebalance detection).
+- [x] **DATA-11
+**: **`E_liq_per_epoch` + Long/Short split polling** every cycle (1–5s) during live/paper operation; values written to `reward_budget_history` in SQLite (feeds DF-04 sizing + A2 rebalance detection).
 
 ### Phase 2 — Fill Model (v0.5 NHPP)
 

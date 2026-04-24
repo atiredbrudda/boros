@@ -265,7 +265,7 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 →
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 0. Prerequisite Resolution & Kill Gate | 0/TBD | Not started | - |
-| 1. Foundation (Infra + Data + Economics Gate) | 9/12 | In progress | - |
+| 1. Foundation (Infra + Data + Economics Gate) | 10/12 | In progress | - |
 | 2. Fill Model (NHPP v0.5) | 0/TBD | Not started | - |
 | 3. Loss & Reward-Share Models + Sizing | 0/TBD | Not started | - |
 | 4. Decision Engine + Predictive Circuit Breakers | 0/TBD | Not started | - |
