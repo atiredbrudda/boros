@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-11-PLAN.md (DATA-08 market screener)
-last_updated: "2026-04-24T03:21:29.027Z"
+stopped_at: Completed 01-12-PLAN.md (DATA-09 economics kill-switch + DATA-10 daily re-screen)
+last_updated: "2026-04-24T03:43:47.055Z"
 last_activity: 2026-04-24
 progress:
   total_phases: 9
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 12
-  completed_plans: 11
-  percent: 92
+  completed_plans: 12
+  percent: 100
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-23)
 ## Current Position
 
 Phase: 01 (foundation-infrastructure-spine-data-pipeline-economics-gate) — EXECUTING
-Plan: 11 of 12
+Plan: 12 of 12
 Status: Ready to execute
 Last activity: 2026-04-24
 
-Progress: [█████████░] 92%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -62,6 +62,7 @@ Progress: [█████████░] 92%
 | Phase 01 P08 | 9 | 3 tasks | 22 files |
 | Phase 01 P01-09 | unknown | 3 tasks | 16 files |
 | Phase 01 P11 | 35 | 3 tasks | 14 files |
+| Phase 01 P12 | 35 | 2 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -118,6 +119,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - now kwarg on apply_screener_filters: INFRA-14 bans time.time() in screener/; offline batch uses datetime.now(UTC).timestamp() as default; callers with chain_time SHOULD pass chain-time value
 - A8 outside_range_wall_flag is a Phase-2 covariate warning, NOT a hard filter — markets with ratio > 2 remain in shortlist
 - SCALE calibration non-blocking: InsufficientCalibrationData caught silently, scale=None, market still rankable by 6 metrics
+- DATA-09 R_apr computed in PENDLE-units only (checker #06 Option A): avoids pendle_price_usd knob in Phase 1; USD conversion deferred to Phase 3 PricingConfig sub-model
+- fill_loss_coarse_bound=0.02 is A1-flagged coarse bound; Phase 3 LossModel refines; documented in strategy YAML and wiki [[fill_loss_coarse_bound v0.5]]; threshold = 0.07 (7% APR decimal) recorded for Phase 3 comparison
 
 ### Pending Todos
 
@@ -132,8 +135,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-24T03:21:29.023Z
-Stopped at: Completed 01-11-PLAN.md (DATA-08 market screener)
+Last session: 2026-04-24T03:43:47.050Z
+Stopped at: Completed 01-12-PLAN.md (DATA-09 economics kill-switch + DATA-10 daily re-screen)
 Resume file: None
 
 **Planned Phase:** 01 (Foundation (Infrastructure Spine + Data Pipeline + Economics Gate)) — 12 plans — 2026-04-23T20:08:16.743Z

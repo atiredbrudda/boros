@@ -69,7 +69,8 @@ Requirements for the v0.5 release. Every requirement is testable (either automat
 **: `fIndexOracle.getLatestFIndex()` on-chain reader decodes the packed `bytes26 → bytes32` payload per `boros_bot_guide.md` L203-213 and returns `fTime`, `floatingIndex`, `feeIndex`. `latestAnnualizedRate()` returns current spot rate. Both cached ≤1s.
 - [x] **DATA-08
 **: **Market screener** computes per candidate market: total trades last 60d, inter-arrival CV using `eventIndex`-ordered intervals, mid-rate realized vol (pp/5min last 14d), mid-rate reversal count (last 3d), order-book depth at incentivized range, `cloLowerThresh`/`cloUpperThresh` both non-zero, time-to-maturity ≥ 30d. Outputs a shortlist of 2–4 markets.
-- [ ] **DATA-09**: **Reward-share economics gate** computes `R_apr_on_collateral = R_share_per_epoch × epochs_per_year / required_collateral` per shortlisted market. Markets below `alternative_yield + estimated_fill_loss_rate` are dropped. Empty shortlist after this filter = cheap kill, project halts with a written kill report.
+- [x] **DATA-09
+**: **Reward-share economics gate** computes `R_apr_on_collateral = R_share_per_epoch × epochs_per_year / required_collateral` per shortlisted market. Markets below `alternative_yield + estimated_fill_loss_rate` are dropped. Empty shortlist after this filter = cheap kill, project halts with a written kill report.
 - [x] **DATA-10**: **Daily automated market re-screen** reruns DATA-08
  + DATA-09 and flags any markets newly entering or exiting the shortlist to operator.
 - [x] **DATA-11
