@@ -1,0 +1,169 @@
+{
+  "results": [
+    {
+      "marketId": 112,
+      "address": "0x39728502feafbae0d090c7ac4ef10f5c3c8ba437",
+      "tokenId": 2,
+      "imData": {
+        "name": "Binance ETHUSDT 29 May 2026",
+        "symbol": "BINANCE-ETHUSDT-29MAY2026",
+        "isIsolatedOnly": false,
+        "maturity": 1780012800,
+        "tickStep": 2,
+        "iTickThresh": 583,
+        "marginFloor": 0.060031412955532215
+      },
+      "config": {
+        "maxOpenOrders": 80,
+        "markRateOracle": "0x0000000000000000000000000000000000000000",
+        "fIndexOracle": "0x1950dc94e3063267049482f075af72107eb79352",
+        "hardOICap": "20000000000000000000000",
+        "takerFee": "500000000000000",
+        "otcFee": "500000000000000",
+        "liqSettings": {
+          "base": "250000000000000000",
+          "slope": "500000000000000000",
+          "feeRate": "500000000000000"
+        },
+        "kIM": "312500000000000000",
+        "kMM": "222222222222222222",
+        "tThresh": 864000,
+        "maxRateDeviationFactorBase1e4": 1500,
+        "closingOrderBoundBase1e4": 1000,
+        "loUpperConstBase1e4": 27,
+        "loUpperSlopeBase1e4": 10444,
+        "loLowerConstBase1e4": -27,
+        "loLowerSlopeBase1e4": 9556,
+        "status": 2,
+        "useImpliedAsMarkRate": true,
+        "softOICap": 9500,
+        "cloLowerThresh": 9300,
+        "cloUpperThresh": 9500
+      },
+      "extConfig": {
+        "ammAddress": "0x0000000000000000000000000000000000000000",
+        "ammId": 0,
+        "isPositiveAMM": true,
+        "settleFeeRate": "1000000000000000",
+        "paymentPeriod": 28800,
+        "maxUpdateDelay": 900
+      },
+      "metadata": {
+        "name": "ETHUSDT",
+        "maxLeverage": 3,
+        "defaultLeverage": 3,
+        "ammAddress": "0x0000000000000000000000000000000000000000",
+        "ammId": 0,
+        "isPositiveAMM": true,
+        "assetSymbol": "ETH",
+        "platformName": "Binance",
+        "settlementDelayTime": 30
+      },
+      "data": {
+        "volume24h": 738.7015026499632,
+        "notionalOI": 969.572685655896,
+        "markApr": 0.000145320418689467,
+        "lastTradedApr": -0.000900382602019128,
+        "midApr": -0.00020013504350890752,
+        "bestBid": -0.000900382602019128,
+        "bestAsk": 0.000500112515001313,
+        "floatingApr": -0.03167835,
+        "longYieldApr": -0.5126977007984037,
+        "nextSettlementTime": 1777017600,
+        "timeToMaturity": 3024000,
+        "assetMarkPrice": 2333.76163566,
+        "rateSensitivity": 0.0009589041095890412,
+        "settlementsToMaturity": 105,
+        "dailyVolatility": 0.00871573594914733,
+        "dailyVolatilityState": "ready"
+      },
+      "state": "Normal"
+    },
+    {
+      "marketId": 78,
+      "address": "0x9c1d1f0aaae7315cd9b51c4d5347ac4d7adfc4e8",
+      "tokenId": 1,
+      "imData": {
+        "name": "Binance BTCUSDT 26 Jun 2026",
+        "symbol": "BINANCE-BTCUSDT-26JUN2026",
+        "isIsolatedOnly": false,
+        "maturity": 1782432000,
+        "tickStep": 2,
+        "iTickThresh": 441,
+        "marginFloor": 0.04508570617979785
+      },
+      "config": {
+        "maxOpenOrders": 80,
+        "markRateOracle": "0x0000000000000000000000000000000000000000",
+        "fIndexOracle": "0x0849c93eccf69702ee383f3b7029f2456b10d6e1",
+        "hardOICap": "666000000000000000000",
+        "takerFee": "500000000000000",
+        "otcFee": "500000000000000",
+        "liqSettings": {
+          "base": "250000000000000000",
+          "slope": "500000000000000000",
+          "feeRate": "500000000000000"
+        },
+        "kIM": "312500000000000000",
+        "kMM": "222222222222222222",
+        "tThresh": 864000,
+        "maxRateDeviationFactorBase1e4": 1500,
+        "closingOrderBoundBase1e4": 1000,
+        "loUpperConstBase1e4": 20,
+        "loUpperSlopeBase1e4": 10444,
+        "loLowerConstBase1e4": -20,
+        "loLowerSlopeBase1e4": 9556,
+        "status": 2,
+        "useImpliedAsMarkRate": true,
+        "softOICap": 316.35,
+        "cloLowerThresh": 309.69,
+        "cloUpperThresh": 316.35
+      },
+      "extConfig": {
+        "ammAddress": "0x70261f4a157067eaa7f2ef2714e021a9af743b5b",
+        "ammId": 780,
+        "isPositiveAMM": true,
+        "settleFeeRate": "1000000000000000",
+        "paymentPeriod": 28800,
+        "maxUpdateDelay": 900
+      },
+      "metadata": {
+        "name": "BTCUSDT",
+        "maxLeverage": 3,
+        "defaultLeverage": 3,
+        "ammAddress": "0x70261f4a157067eaa7f2ef2714e021a9af743b5b",
+        "ammId": 780,
+        "isPositiveAMM": true,
+        "assetSymbol": "BTC",
+        "platformName": "Binance",
+        "settlementDelayTime": 30
+      },
+      "data": {
+        "volume24h": 0.26881749721129705,
+        "notionalOI": 41.36228647998887,
+        "markApr": 0.015721919092967798,
+        "lastTradedApr": 0.015721919092967798,
+        "midApr": 0.015721919092967798,
+        "bestBid": 0.015315721725069594,
+        "bestAsk": 0.015721919092967798,
+        "ammImpliedApr": 0.015721919092967798,
+        "floatingApr": -0.04792815,
+        "longYieldApr": -1.411757172863987,
+        "nextSettlementTime": 1777017600,
+        "timeToMaturity": 5443200,
+        "assetMarkPrice": 78495.12303623,
+        "rateSensitivity": 0.0017260273972602741,
+        "settlementsToMaturity": 189,
+        "dailyVolatility": 0.0008129869544819356,
+        "dailyVolatilityState": "ready"
+      },
+      "state": "Normal"
+    }
+  ],
+  "total": 2,
+  "skip": 0,
+  "syncStatus": {
+    "blockNumber": 455701106,
+    "timestamp": 1776996232
+  }
+}
