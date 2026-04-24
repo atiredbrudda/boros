@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-07-PLAN.md — chain-time cache + DuckDB analytical layer (INFRA-14, INFRA-04)
-last_updated: "2026-04-24T01:47:45.894Z"
+stopped_at: Completed 01-08-PLAN.md — NDJSON ingester framework (DATA-01..04)
+last_updated: "2026-04-24T02:02:20.954Z"
 last_activity: 2026-04-24
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 12
-  completed_plans: 7
-  percent: 58
+  completed_plans: 8
+  percent: 67
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-23)
 ## Current Position
 
 Phase: 01 (foundation-infrastructure-spine-data-pipeline-economics-gate) — EXECUTING
-Plan: 7 of 12
+Plan: 8 of 12
 Status: Ready to execute
 Last activity: 2026-04-24
 
-Progress: [██████░░░░] 58%
+Progress: [███████░░░] 67%
 
 ## Performance Metrics
 
@@ -59,6 +59,7 @@ Progress: [██████░░░░] 58%
 | Phase 01 P01-05 | 15 | 2 tasks | 27 files |
 | Phase 01 P01-06 | 9 | 3 tasks | 17 files |
 | Phase 01 P01-07 | 11 | 2 tasks | 13 files |
+| Phase 01 P08 | 9 | 3 tasks | 22 files |
 
 ## Accumulated Context
 
@@ -107,6 +108,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - chain_drift thresholds: startup halt = chain_drift_warn_s (5s), runtime halt = chain_drift_halt_s (30s); startup is stricter than runtime halt by design
 - sqlite_scanner: CALL sqlite_attach() chosen over ATTACH…USE live — USE live redirects default DDL catalog to read-only attach, breaking CREATE VIEW
 - no_time_time_lint: full-tree walk (not git diff --cached fallback) so tests can inject files without staging them
+- Used polars pl.PartitionBy + sink_parquet for Hive-partitioned parquet — pyarrow not in project deps; PartitionBy produces identical layout and is streaming-native
+- snapshot_ts stored as Utf8 partition col in order_book parquet — PartitionBy requires string partition values; join on (snapshot_ts, tick) consistent across both sides
+- CLI manifest fallback: write sidecar JSON when SQLite not yet initialized — enables ingest-first runs before state DB setup
 
 ### Pending Todos
 
@@ -121,8 +125,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-24T01:47:45.890Z
-Stopped at: Completed 01-07-PLAN.md — chain-time cache + DuckDB analytical layer (INFRA-14, INFRA-04)
+Last session: 2026-04-24T02:02:20.950Z
+Stopped at: Completed 01-08-PLAN.md — NDJSON ingester framework (DATA-01..04)
 Resume file: None
 
 **Planned Phase:** 01 (Foundation (Infrastructure Spine + Data Pipeline + Economics Gate)) — 12 plans — 2026-04-23T20:08:16.743Z

@@ -53,10 +53,14 @@ Requirements for the v0.5 release. Every requirement is testable (either automat
 
 ### Phase 1b–d — Data Pipeline + Market Screener + Economics Gate
 
-- [ ] **DATA-01**: NDJSON ingester downloads and parses `market-trades/` for every candidate market, preserving `eventIndex`, `blockTimestamp`, `rate`, `side`, `size`, `txHash`. Stored as partitioned parquet; sizes are explicitly wei → float converted.
-- [ ] **DATA-02**: NDJSON ingester downloads `order-book/{market}/raw/` hourly snapshots (per-tick `{t, sz}`) and `order-book/{market}/combined_{tickSize}/` for AMM-merged snapshots.
-- [ ] **DATA-03**: NDJSON ingester downloads `underlying-apr/` funding-rate series per relevant CEX-asset pair.
-- [ ] **DATA-04**: NDJSON ingester downloads `settlement/` and `market-data/` records for the same markets.
+- [x] **DATA-01
+**: NDJSON ingester downloads and parses `market-trades/` for every candidate market, preserving `eventIndex`, `blockTimestamp`, `rate`, `side`, `size`, `txHash`. Stored as partitioned parquet; sizes are explicitly wei → float converted.
+- [x] **DATA-02
+**: NDJSON ingester downloads `order-book/{market}/raw/` hourly snapshots (per-tick `{t, sz}`) and `order-book/{market}/combined_{tickSize}/` for AMM-merged snapshots.
+- [x] **DATA-03
+**: NDJSON ingester downloads `underlying-apr/` funding-rate series per relevant CEX-asset pair.
+- [x] **DATA-04
+**: NDJSON ingester downloads `settlement/` and `market-data/` records for the same markets.
 - [ ] **DATA-05**: An **AMM-conservation assertion** runs on every combined snapshot: `combined_size(δ) − raw_book_size(δ) ≥ 0` per tick; violations fail ingest loud.
 - [ ] **DATA-06**: `GET /markets` live poller (every ~30s) detects `cloLowerThresh`/`cloUpperThresh` changes and writes a timestamped row to `clo_history` table in SQLite.
 - [ ] **DATA-07**: `fIndexOracle.getLatestFIndex()` on-chain reader decodes the packed `bytes26 → bytes32` payload per `boros_bot_guide.md` L203-213 and returns `fTime`, `floatingIndex`, `feeIndex`. `latestAnnualizedRate()` returns current spot rate. Both cached ≤1s.
