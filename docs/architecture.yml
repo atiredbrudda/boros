@@ -590,6 +590,13 @@ nodes:
     path: data/parquet/market_data/**/*.parquet
     notes: "Hive-partitioned: market_id / year_month. Written by ingest_settlement_md."
 
+  # ── DATA-08 screener metrics (01-11 Task 1) ────────────────────────────────
+  - id: brain.screener.metrics
+    type: module
+    process: brain
+    path: python/src/boros_brain/screener/metrics.py
+    public_functions: [compute_inter_arrival_cv, compute_realized_vol, compute_reversal_count, compute_depth_at_clo_edge, compute_outside_range_wall_ratio, compute_days_to_maturity]
+
 edges:
   # ── brain internal wiring ──────────────────────────────────────────────
   - from: brain
@@ -1161,3 +1168,19 @@ edges:
     to: parquet.order_book_raw
     type: reads
     notes: "assert_amm_conservation reads raw df for comparison before combined parquet write"
+
+  # ── DATA-08 screener metrics edges (01-11 Task 1) ──────────────────────────
+  - from: brain.screener.metrics
+    to: parquet.market_trades
+    type: reads
+    notes: "compute_inter_arrival_cv / compute_realized_vol / compute_reversal_count read market_trades via DuckDB"
+
+  - from: brain.screener.metrics
+    to: parquet.order_book_combined
+    type: reads
+    notes: "compute_depth_at_clo_edge / compute_outside_range_wall_ratio read order_book_combined via DuckDB"
+
+  - from: brain.screener.metrics
+    to: state.clo_history
+    type: reads
+    notes: "clo_lower_thresh / clo_upper_thresh read from clo_history via DuckDB sqlite_scanner"

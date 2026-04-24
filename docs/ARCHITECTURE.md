@@ -185,6 +185,12 @@ flowchart TB
     spike_a6 -- "eth_getLogs distributor events (live only)" --> ext_rpc
     spike_a6 -- writes --> verdict_a6
 
+    %% DATA-08 screener metrics (01-11 Task 1)
+    screener_metrics["screener/metrics.py<br/>compute_inter_arrival_cv, compute_realized_vol,<br/>compute_reversal_count, compute_depth_at_clo_edge,<br/>compute_outside_range_wall_ratio, compute_days_to_maturity<br/>(DATA-08, 01-11)"]
+    screener_metrics -- "reads market_trades (CV, vol, reversal)" --> parquet_mt
+    screener_metrics -- "reads order_book_combined (depth, wall ratio)" --> parquet_ob_comb
+    screener_metrics -- "reads clo_lower_thresh/clo_upper_thresh" --> state_clo
+
     %% brain wiring
     brain_main --> brain_cfg_loader --> brain_cfg_schema
     brain_main --> brain_manifest_writer --> brain_manifest_schema

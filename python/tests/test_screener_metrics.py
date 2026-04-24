@@ -108,24 +108,30 @@ def test_cv_null_eventindex_returns_none_and_logs():
 
 
 def test_realized_vol_synthetic_series():
-    """Synthetic rate series with known sigma -> compute_realized_vol within 5%."""
-    import numpy as np
+    """Synthetic rate series with known sigma -> compute_realized_vol is positive and finite."""
+    import math
+    import random
 
-    rng = np.random.default_rng(seed=0)
-    sigma = 0.01  # annualized daily vol
+    rng = random.Random(42)
+    sigma = 0.01  # step size per hourly observation
     n_days = 60
     n = n_days * 24  # hourly
 
-    # Build a polars DataFrame with a datetime column and rate column
+    # Build a random-walk rate series (no numpy dependency)
     base_ts = 1_750_000_000
-    rates = 9400.0 + np.cumsum(rng.normal(0, sigma, size=n))
+    rate = 9400.0
+    rates = []
+    for _ in range(n):
+        rate += rng.gauss(0, sigma)
+        rates.append(rate)
     datetimes = [base_ts + i * 3600 for i in range(n)]
+
     df = pl.DataFrame(
         {
             "blockTimestamp": datetimes,
             "eventIndex": list(range(n)),
             "datetime": ["2025-08-01T00:00:00.000Z"] * n,
-            "rate": rates.tolist(),
+            "rate": rates,
             "side": ["long"] * n,
             "size": ["1000000000000000"] * n,
             "txHash": [f"0x{i:04x}" for i in range(n)],
@@ -136,11 +142,6 @@ def test_realized_vol_synthetic_series():
     rv = compute_realized_vol(df, window_days=14)
     assert rv is not None, "realized_vol should not be None"
     assert rv > 0, "realized_vol should be positive"
-    # Within 5% (relative) of the sigma used as input
-    # Daily sigma = 0.01 * sqrt(3600) won't match perfectly but should be in a reasonable range
-    # Just check it's > 0 and finite — the exact value test is for a controlled case
-    import math
-
     assert math.isfinite(rv), "realized_vol must be finite"
 
 
