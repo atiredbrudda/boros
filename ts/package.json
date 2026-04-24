@@ -28,5 +28,10 @@
     "@biomejs/biome": "^1.9",
     "@types/node": "^24",
     "@types/better-sqlite3": "^7"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "better-sqlite3"
+    ]
   }
 }

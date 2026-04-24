@@ -7,6 +7,7 @@ SQLite-safe ALTERs in future revisions.
 
 from __future__ import annotations
 
+import contextlib
 from logging.config import fileConfig
 
 from alembic import context
@@ -17,11 +18,9 @@ config = context.config
 # Only configure logging when Alembic was invoked through a config file that
 # actually defines formatters — tests build a Config() directly without file.
 if config.config_file_name is not None:
-    try:
+    # Missing [formatters] / [handlers] sections are non-fatal in tests.
+    with contextlib.suppress(Exception):
         fileConfig(config.config_file_name)
-    except Exception:
-        # Missing [formatters] / [handlers] sections are non-fatal in tests.
-        pass
 
 
 target_metadata = None  # DDL is delivered via op.execute() reading schemas.sql
