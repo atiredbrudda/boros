@@ -119,9 +119,21 @@ class MarketsPoller:
           3. Compare (clo_lower, clo_upper, f_index_raw) against previous snapshot
           4. insert_clo_history ONLY on change (keeps clo_history compact)
         """
-        markets = await self.poll_once()
+        raw_markets = await self.poll_once()
         snapshot_ts = await now_cached()
         written = 0
+
+        # Deduplicate by symbol — the API occasionally returns the same symbol twice
+        # (e.g. HYPERLIQUID-BTC-29MAY2026). Keep first occurrence; log duplicates.
+        seen: set[str] = set()
+        markets = []
+        for m in raw_markets:
+            sym = m.im_data.symbol
+            if sym in seen:
+                log.warning("markets_poller.duplicate_symbol_skipped", symbol=sym)
+            else:
+                seen.add(sym)
+                markets.append(m)
 
         for m in markets:
             symbol = m.im_data.symbol  # string market identifier (e.g. "BINANCE-ETHUSDT-29MAY2026")

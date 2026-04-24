@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: milestone
 status: ready_to_plan
-stopped_at: "Phase 01 UAT in progress — tests 1/4/5/7 PASS, tests 2/3/6 pending live credentials"
-last_updated: "2026-04-24T07:30:00Z"
+stopped_at: "Phase 01 UAT complete — 5/7 PASS, Test 6 PARTIAL (clo_history OK, reward_budget_history blocked by ELiqPoller Assumption A5 mismatch). Ready to plan Phase 02."
+last_updated: "2026-04-24T09:00:00Z"
 last_activity: 2026-04-24
 progress:
   total_phases: 9
@@ -121,6 +121,10 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - SCALE calibration non-blocking: InsufficientCalibrationData caught silently, scale=None, market still rankable by 6 metrics
 - DATA-09 R_apr computed in PENDLE-units only (checker #06 Option A): avoids pendle_price_usd knob in Phase 1; USD conversion deferred to Phase 3 PricingConfig sub-model
 - fill_loss_coarse_bound=0.02 is A1-flagged coarse bound; Phase 3 LossModel refines; documented in strategy YAML and wiki [[fill_loss_coarse_bound v0.5]]; threshold = 0.07 (7% APR decimal) recorded for Phase 3 comparison
+- [2026-04-24 UAT] ELiqPoller Assumption A5 unverified: fields liquidityRewardPerEpoch/longBudget/shortBudget absent from live GET /markets response. Only reward-adjacent field is config.liqSettings.{base,slope,feeRate}. ELiqPoller needs full redesign once actual E_liq_per_epoch source identified. Not blocking Phase 2.
+- [2026-04-24 UAT] GET /markets returns HYPERLIQUID-BTC-29MAY2026 twice (duplicate symbol). MarketsPoller.tick() now deduplicates by symbol with a warning log; clo_history PK (snapshot_ts, market_id) constraint still enforced.
+- [2026-04-24 UAT] DOTENV_PRIVATE_KEY_PRODUCTION was wrong env var name in both wrapper scripts; corrected to DOTENV_PRIVATE_KEY (matches .env.keys naming convention for plain .env file).
+- [2026-04-24 UAT] LLM Wiki canonical path fixed: copied 35 pages from old /Documents/…/LLM Wiki/ to /Users/macbookair/LLM Wiki/workspaces/boros/ (sibling to project, matching CLAUDE.md ../LLM Wiki/ contract).
 
 ### Pending Todos
 
@@ -135,16 +139,21 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-24T07:30:00Z
-Stopped at: Phase 01 UAT — 4/7 tests done (1/4/5/7 PASS), 3 remaining require live credentials
+Last session: 2026-04-24T09:00:00Z
+Stopped at: Phase 01 UAT complete (5/7 PASS, 1 PARTIAL). Ready to plan Phase 02 (Fill Model — NHPP v0.5).
 Resume file: None
 
-**Next action:** Complete Phase 01 UAT tests 2, 3, 6 (live environment):
-- Test 2 (launchd): `dotenvx run -- launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.boros.brain.plist` — verify RUN_MANIFEST first log line + SIGKILL restart
-- Test 3 (live RUN_MANIFEST): initialize state DB + run brain with real Arbitrum RPC — verify chain_drift ≤5s, sidecar JSON, run_manifests SQLite row
-- Test 6 (live poller ~5 min): verify clo_history + reward_budget_history rows accumulate with real market data
-- See .planning/phases/01-.../01-HUMAN-UAT.md for full expected/result spec
+**Completed this session (2026-04-24 second pass):**
+- Fixed wrapper scripts: DOTENV_PRIVATE_KEY_PRODUCTION → DOTENV_PRIVATE_KEY (env var name mismatch with .env.keys)
+- Fixed venv editable install: uv sync --locked in python/ updated stale .pth from old path to /Users/macbookair/boros/python/src
+- Loaded brain launchd agent: bootstrap + enable + kickstart. Brain running at /Users/macbookair/boros.
+- Test 2 PASS: SIGKILL PID 18701 at 07:37:02 → new PID 18896 at 07:37:13 (11s restart). Fresh RUN_MANIFEST confirmed.
+- Test 6 PARTIAL: clo_history 41 rows, f_index_raw populated, market_ids correct. MarketsPoller duplicate-symbol fix applied (HYPERLIQUID-BTC-29MAY2026 deduped). reward_budget_history = 0 — ELiqPoller Assumption A5 fields absent from live API.
+- LLM Wiki migrated: 35 pages copied from old path to /Users/macbookair/LLM Wiki/workspaces/boros/wiki/ (canonical).
+- ELiqPoller gap documented in UAT file: needs redesign before Phase 3 reward-share model.
 
-**After UAT complete:** Phase 01 fully done → plan Phase 02 (Fill Model — NHPP v0.5)
+**Carried concern:**
+- ELiqPoller (DATA-11): fields liquidityRewardPerEpoch/longBudget/shortBudget NOT in GET /markets. Real source of E_liq_per_epoch unknown — candidates: config.liqSettings.{base,slope}, on-chain distributor contract, or separate endpoint. Investigate before Phase 3.
 
-**Credentials status (2026-04-24):** dotenvx installed, .env encrypted with agent wallet key, strategy/v0.5-default.yaml has wallet addresses (gitignored). Keychain step (security add-generic-password) NOT yet done — needed for launchd test.
+**Next action:**
+/clear then `/gsd-plan-phase 2` — Phase 02: Fill Model (NHPP v0.5)
