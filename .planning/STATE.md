@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: milestone
-status: ready_to_plan
-stopped_at: "Phase 01 UAT complete — 5/7 PASS, Test 6 PARTIAL (clo_history OK, reward_budget_history blocked by ELiqPoller Assumption A5 mismatch). Ready to plan Phase 02."
-last_updated: "2026-04-24T09:00:00Z"
+status: planning
+stopped_at: Phase 01 UAT complete (5/7 PASS, 1 PARTIAL). Ready to plan Phase 02 (Fill Model — NHPP v0.5).
+last_updated: "2026-04-24T09:56:57.590Z"
 last_activity: 2026-04-24
 progress:
   total_phases: 9
-  completed_phases: 2
-  total_plans: 12
+  completed_phases: 1
+  total_plans: 16
   completed_plans: 12
-  percent: 22
+  percent: 75
 ---
 
 # Project State
@@ -144,6 +144,7 @@ Stopped at: Phase 01 UAT complete (5/7 PASS, 1 PARTIAL). Ready to plan Phase 02 
 Resume file: None
 
 **Completed this session (2026-04-24 second pass):**
+
 - Fixed wrapper scripts: DOTENV_PRIVATE_KEY_PRODUCTION → DOTENV_PRIVATE_KEY (env var name mismatch with .env.keys)
 - Fixed venv editable install: uv sync --locked in python/ updated stale .pth from old path to /Users/macbookair/boros/python/src
 - Loaded brain launchd agent: bootstrap + enable + kickstart. Brain running at /Users/macbookair/boros.
@@ -153,7 +154,10 @@ Resume file: None
 - ELiqPoller gap documented in UAT file: needs redesign before Phase 3 reward-share model.
 
 **Carried concern:**
+
 - ELiqPoller (DATA-11): fields liquidityRewardPerEpoch/longBudget/shortBudget NOT in GET /markets. Real source of E_liq_per_epoch unknown — candidates: config.liqSettings.{base,slope}, on-chain distributor contract, or separate endpoint. Investigate before Phase 3.
 
 **Next action:**
 /clear then `/gsd-plan-phase 2` — Phase 02: Fill Model (NHPP v0.5)
+
+**Planned Phase:** 2 (Fill Model (NHPP v0.5)) — 4 plans — 2026-04-24T09:56:57.583Z
