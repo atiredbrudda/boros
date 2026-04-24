@@ -32,8 +32,8 @@ Every phase, every plan, every code change obeys three protocols. Skipping them 
 
 ### 1. LLM Wiki — check first, write back
 
-- **Workspace:** `../LLM Wiki/workspaces/boros/` (skeleton seeded 2026-04-23).
-- **Tools:** the shared `LLM Wiki/src/` pipeline (`python src/ingest/url_fetcher.py … -w boros`, `python src/process/wiki_generator.py … -w boros`, `python -m src.lint.lint_engine -w boros --no-external`). See `../LLM Wiki/CLAUDE.md` for the full tooling contract.
+- **Workspace:** `/Users/macbookair/Documents/project/test/rerun7/LLM Wiki/workspaces/boros/` (skeleton seeded 2026-04-23).
+- **Tools:** the shared `LLM Wiki/src/` pipeline (`python src/ingest/url_fetcher.py … -w boros`, `python src/process/wiki_generator.py … -w boros`, `python -m src.lint.lint_engine -w boros --no-external`). See `/Users/macbookair/Documents/project/test/rerun7/LLM Wiki/CLAUDE.md` for the full tooling contract.
 - **Before any research task** (phase research, spike, debug, design question): read `workspaces/boros/wiki/index.md` and any pages keyed by the topic. Cite pages as `[[page-name]]` in answers/plans.
 - **Before closing any task** with a decision, discovery, surprise, failed hypothesis, or calibrated number: file a wiki page (or append to an existing one) with a `**Status:**` field (`Current` / `Current — <condition>` / `Historical — <reason>`).
 - **Supersedence:** when a new finding invalidates an older one, grep the wiki and update every stale page in the same commit with `Status: Historical — superseded by [[new-page]]`. Stale claims in forgotten pages are worse than gaps.
@@ -97,7 +97,7 @@ These are load-bearing; don't "fix" them without discussion:
 ## Where to look first
 
 - **Something isn't working:** check `.planning/research/PITFALLS.md` — 29 failure modes already documented with phase-mapped prevention.
-- **Wondering why a decision was made:** check `.planning/PROJECT.md` Key Decisions table, then the LLM Wiki pages under `../LLM Wiki/workspaces/boros/wiki/`.
+- **Wondering why a decision was made:** check `.planning/PROJECT.md` Key Decisions table, then the LLM Wiki pages under `/Users/macbookair/Documents/project/test/rerun7/LLM Wiki/workspaces/boros/wiki/`.
 - **Wondering what's next:** `/gsd-progress` or `.planning/STATE.md`.
 - **Wondering what's in scope:** `.planning/REQUIREMENTS.md` (v1 = this milestone; v2 = deferred to v1.0; Out of Scope = never).
 

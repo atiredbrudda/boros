@@ -124,7 +124,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [2026-04-24 UAT] ELiqPoller Assumption A5 unverified: fields liquidityRewardPerEpoch/longBudget/shortBudget absent from live GET /markets response. Only reward-adjacent field is config.liqSettings.{base,slope,feeRate}. ELiqPoller needs full redesign once actual E_liq_per_epoch source identified. Not blocking Phase 2.
 - [2026-04-24 UAT] GET /markets returns HYPERLIQUID-BTC-29MAY2026 twice (duplicate symbol). MarketsPoller.tick() now deduplicates by symbol with a warning log; clo_history PK (snapshot_ts, market_id) constraint still enforced.
 - [2026-04-24 UAT] DOTENV_PRIVATE_KEY_PRODUCTION was wrong env var name in both wrapper scripts; corrected to DOTENV_PRIVATE_KEY (matches .env.keys naming convention for plain .env file).
-- [2026-04-24 UAT] LLM Wiki canonical path fixed: copied 35 pages from old /Documents/…/LLM Wiki/ to /Users/macbookair/LLM Wiki/workspaces/boros/ (sibling to project, matching CLAUDE.md ../LLM Wiki/ contract).
+- [2026-04-24 UAT] LLM Wiki stays at /Users/macbookair/Documents/project/test/rerun7/LLM Wiki/ — not moved. CLAUDE.md ../LLM Wiki/ references updated to absolute path to match.
 
 ### Pending Todos
 
@@ -149,7 +149,7 @@ Resume file: None
 - Loaded brain launchd agent: bootstrap + enable + kickstart. Brain running at /Users/macbookair/boros.
 - Test 2 PASS: SIGKILL PID 18701 at 07:37:02 → new PID 18896 at 07:37:13 (11s restart). Fresh RUN_MANIFEST confirmed.
 - Test 6 PARTIAL: clo_history 41 rows, f_index_raw populated, market_ids correct. MarketsPoller duplicate-symbol fix applied (HYPERLIQUID-BTC-29MAY2026 deduped). reward_budget_history = 0 — ELiqPoller Assumption A5 fields absent from live API.
-- LLM Wiki migrated: 35 pages copied from old path to /Users/macbookair/LLM Wiki/workspaces/boros/wiki/ (canonical).
+- LLM Wiki stays at original path. CLAUDE.md updated: ../LLM Wiki/ → absolute /Users/macbookair/Documents/project/test/rerun7/LLM Wiki/.
 - ELiqPoller gap documented in UAT file: needs redesign before Phase 3 reward-share model.
 
 **Carried concern:**
