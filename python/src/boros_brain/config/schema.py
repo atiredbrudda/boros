@@ -16,6 +16,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from ..fill_model.config import FillModelConfig
+
 
 class StrictBase(BaseModel):
     """Base for every BotConfig sub-model.
@@ -131,4 +133,5 @@ class BotConfig(StrictBase):
     data: DataConfig
     infra: InfraConfig = Field(default_factory=InfraConfig)  # type: ignore
     screener: ScreenerConfig = Field(default_factory=ScreenerConfig)  # type: ignore
+    fill_model: FillModelConfig = Field(default_factory=FillModelConfig)  # type: ignore
     markets: list[MarketCalibration] = Field(default_factory=list, max_length=1)

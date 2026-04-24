@@ -115,6 +115,25 @@ def test_wallet_address_hash_is_deterministic(default_config: BotConfig) -> None
     assert len(m1.wallet_address_hash) == 16
 
 
+def test_fill_model_leaves_surfaced(default_config: BotConfig) -> None:
+    """T-02-R-01: PROTO-04 — every fill_model.* knob auto-surfaces via reflection.
+
+    Adding a FillModelConfig field without this test passing is a signal that the
+    field is not reachable via BotConfig.model_dump(mode='json') reflection —
+    which would mean it silently disappears from the RUN_MANIFEST.
+    """
+    leaves = _collect_leaf_paths(BotConfig)
+    fill_model_leaves = [".".join(leaf) for leaf in leaves if leaf and leaf[0] == "fill_model"]
+    # 11 knobs; covariate_whitelist is a list-leaf (counted as 1) per the existing collector
+    assert len(fill_model_leaves) >= 11, (
+        f"expected >=11 fill_model leaves, got {len(fill_model_leaves)}: {fill_model_leaves}"
+    )
+    # Spot-check specific knobs
+    assert "fill_model.window_days" in fill_model_leaves
+    assert "fill_model.queue_tracker_bias_mode" in fill_model_leaves
+    assert "fill_model.covariate_whitelist" in fill_model_leaves
+
+
 def test_git_sha_and_dirty_captured(default_config: BotConfig) -> None:
     m = build_run_manifest(default_config)
     assert isinstance(m.git_sha, str) and len(m.git_sha) >= 7

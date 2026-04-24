@@ -674,6 +674,87 @@ nodes:
     path: docs/kill-report-template.md
     notes: "Template used by kill_report.py to render docs/kill-report-YYYYMMDD.md"
 
+  # ── Phase 2: Fill Model — Plan 02-01 (features + config) ────────────────────
+  - id: brain.fill_model.constants
+    type: module
+    process: brain
+    path: python/src/boros_brain/fill_model/constants.py
+    public_functions: []   # Constants-only module: ALLOWED_COVARIATES + DEFAULT_*
+
+  - id: brain.fill_model.config
+    type: module
+    process: brain
+    path: python/src/boros_brain/fill_model/config.py
+    public_functions: []   # FillModelConfig is a Pydantic class, not a function
+
+  - id: brain.fill_model.features
+    type: module
+    process: brain
+    path: python/src/boros_brain/fill_model/features.py
+    public_functions: [build_features_table]   # FeatureSet is a class
+
+  # ── Phase 2 Plan 02-01: parquet.fill_features storage node ──────────────────
+  - id: parquet.fill_features
+    type: storage
+    path: data/parquet/fill_features/**/*.parquet
+    notes: "Hive-partitioned: market_id / side. Written by brain.fill_model.features.build_features_table."
+
+  # ── Phase 2 Plan 02-01: FillModelConfig knobs (11 total) ────────────────────
+  - id: config.fill_model.window_days
+    type: config_knob
+    pydantic_path: BotConfig.fill_model.window_days
+    default: 14
+
+  - id: config.fill_model.bin_duration_s
+    type: config_knob
+    pydantic_path: BotConfig.fill_model.bin_duration_s
+    default: 60.0
+
+  - id: config.fill_model.refit_cadence_s
+    type: config_knob
+    pydantic_path: BotConfig.fill_model.refit_cadence_s
+    default: 900.0
+
+  - id: config.fill_model.covariate_whitelist
+    type: config_knob
+    pydantic_path: BotConfig.fill_model.covariate_whitelist
+    default: "[basis_spread, imbalance, sin_settlement, cos_settlement, ewma_vol]"
+
+  - id: config.fill_model.queue_tracker_bias_mode
+    type: config_knob
+    pydantic_path: BotConfig.fill_model.queue_tracker_bias_mode
+    default: pessimistic
+
+  - id: config.fill_model.gof_ks_pval_threshold
+    type: config_knob
+    pydantic_path: BotConfig.fill_model.gof_ks_pval_threshold
+    default: 0.0
+
+  - id: config.fill_model.gof_lr_ratio_threshold
+    type: config_knob
+    pydantic_path: BotConfig.fill_model.gof_lr_ratio_threshold
+    default: null
+
+  - id: config.fill_model.fit_warn_staleness_s
+    type: config_knob
+    pydantic_path: BotConfig.fill_model.fit_warn_staleness_s
+    default: 1800.0
+
+  - id: config.fill_model.fit_max_staleness_s
+    type: config_knob
+    pydantic_path: BotConfig.fill_model.fit_max_staleness_s
+    default: 3600.0
+
+  - id: config.fill_model.bracket_width_warn_multiplier
+    type: config_knob
+    pydantic_path: BotConfig.fill_model.bracket_width_warn_multiplier
+    default: 0.5
+
+  - id: config.fill_model.min_events_per_param_ratio
+    type: config_knob
+    pydantic_path: BotConfig.fill_model.min_events_per_param_ratio
+    default: 10
+
 edges:
   # ── brain internal wiring ──────────────────────────────────────────────
   - from: brain
@@ -1391,3 +1472,64 @@ edges:
     to: brain.config.schema
     type: reads
     notes: "load_raw_yaml() returns raw dict; load_config() calls BotConfig.model_validate -- both used by economics_gate"
+
+  # ── Phase 2 Plan 02-01 edges ─────────────────────────────────────────────────
+  - from: brain.fill_model.features
+    to: parquet.market_trades
+    type: reads
+    notes: "DuckDB-joined feature table reads market_trades via open_analytical_conn"
+
+  - from: brain.fill_model.features
+    to: parquet.order_book_combined
+    type: reads
+    notes: "book_imbalance covariate joined from order_book_combined snapshots"
+
+  - from: brain.fill_model.features
+    to: parquet.order_book_raw
+    type: reads
+    notes: "order_book_raw available for per-tick raw size queries (joins through DuckDB views)"
+
+  - from: brain.fill_model.features
+    to: parquet.underlying_apr
+    type: reads
+    notes: "underlying_rate joined from underlying_apr for basis_spread = mid_rate - underlying"
+
+  - from: brain.fill_model.features
+    to: state.clo_history
+    type: reads
+    notes: "clo_history attached read-only via sqlite_scanner (through open_analytical_conn)"
+
+  - from: brain.fill_model.features
+    to: parquet.fill_features
+    type: writes
+    notes: "Hive-partitioned feature rows: market_id / side / features.parquet"
+
+  - from: brain.fill_model.features
+    to: brain.duckdb_layer.setup
+    type: calls
+    notes: "open_analytical_conn(sqlite_path, parquet_dir) — read-only attach"
+
+  - from: brain.fill_model.config
+    to: brain.fill_model.constants
+    type: calls
+    notes: "imports ALLOWED_COVARIATES + DEFAULT_COVARIATE_WHITELIST for field_validator"
+
+  - from: brain.config.schema
+    to: brain.fill_model.config
+    type: calls
+    notes: "BotConfig.fill_model: FillModelConfig field (Plan 02-01 attach-point)"
+
+  - from: brain.fill_model.features
+    to: config.fill_model.bin_duration_s
+    type: depends-on-config
+    notes: "bin width used for SQL floor() binning and output bin_duration_s column"
+
+  - from: brain.fill_model.features
+    to: config.fill_model.window_days
+    type: depends-on-config
+    notes: "window_days × 86400 = window length in seconds (caller computes window_start_ts)"
+
+  - from: brain.fill_model.features
+    to: config.fill_model.covariate_whitelist
+    type: depends-on-config
+    notes: "Plan 02-03 fitter consults covariate_whitelist to select columns from the feature table"
