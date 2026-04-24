@@ -87,6 +87,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     write_manifest(manifest, logs_dir=config.infra.logs_dir, sqlite_path=config.infra.sqlite_path)
     log = structlog.get_logger("fill_model.cli")
+    log.info("RUN_MANIFEST", **manifest.model_dump())
     log.info("fill_model.cli_started", subcommand=args.cmd)
 
     try:
