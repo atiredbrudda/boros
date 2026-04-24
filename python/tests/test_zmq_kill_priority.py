@@ -61,13 +61,13 @@ async def test_kill_lane_preempts_cmd(ipc_dir: Path) -> None:
                 msg = await asyncio.wait_for(kill_pull.recv_json(), timeout=0.001)
                 processed.append(f"KILL:{msg['reason']}")
                 continue  # after kill, loop back — kill always first
-            except (asyncio.TimeoutError, zmq.error.Again):
+            except (TimeoutError, zmq.error.Again):
                 pass
             # Then drain one cmd message.
             try:
                 msg = await asyncio.wait_for(cmd_pull.recv_json(), timeout=0.001)
                 processed.append(f"CMD:{msg['order_id']}")
-            except (asyncio.TimeoutError, zmq.error.Again):
+            except (TimeoutError, zmq.error.Again):
                 # No more pending messages — exit.
                 return
 

@@ -16,9 +16,7 @@ from boros_brain.config.loader import load_config
 from boros_brain.config.schema import BotConfig, DataConfig, StrategyConfig
 
 
-def test_round_trip_yaml_to_config_to_yaml(
-    default_yaml_path: Path, default_config: BotConfig, tmp_path: Path
-) -> None:
+def test_round_trip_yaml_to_config_to_yaml(default_yaml_path: Path, default_config: BotConfig, tmp_path: Path) -> None:
     """YAML → BotConfig → model_dump → YAML → BotConfig — two instances must be equal."""
     dumped = default_config.model_dump(mode="json")
     round_trip_path = tmp_path / "round_trip.yaml"

@@ -42,7 +42,6 @@ def mark_claim_tx(
     `UPDATE epoch_rewards` must live ONLY in this file (single-writer lint).
     """
     conn.execute(
-        "UPDATE epoch_rewards SET claimed=1, claim_tx_hash=? "
-        "WHERE epoch_end_ts=? AND market_id=?",
+        "UPDATE epoch_rewards SET claimed=1, claim_tx_hash=? " "WHERE epoch_end_ts=? AND market_id=?",
         (claim_tx_hash, epoch_end_ts, market_id),
     )

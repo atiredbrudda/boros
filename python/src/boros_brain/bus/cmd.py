@@ -30,11 +30,11 @@ class CmdBus:
 
     async def send_cmd(self, msg: StrictMsg) -> None:
         """Enqueue a PlaceCmd / CancelCmd on the normal cmd socket."""
-        await self.cmd.send_json(msg.model_dump(mode="json"))
+        await self.cmd.send_json(msg.model_dump(mode="json"))  # type: ignore[misc,func-returns-value]
 
     async def send_kill(self, msg: KillCmd) -> None:
         """Enqueue a KillCmd on the priority kill socket."""
-        await self.kill.send_json(msg.model_dump(mode="json"))
+        await self.kill.send_json(msg.model_dump(mode="json"))  # type: ignore[misc,func-returns-value]
 
     def close(self) -> None:
         self.cmd.close()

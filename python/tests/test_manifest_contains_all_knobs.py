@@ -32,6 +32,7 @@ def _upgrade(db_path: Path) -> None:
     cfg.set_main_option("sqlalchemy.url", f"sqlite:///{db_path}")
     command.upgrade(cfg, "head")
 
+
 _EXPECTED_TOP_LEVEL_FIELDS = {
     "run_id",
     "parent_run_id",
@@ -120,9 +121,7 @@ def test_git_sha_and_dirty_captured(default_config: BotConfig) -> None:
     assert isinstance(m.git_dirty, bool)
 
 
-def test_first_log_line_is_manifest_and_sidecar_written(
-    default_config: BotConfig, tmp_path: Path, monkeypatch
-) -> None:
+def test_first_log_line_is_manifest_and_sidecar_written(default_config: BotConfig, tmp_path: Path, monkeypatch) -> None:
     """Dry-run subprocess — manifest first log line + sidecar JSON parity.
 
     Uses the library functions directly (not the subprocess) to stay fast and

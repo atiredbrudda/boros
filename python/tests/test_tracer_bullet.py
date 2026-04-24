@@ -66,8 +66,7 @@ def test_manifest_writer_emits_first_line(tmp_path: Path) -> None:
     )
 
     result = subprocess.run(
-        [sys.executable, "-m", "boros_brain.main",
-         "--mode=paper", f"--config={cfg_yaml}", "--dry-run"],
+        [sys.executable, "-m", "boros_brain.main", "--mode=paper", f"--config={cfg_yaml}", "--dry-run"],
         check=True,
         capture_output=True,
         text=True,

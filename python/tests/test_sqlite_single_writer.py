@@ -102,9 +102,7 @@ def test_run_manifests_round_trip(tmp_path: Path) -> None:
             wallet_address_hash="0xhashed",
             config_json='{"k": 1}',
         )
-        row = conn.execute(
-            "SELECT run_id, parent_run_id, mode, strategy_version FROM run_manifests"
-        ).fetchone()
+        row = conn.execute("SELECT run_id, parent_run_id, mode, strategy_version FROM run_manifests").fetchone()
     assert row == ("run-parent", None, "paper", "v0.5.0")
 
 
@@ -120,9 +118,7 @@ def test_epoch_rewards_round_trip(tmp_path: Path) -> None:
             claimed=0,
             claim_tx_hash=None,
         )
-        row = conn.execute(
-            "SELECT epoch_end_ts, market_id, our_accrued_pendle, claimed FROM epoch_rewards"
-        ).fetchone()
+        row = conn.execute("SELECT epoch_end_ts, market_id, our_accrued_pendle, claimed FROM epoch_rewards").fetchone()
     assert row == (1_714_000_000, "ETHUSDT-29MAY2026", 12.5, 0)
 
 

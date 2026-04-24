@@ -12,6 +12,8 @@ respectively.
 
 from __future__ import annotations
 
+from typing import Any
+
 from pydantic import BaseModel, ConfigDict
 
 
@@ -32,6 +34,6 @@ class RunManifest(StrictBase):
     market_id: str
     side: str
     wallet_address_hash: str
-    config: dict
+    config: dict[str, Any]
     chain_time_drift_at_start_seconds: float | None = None
     agent_wallet_gas_balance_at_start: float | None = None

@@ -61,7 +61,7 @@ class HeartbeatMonitor:
             await self.events.publish(hb)
             try:
                 await asyncio.wait_for(self._stopped.wait(), timeout=self.interval_s)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 continue
 
     async def monitor_loop(self) -> None:
@@ -71,7 +71,7 @@ class HeartbeatMonitor:
                 await asyncio.wait_for(self._stopped.wait(), timeout=self.interval_s)
                 if self._stopped.is_set():
                     return
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 pass
             now_ms = int(time.time() * 1000)
             elapsed_ms = now_ms - self.last_peer_heartbeat_ms

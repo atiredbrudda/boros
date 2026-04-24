@@ -41,9 +41,7 @@ def test_parent_run_id_chain(default_config: BotConfig, tmp_path: Path) -> None:
     write_manifest(m2, logs_dir=logs_dir, sqlite_path=db)
 
     with open_connection(db) as conn:
-        rows = conn.execute(
-            "SELECT run_id, parent_run_id FROM run_manifests ORDER BY run_id"
-        ).fetchall()
+        rows = conn.execute("SELECT run_id, parent_run_id FROM run_manifests ORDER BY run_id").fetchall()
     mapping = dict(rows)
     assert mapping[m1.run_id] is None
     assert mapping[m2.run_id] == m1.run_id
@@ -53,19 +51,18 @@ def test_parent_run_id_fk_enforced(tmp_path: Path) -> None:
     """FK constraint: inserting with a bogus parent_run_id must raise IntegrityError."""
     db = tmp_path / "state.sqlite"
     _upgrade(db)
-    with open_connection(db) as conn:
-        with pytest.raises(sqlite3.IntegrityError):
-            insert_run_manifest(
-                conn,
-                run_id="orphan-1",
-                parent_run_id="NONEXISTENT_PARENT",
-                started_at_iso="2026-04-24T00:00:00+00:00",
-                mode="paper",
-                strategy_version="v0.5.0",
-                git_sha="deadbeef",
-                git_dirty=0,
-                market_id="ETHUSDT-29MAY2026",
-                side="long",
-                wallet_address_hash="abc1234deadbeef0",
-                config_json=json.dumps({}),
-            )
+    with open_connection(db) as conn, pytest.raises(sqlite3.IntegrityError):
+        insert_run_manifest(
+            conn,
+            run_id="orphan-1",
+            parent_run_id="NONEXISTENT_PARENT",
+            started_at_iso="2026-04-24T00:00:00+00:00",
+            mode="paper",
+            strategy_version="v0.5.0",
+            git_sha="deadbeef",
+            git_dirty=0,
+            market_id="ETHUSDT-29MAY2026",
+            side="long",
+            wallet_address_hash="abc1234deadbeef0",
+            config_json=json.dumps({}),
+        )

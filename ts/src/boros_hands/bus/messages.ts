@@ -9,69 +9,69 @@
  * input) raise a parse error rather than silently leaking through.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
 export const PlaceCmdSchema = z
-  .object({
-    kind: z.literal('place'),
-    order_id: z.string(),
-    market_id: z.string(),
-    side: z.enum(['long', 'short']),
-    depth_ticks: z.number().int(),
-    size_wei: z.string(),
-    rate: z.number().int(),
-    run_id: z.string(),
-  })
-  .strict();
+	.object({
+		kind: z.literal("place"),
+		order_id: z.string(),
+		market_id: z.string(),
+		side: z.enum(["long", "short"]),
+		depth_ticks: z.number().int(),
+		size_wei: z.string(),
+		rate: z.number().int(),
+		run_id: z.string(),
+	})
+	.strict();
 
 export const CancelCmdSchema = z
-  .object({
-    kind: z.literal('cancel'),
-    order_id: z.string(),
-    run_id: z.string(),
-  })
-  .strict();
+	.object({
+		kind: z.literal("cancel"),
+		order_id: z.string(),
+		run_id: z.string(),
+	})
+	.strict();
 
 export const KillCmdSchema = z
-  .object({
-    kind: z.literal('kill'),
-    reason: z.string(),
-    run_id: z.string(),
-  })
-  .strict();
+	.object({
+		kind: z.literal("kill"),
+		reason: z.string(),
+		run_id: z.string(),
+	})
+	.strict();
 
 export const HeartbeatSchema = z
-  .object({
-    kind: z.literal('heartbeat'),
-    from_tier: z.enum(['brain', 'hands']),
-    ts_ms: z.number().int(),
-    run_id: z.string(),
-  })
-  .strict();
+	.object({
+		kind: z.literal("heartbeat"),
+		from_tier: z.enum(["brain", "hands"]),
+		ts_ms: z.number().int(),
+		run_id: z.string(),
+	})
+	.strict();
 
 export const LostSiblingSchema = z
-  .object({
-    kind: z.literal('lost_sibling'),
-    observer: z.enum(['brain', 'hands']),
-    missing_since_ts_ms: z.number().int(),
-    run_id: z.string(),
-  })
-  .strict();
+	.object({
+		kind: z.literal("lost_sibling"),
+		observer: z.enum(["brain", "hands"]),
+		missing_since_ts_ms: z.number().int(),
+		run_id: z.string(),
+	})
+	.strict();
 
 export const RunManifestAnnounceSchema = z
-  .object({
-    kind: z.literal('run_manifest_announce'),
-    run_id: z.string(),
-    started_at: z.string(),
-    parent_run_id: z.string().nullable().optional(),
-  })
-  .strict();
+	.object({
+		kind: z.literal("run_manifest_announce"),
+		run_id: z.string(),
+		started_at: z.string(),
+		parent_run_id: z.string().nullable().optional(),
+	})
+	.strict();
 
 /** Discriminated union of cmd messages — used by CmdListener for validation. */
-export const CmdSchema = z.discriminatedUnion('kind', [
-  PlaceCmdSchema,
-  CancelCmdSchema,
-  KillCmdSchema,
+export const CmdSchema = z.discriminatedUnion("kind", [
+	PlaceCmdSchema,
+	CancelCmdSchema,
+	KillCmdSchema,
 ]);
 
 export type PlaceCmd = z.infer<typeof PlaceCmdSchema>;

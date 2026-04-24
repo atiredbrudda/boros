@@ -9,76 +9,76 @@
  *      ts/bus/messages.ts.
  */
 
-import { execSync } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { execSync } from "node:child_process";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 
-import { Publisher, Subscriber, Pull, Push } from 'zeromq';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { Publisher, Pull, Push, Subscriber } from "zeromq";
 
 import {
-  CmdSchema,
-  HeartbeatSchema,
-  KillCmdSchema,
-  LostSiblingSchema,
-  PlaceCmdSchema,
-} from '../../src/boros_hands/bus/messages.js';
+	CmdSchema,
+	HeartbeatSchema,
+	KillCmdSchema,
+	LostSiblingSchema,
+	PlaceCmdSchema,
+} from "../../src/boros_hands/bus/messages.js";
 
-const REPO_ROOT = resolve(__dirname, '../../..');
+const REPO_ROOT = resolve(__dirname, "../../..");
 
-describe('ZMQ echo + Zod mirror — INFRA-05 / T-03-03', () => {
-  let workdir: string;
+describe("ZMQ echo + Zod mirror — INFRA-05 / T-03-03", () => {
+	let workdir: string;
 
-  beforeEach(() => {
-    workdir = mkdtempSync(join(tmpdir(), 'b-'));
-  });
-  afterEach(() => {
-    rmSync(workdir, { recursive: true, force: true });
-  });
+	beforeEach(() => {
+		workdir = mkdtempSync(join(tmpdir(), "b-"));
+	});
+	afterEach(() => {
+		rmSync(workdir, { recursive: true, force: true });
+	});
 
-  it('pure-TS Push/Pull round-trip median < 10ms', async () => {
-    const endpoint = `ipc://${workdir}/cmd`;
-    const push = new Push();
-    const pull = new Pull();
-    pull.receiveHighWaterMark = 1000;
-    await push.bind(endpoint);
-    pull.connect(endpoint);
-    // Small delay for connect handshake.
-    await new Promise((r) => setTimeout(r, 50));
+	it("pure-TS Push/Pull round-trip median < 10ms", async () => {
+		const endpoint = `ipc://${workdir}/cmd`;
+		const push = new Push();
+		const pull = new Pull();
+		pull.receiveHighWaterMark = 1000;
+		await push.bind(endpoint);
+		pull.connect(endpoint);
+		// Small delay for connect handshake.
+		await new Promise((r) => setTimeout(r, 50));
 
-    const latencies: number[] = [];
-    const N = 50;
-    const msg = PlaceCmdSchema.parse({
-      kind: 'place',
-      order_id: 'ord-0',
-      market_id: 'ETHUSDT-29MAY2026',
-      side: 'long',
-      depth_ticks: 50,
-      size_wei: '1',
-      rate: 9400,
-      run_id: 'r',
-    });
-    for (let i = 0; i < N; i++) {
-      const t0 = performance.now();
-      await push.send(JSON.stringify({ ...msg, order_id: `ord-${i}` }));
-      const [buf] = await pull.receive();
-      const t1 = performance.now();
-      const parsed = CmdSchema.parse(JSON.parse(buf.toString()));
-      expect(parsed.kind).toBe('place');
-      latencies.push(t1 - t0);
-    }
-    const sorted = [...latencies].sort((a, b) => a - b);
-    const median = sorted[Math.floor(sorted.length / 2)];
-    push.close();
-    pull.close();
-    expect(median).toBeLessThan(10);
-  });
+		const latencies: number[] = [];
+		const N = 50;
+		const msg = PlaceCmdSchema.parse({
+			kind: "place",
+			order_id: "ord-0",
+			market_id: "ETHUSDT-29MAY2026",
+			side: "long",
+			depth_ticks: 50,
+			size_wei: "1",
+			rate: 9400,
+			run_id: "r",
+		});
+		for (let i = 0; i < N; i++) {
+			const t0 = performance.now();
+			await push.send(JSON.stringify({ ...msg, order_id: `ord-${i}` }));
+			const [buf] = await pull.receive();
+			const t1 = performance.now();
+			const parsed = CmdSchema.parse(JSON.parse(buf.toString()));
+			expect(parsed.kind).toBe("place");
+			latencies.push(t1 - t0);
+		}
+		const sorted = [...latencies].sort((a, b) => a - b);
+		const median = sorted[Math.floor(sorted.length / 2)];
+		push.close();
+		pull.close();
+		expect(median).toBeLessThan(10);
+	});
 
-  it('Python model_dump(mode="json") parses through Zod schemas — T-03-03 mirror', () => {
-    // Generate canonical JSON from the Python side — any schema drift between
-    // Pydantic and Zod will surface here as a ZodError.
-    const script = `
+	it('Python model_dump(mode="json") parses through Zod schemas — T-03-03 mirror', () => {
+		// Generate canonical JSON from the Python side — any schema drift between
+		// Pydantic and Zod will surface here as a ZodError.
+		const script = `
 from boros_brain.bus.messages import PlaceCmd, CancelCmd, KillCmd, Heartbeat, LostSibling
 import json, sys
 payload = {
@@ -90,17 +90,20 @@ payload = {
 }
 json.dump(payload, sys.stdout)
 `;
-    const out = execSync(`uv run python -c '${script.replace(/'/g, "'\\''")}'`, {
-      cwd: join(REPO_ROOT, 'python'),
-      encoding: 'utf-8',
-    });
-    const py = JSON.parse(out);
+		const out = execSync(
+			`uv run python -c '${script.replace(/'/g, "'\\''")}'`,
+			{
+				cwd: join(REPO_ROOT, "python"),
+				encoding: "utf-8",
+			},
+		);
+		const py = JSON.parse(out);
 
-    // Zod round-trip — any field drift throws.
-    expect(() => PlaceCmdSchema.parse(py.place)).not.toThrow();
-    expect(() => CmdSchema.parse(py.cancel)).not.toThrow();
-    expect(() => KillCmdSchema.parse(py.kill)).not.toThrow();
-    expect(() => HeartbeatSchema.parse(py.heartbeat)).not.toThrow();
-    expect(() => LostSiblingSchema.parse(py.lost)).not.toThrow();
-  });
+		// Zod round-trip — any field drift throws.
+		expect(() => PlaceCmdSchema.parse(py.place)).not.toThrow();
+		expect(() => CmdSchema.parse(py.cancel)).not.toThrow();
+		expect(() => KillCmdSchema.parse(py.kill)).not.toThrow();
+		expect(() => HeartbeatSchema.parse(py.heartbeat)).not.toThrow();
+		expect(() => LostSiblingSchema.parse(py.lost)).not.toThrow();
+	});
 });

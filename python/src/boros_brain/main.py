@@ -20,11 +20,12 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import contextlib
 import signal
 import sys
 import time
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Sequence
 
 from .bus.cmd import CmdBus
 from .bus.events import EventBus
@@ -95,9 +96,7 @@ async def run(config_path: Path, dry_run: bool = False) -> int:
     if dry_run:
         # Smoke-test invariant: publish one heartbeat so the tracer-bullet test
         # confirms the bus is wired end-to-end, then exit cleanly.
-        await event_bus.publish(
-            Heartbeat(from_tier="brain", ts_ms=int(time.time() * 1000), run_id=manifest.run_id)
-        )
+        await event_bus.publish(Heartbeat(from_tier="brain", ts_ms=int(time.time() * 1000), run_id=manifest.run_id))
         log.info("heartbeat_emitted", run_id=manifest.run_id)
         cmd_bus.close()
         event_bus.close()
@@ -126,10 +125,8 @@ async def run(config_path: Path, dry_run: bool = False) -> int:
     heartbeat.stop()
     for t in (send_task, monitor_task, ingest_task):
         t.cancel()
-        try:
+        with contextlib.suppress(asyncio.CancelledError):
             await t
-        except asyncio.CancelledError:
-            pass
     cmd_bus.close()
     event_bus.close()
     log.info("brain_shutdown")

@@ -8,6 +8,7 @@ tight. The production bus uses 5s / 15s per BotConfig defaults.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 from pathlib import Path
 
 import pytest
@@ -22,14 +23,10 @@ async def test_lost_sibling_after_three_misses(ipc_dir: Path) -> None:
     brain_endpoint = f"ipc://{ipc_dir}/events.brain"
     hands_endpoint = f"ipc://{ipc_dir}/events.hands"
 
-    brain_bus = EventBus(
-        brain_endpoint=brain_endpoint, hands_endpoint=hands_endpoint, tier="brain"
-    )
+    brain_bus = EventBus(brain_endpoint=brain_endpoint, hands_endpoint=hands_endpoint, tier="brain")
     # Natural hands-tier peer — binds its OWN endpoint, SUBs the brain's PUB.
     # This mirrors the production topology exactly.
-    observer_bus = EventBus(
-        brain_endpoint=brain_endpoint, hands_endpoint=hands_endpoint, tier="hands"
-    )
+    observer_bus = EventBus(brain_endpoint=brain_endpoint, hands_endpoint=hands_endpoint, tier="hands")
     # PUB/SUB slow-joiner: the SUB must connect BEFORE the PUB emits, and ZMQ's
     # in-process handshake can take ~100-200ms. Give it a comfortable margin.
     await asyncio.sleep(0.3)
@@ -56,10 +53,8 @@ async def test_lost_sibling_after_three_misses(ipc_dir: Path) -> None:
 
     monitor.stop()
     monitor_task.cancel()
-    try:
+    with contextlib.suppress(asyncio.CancelledError):
         await monitor_task
-    except asyncio.CancelledError:
-        pass
     brain_bus.close()
     observer_bus.close()
 
@@ -81,12 +76,11 @@ async def test_heartbeat_send_cadence(ipc_dir: Path) -> None:
     # PUB/SUB slow-joiner: give the handshake enough time to settle.
     await asyncio.sleep(0.3)
 
-    monitor = HeartbeatMonitor(
-        events=brain_bus, tier="brain", run_id="hb_run", interval_s=0.1, timeout_misses=100
-    )
+    monitor = HeartbeatMonitor(events=brain_bus, tier="brain", run_id="hb_run", interval_s=0.1, timeout_misses=100)
     send_task = asyncio.create_task(monitor.send_loop())
 
     heartbeats: list[dict] = []
+
     async def collect() -> None:
         while len(heartbeats) < 3:
             msg = await observer_bus.receive()
@@ -97,10 +91,8 @@ async def test_heartbeat_send_cadence(ipc_dir: Path) -> None:
 
     monitor.stop()
     send_task.cancel()
-    try:
+    with contextlib.suppress(asyncio.CancelledError):
         await send_task
-    except asyncio.CancelledError:
-        pass
     brain_bus.close()
     observer_bus.close()
 

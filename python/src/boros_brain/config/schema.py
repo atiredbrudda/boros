@@ -122,9 +122,13 @@ class BotConfig(StrictBase):
     root_wallet_address: str
     agent_wallet_address: str
 
-    strategy: StrategyConfig = Field(default_factory=StrategyConfig)
-    execution: ExecutionConfig = Field(default_factory=ExecutionConfig)
+    # Bare type: ignore (no error code) is intentional: mypy fires [arg-type] on these
+    # Pydantic default_factory=ModelClass lines only when the pydantic mypy plugin is
+    # absent. With the plugin, no error appears. A bare ignore suppresses either case
+    # without triggering [unused-ignore] when the plugin is installed.
+    strategy: StrategyConfig = Field(default_factory=StrategyConfig)  # type: ignore
+    execution: ExecutionConfig = Field(default_factory=ExecutionConfig)  # type: ignore
     data: DataConfig
-    infra: InfraConfig = Field(default_factory=InfraConfig)
-    screener: ScreenerConfig = Field(default_factory=ScreenerConfig)
+    infra: InfraConfig = Field(default_factory=InfraConfig)  # type: ignore
+    screener: ScreenerConfig = Field(default_factory=ScreenerConfig)  # type: ignore
     markets: list[MarketCalibration] = Field(default_factory=list, max_length=1)

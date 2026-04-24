@@ -36,9 +36,7 @@ def insert_reward_budget(
     before the DB round-trip gives the caller a clearer stack trace (B6 guard).
     """
     if data_source not in _ALLOWED:
-        raise ValueError(
-            f"data_source={data_source!r} not in {sorted(_ALLOWED)} (B6 pitfall guard)"
-        )
+        raise ValueError(f"data_source={data_source!r} not in {sorted(_ALLOWED)} (B6 pitfall guard)")
     conn.execute(
         "INSERT INTO reward_budget_history "
         "(snapshot_ts, market_id, e_liq_per_epoch, long_budget, short_budget, data_source) "

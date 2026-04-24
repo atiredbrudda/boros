@@ -17,28 +17,31 @@ from __future__ import annotations
 
 import logging
 import os
-from datetime import datetime, timezone
+from collections.abc import Callable
+from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 import orjson
 import structlog
 from structlog.contextvars import bind_contextvars, clear_contextvars
 
 
-def _orjson_dumps(obj, default=None) -> str:
+def _orjson_dumps(obj: Any, default: Callable[[Any], Any] | None = None) -> str:
     """Serialize to str — structlog WriteLoggerFactory writes text, not bytes.
 
     orjson returns bytes by design; decode to utf-8 here so the JSONRenderer
     output line-concatenates cleanly with the newline inside WriteLogger.msg().
     """
-    return orjson.dumps(obj, default=default).decode("utf-8")
+    result: str = orjson.dumps(obj, default=default).decode("utf-8")
+    return result
 
 
 def configure_logging(
     run_id: str,
     tier: str,
     logs_dir: Path | str,
-    first_manifest_line: dict | None = None,
+    first_manifest_line: dict[str, Any] | None = None,
 ) -> None:
     """Bind contextvars + configure structlog JSON writer.
 
@@ -47,7 +50,7 @@ def configure_logging(
     `<run_id>.brain.log.jsonl` opens with a self-describing manifest record.
     """
     logs_dir = Path(logs_dir)
-    date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    date_str = datetime.now(UTC).strftime("%Y-%m-%d")
     date_dir = logs_dir / date_str
     date_dir.mkdir(parents=True, exist_ok=True)
     log_path = date_dir / f"{run_id}.{tier}.log.jsonl"
@@ -88,6 +91,11 @@ def configure_logging(
         get_logger("boros_brain.manifest.writer").info("RUN_MANIFEST", **first_manifest_line)
 
 
-def get_logger(name: str):
-    """Return a bound structlog logger. Thin wrapper; exported for test imports."""
+def get_logger(name: str) -> Any:
+    """Return a bound structlog logger. Thin wrapper; exported for test imports.
+
+    Returns Any because structlog.get_logger() returns a FilteringBoundLogger whose
+    exact type depends on the wrapper_class configured at runtime — impossible to
+    statically type without a mypy plugin. Callers use it as a duck-typed logger.
+    """
     return structlog.get_logger(name)

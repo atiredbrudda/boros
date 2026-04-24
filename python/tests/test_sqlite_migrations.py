@@ -17,7 +17,6 @@ import stat
 from pathlib import Path
 
 import pytest
-
 from alembic import command
 from alembic.config import Config
 
@@ -56,9 +55,7 @@ def test_all_8_tables_exist_after_migration(tmp_path: Path) -> None:
     command.upgrade(cfg, "head")
 
     with sqlite3.connect(str(db_path)) as conn:
-        rows = conn.execute(
-            "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
-        ).fetchall()
+        rows = conn.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").fetchall()
     names = {r[0] for r in rows}
 
     expected = {
@@ -86,14 +83,13 @@ def test_reward_budget_history_data_source_check(tmp_path: Path) -> None:
         pass
     command.upgrade(_alembic_config_for(db_path), "head")
 
-    with open_connection(db_path) as conn:
-        with pytest.raises(sqlite3.IntegrityError):
-            conn.execute(
-                "INSERT INTO reward_budget_history "
-                "(snapshot_ts, market_id, e_liq_per_epoch, long_budget, short_budget, data_source) "
-                "VALUES (?, ?, ?, ?, ?, ?)",
-                (1, "ETHUSDT-29MAY2026", 10.0, 5.0, 5.0, "invalid"),
-            )
+    with open_connection(db_path) as conn, pytest.raises(sqlite3.IntegrityError):
+        conn.execute(
+            "INSERT INTO reward_budget_history "
+            "(snapshot_ts, market_id, e_liq_per_epoch, long_budget, short_budget, data_source) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (1, "ETHUSDT-29MAY2026", 10.0, 5.0, 5.0, "invalid"),
+        )
 
 
 def test_run_manifests_parent_run_id_fk(tmp_path: Path) -> None:

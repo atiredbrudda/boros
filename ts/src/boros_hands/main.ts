@@ -12,30 +12,30 @@
  * // Socket.IO listener wired by Phase 6 (EXEC / WS).
  */
 
-import { configureHandsLogger, ctxStore } from './logger.js';
+import { configureHandsLogger, ctxStore } from "./logger.js";
 
 export async function main(): Promise<number> {
-  const run_id = process.env.BOROS_RUN_ID ?? '<unassigned>';
-  const logsDir = process.env.BOROS_LOGS_DIR ?? 'logs';
-  const logger = configureHandsLogger(run_id, logsDir);
+	const run_id = process.env.BOROS_RUN_ID ?? "<unassigned>";
+	const logsDir = process.env.BOROS_LOGS_DIR ?? "logs";
+	const logger = configureHandsLogger(run_id, logsDir);
 
-  return new Promise<number>((resolve) => {
-    ctxStore.run({ run_id, tier: 'hands' }, () => {
-      logger.info({ event: 'hands_booted' });
+	return new Promise<number>((resolve) => {
+		ctxStore.run({ run_id, tier: "hands" }, () => {
+			logger.info({ event: "hands_booted" });
 
-      const shutdown = (): void => {
-        logger.info({ event: 'hands_shutdown' });
-        resolve(0);
-      };
-      process.once('SIGTERM', shutdown);
-      process.once('SIGINT', shutdown);
-    });
-  });
+			const shutdown = (): void => {
+				logger.info({ event: "hands_shutdown" });
+				resolve(0);
+			};
+			process.once("SIGTERM", shutdown);
+			process.once("SIGINT", shutdown);
+		});
+	});
 }
 
 // Only auto-run when executed directly (tsx src/boros_hands/main.ts), not when imported.
 if (import.meta.url === `file://${process.argv[1]}`) {
-  main().then((code) => {
-    process.exit(code);
-  });
+	main().then((code) => {
+		process.exit(code);
+	});
 }

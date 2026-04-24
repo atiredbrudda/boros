@@ -1,0 +1,93 @@
+# Pre-commit config — enforces Engineering Protocols 1/2 + security
+# Hooks run on every commit; `git commit --no-verify` bypasses but MUST be logged in
+# docs/override-log.md (see plan 01-04 Task 1 bootstrap exception).
+#
+# Install: pre-commit install
+# Manual run: pre-commit run --all-files
+# Skip a hook (for documented exceptions only): git commit --no-verify
+#
+# Hook overview:
+#   architecture-lint        — Protocol #2: no code change without architecture.yml update
+#   wiki-cite-lint           — Protocol #1: research/decisions/postmortem markdown must cite wiki
+#   sqlite-writer-lint       — INFRA-03: single-writer-per-table discipline
+#   no-plain-keys            — T-04-03: block Ethereum private keys + PEM headers
+#   config-round-trip-test   — PROTO-04: BotConfig round-trip stays valid after changes
+#   manifest-contains-all-knobs — PITFALLS D2: RUN_MANIFEST must contain every BotConfig field
+#   ruff / ruff-format       — Python code quality (Astral ruff)
+#   mypy                     — Python static type checking (strict)
+#   biome-check              — TypeScript/JSON linting + formatting (Biome)
+
+repos:
+  - repo: local
+    hooks:
+      - id: architecture-lint
+        name: Architecture drift lint (INFRA-09 / PROTO-02)
+        entry: python3 scripts/architecture_lint.py
+        language: system
+        pass_filenames: false   # the lint scans the whole tree against architecture.yml
+        types: [text]
+        files: '\.(py|ts|yml|yaml)$'
+
+      - id: wiki-cite-lint
+        name: Wiki-cite lint (INFRA-11 / PROTO-03)
+        entry: python3 scripts/wiki_cite_lint.py
+        language: system
+        # Only fire on markdown files directly under research/, decisions/, postmortem/
+        # at repo root. Files under .planning/research/ are bootstrap-exempt (pre-hook).
+        files: '^(research|decisions|postmortem)/.*\.md$'
+
+      - id: sqlite-writer-lint
+        name: Single-writer-per-table lint (INFRA-03)
+        entry: python3 scripts/sqlite_writer_lint.py --root .
+        language: system
+        pass_filenames: false
+        types: [text]
+        files: '\.(py|ts)$'
+
+      - id: no-plain-keys
+        name: Block plaintext private-key patterns (T-04-03)
+        entry: python3 scripts/no_plain_keys.py
+        language: system
+        types: [text]
+        # Exclude planning docs — they contain key patterns as documentation examples only.
+        # Actual source code, config, and env files are still fully policed.
+        exclude: '^\.planning/'
+
+      - id: config-round-trip-test
+        name: BotConfig round-trip test (INFRA-02 / PROTO-04)
+        entry: bash -c "cd python && uv run pytest tests/test_config_round_trip.py -q"
+        language: system
+        pass_filenames: false
+        files: '^(python/src/boros_brain/config/|strategy/).*'
+
+      - id: manifest-contains-all-knobs
+        name: RUN_MANIFEST contains every BotConfig field (PITFALLS D2)
+        entry: bash -c "cd python && uv run pytest tests/test_manifest_contains_all_knobs.py -q"
+        language: system
+        pass_filenames: false
+        files: '^(python/src/boros_brain/(config|manifest)/).*'
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.7.0
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+        files: '^python/'
+      - id: ruff-format
+        files: '^python/'
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.13.0
+    hooks:
+      - id: mypy
+        additional_dependencies:
+          - pydantic==2.13.3
+          - types-PyYAML
+        args: [--strict, --ignore-missing-imports, --no-warn-unused-ignores]
+        files: '^python/src/'
+
+  - repo: https://github.com/biomejs/pre-commit
+    rev: v1.9.4
+    hooks:
+      - id: biome-check
+        files: '^ts/'

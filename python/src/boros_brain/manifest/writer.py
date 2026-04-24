@@ -15,7 +15,7 @@ from __future__ import annotations
 import hashlib
 import json
 import subprocess
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from ulid import ULID
@@ -29,10 +29,14 @@ from .schema import RunManifest
 def _git_sha() -> str:
     """Return current HEAD SHA, or 40 zeros if git is unavailable."""
     try:
-        sha = subprocess.check_output(
-            ["git", "rev-parse", "HEAD"],
-            stderr=subprocess.DEVNULL,
-        ).decode().strip()
+        sha = (
+            subprocess.check_output(
+                ["git", "rev-parse", "HEAD"],
+                stderr=subprocess.DEVNULL,
+            )
+            .decode()
+            .strip()
+        )
         return sha or "0" * 40
     except (subprocess.CalledProcessError, FileNotFoundError):
         return "0" * 40
@@ -42,10 +46,13 @@ def _git_dirty() -> bool:
     """True iff the working tree has uncommitted changes vs. HEAD."""
     try:
         # git diff --quiet exits 0 on clean, 1 on dirty, >1 on error.
-        return subprocess.call(
-            ["git", "diff", "--quiet", "HEAD"],
-            stderr=subprocess.DEVNULL,
-        ) == 1
+        return (
+            subprocess.call(
+                ["git", "diff", "--quiet", "HEAD"],
+                stderr=subprocess.DEVNULL,
+            )
+            == 1
+        )
     except FileNotFoundError:
         return False
 
@@ -60,7 +67,7 @@ def build_run_manifest(config: BotConfig, parent_run_id: str | None = None) -> R
     return RunManifest(
         run_id=str(ULID()),
         parent_run_id=parent_run_id,
-        started_at=datetime.now(timezone.utc).isoformat(),
+        started_at=datetime.now(UTC).isoformat(),
         mode=config.mode,
         strategy_version=config.strategy_version,
         git_sha=_git_sha(),
@@ -91,7 +98,7 @@ def write_manifest(
     logs_dir = Path(logs_dir)
     sqlite_path = Path(sqlite_path)
 
-    date_dir = logs_dir / datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    date_dir = logs_dir / datetime.now(UTC).strftime("%Y-%m-%d")
     date_dir.mkdir(parents=True, exist_ok=True)
     sidecar_path = date_dir / f"{manifest.run_id}.manifest.json"
     sidecar_path.write_text(json.dumps(manifest.model_dump(mode="json"), indent=2))

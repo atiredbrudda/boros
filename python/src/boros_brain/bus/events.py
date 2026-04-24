@@ -10,6 +10,8 @@ future fill-forward events.
 
 from __future__ import annotations
 
+from typing import Any
+
 import zmq
 import zmq.asyncio
 
@@ -36,11 +38,12 @@ class EventBus:
             raise ValueError(f"tier must be 'brain' or 'hands', got {tier!r}")
 
     async def publish(self, msg: StrictMsg) -> None:
-        await self.pub.send_json(msg.model_dump(mode="json"))
+        await self.pub.send_json(msg.model_dump(mode="json"))  # type: ignore[misc,func-returns-value]
 
-    async def receive(self) -> dict:
+    async def receive(self) -> dict[str, Any]:
         """Block until the next event arrives from the peer's PUB."""
-        return await self.sub.recv_json()
+        result: dict[str, Any] = await self.sub.recv_json()  # type: ignore[misc]
+        return result
 
     def close(self) -> None:
         self.pub.close()
