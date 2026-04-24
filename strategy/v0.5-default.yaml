@@ -76,4 +76,56 @@ fill_model:
   bracket_width_warn_multiplier: 0.5
   min_events_per_param_ratio: 10
 
+# Phase 3: LossModel knobs (LOSS-01/02/03 — Plan 03-01 attached, Plan 03-02 wired)
+loss_model:
+  depth_bucket_edges: [0.0, 1.0, 2.0, 4.0, 8.0, 16.0, 32.0, 10000.0]
+  tau_bucket_edges_days: [0.0, 7.0, 14.0, 30.0, 60.0, 90.0, 180.0, 10000.0]
+  min_samples_per_cell: 5
+  knn_k: 3
+  knn_max_distance: 4.0
+  aggregation_metric: mean
+  window_days: 90
+  refit_cadence_s: 900.0
+  fit_warn_staleness_s: 1800.0
+  fit_max_staleness_s: 86400.0
+  close_latency_budget_s: 60.0
+  fees:
+    taker_fee_rate: 0.0005
+    settlement_fee_rate: 0.001
+    settlement_period_s: 28800
+    market_entrance_fee_usd: 1.0
+    gas_place_gwei: 200000
+    gas_cancel_gwei: 100000
+    gas_close_gwei: 300000
+    gas_price_gwei: 0.1
+
+# Phase 3: RewardShareModel knobs (REWARD-01/02/04 — Plan 03-02)
+reward_share_model:
+  competition_poll_interval_s: 5.0
+  sigma_others_min_pendle: 0.000001
+  epoch_days: 7.0
+  cap_apr_multiple: 10.0
+  fallback_to_parquet_after_rest_fails_n: 5
+
+# Phase 3: PENDLE/USD pricing — operator-manual in v0.5 (Plan 03-02)
+pricing:
+  pendle_price_usd: 7.0
+  price_source: manual
+  price_staleness_warn_s: 86400.0
+  price_staleness_halt_s: 604800.0
+
+# markets:
+#   - market_id: BINANCE-ETHUSDT-29MAY2026
+#     scale: ...
+#     s: ...
+#     clo_lower_thresh: ...
+#     clo_upper_thresh: ...
+#     fIndex_oracle_address: ...
+#     maturity_ts: ...
+#     # reward_calibration: # OPTIONAL (LOCKED D-01) — at daily re-screen, uncomment + fill from dApp UI
+#     #   e_liq_per_epoch_pendle: 273.0   # Read from Pendle dApp "LO rewards" panel
+#     #   long_side_split: 0.14            # long-side fraction of E_liq
+#     #   short_side_split: 0.86           # must sum to 1.0 with long_side_split
+#     #   calibrated_at_utc: "2026-04-24T00:00:00+00:00"
+#     #   source: dapp_ui                  # or team_statement / pendle_docs
 markets: []
