@@ -29,9 +29,12 @@ Requirements for the v0.5 release. Every requirement is testable (either automat
 - [x] **INFRA-03
 **: A **SQLite database with WAL mode** holds shared cross-process state: in-flight orders, queue-position estimates, reward accrual tracker, recent fills/PnL. Single-writer-per-table discipline is documented and linted.
 - [ ] **INFRA-04**: **DuckDB read-only** layer sits over the NDJSON parquet + SQLite for backtest / analysis queries — no writes, pure analytical reads.
-- [ ] **INFRA-05**: **ZMQ IPC** between Python `brain` and TypeScript `hands` over two sockets: `ipc:///tmp/boros.cmd` (PUSH/PULL, priority lanes so KILL preempts placements) and `ipc:///tmp/boros.events` (PUB/SUB).
-- [ ] **INFRA-06**: A **RUN_MANIFEST writer** emits the manifest as (a) first log record, (b) `<run_id>.manifest.json` sidecar. Fields: `run_id` (ULID), `started_at`, `mode` (backtest/paper/live), `git_sha`, `git_dirty`, `strategy_version`, `market_id`, `side`, `wallet_address_hash`, full config tree. Mid-run knob change triggers a new `run_id` with `parent_run_id` pointer.
-- [ ] **INFRA-07**: A **structured JSON logger** (`structlog`) emits one record per event. Every log line carries the active `run_id` for join-on-grep. Log files written to `logs/<YYYY-MM-DD>/<run_id>.log.jsonl`.
+- [x] **INFRA-05
+**: **ZMQ IPC** between Python `brain` and TypeScript `hands` over two sockets: `ipc:///tmp/boros.cmd` (PUSH/PULL, priority lanes so KILL preempts placements) and `ipc:///tmp/boros.events` (PUB/SUB).
+- [x] **INFRA-06
+**: A **RUN_MANIFEST writer** emits the manifest as (a) first log record, (b) `<run_id>.manifest.json` sidecar. Fields: `run_id` (ULID), `started_at`, `mode` (backtest/paper/live), `git_sha`, `git_dirty`, `strategy_version`, `market_id`, `side`, `wallet_address_hash`, full config tree. Mid-run knob change triggers a new `run_id` with `parent_run_id` pointer.
+- [x] **INFRA-07
+**: A **structured JSON logger** (`structlog`) emits one record per event. Every log line carries the active `run_id` for join-on-grep. Log files written to `logs/<YYYY-MM-DD>/<run_id>.log.jsonl`.
 - [ ] **INFRA-08**: `docs/ARCHITECTURE.md` is created with a Mermaid diagram + `docs/architecture.yml` machine-readable manifest listing every module, public function, CLI command, and config knob with typed edges (`calls`, `reads`, `writes`, `emits-event`, `subscribes-to`, `depends-on-config`).
 - [ ] **INFRA-09**: A **pre-commit hook** runs `scripts/architecture_lint.py` that parses `architecture.yml`, walks the source tree, and fails the commit if code changes don't touch the architecture manifest when they should (or vice versa). This is the mechanical enforcement of Engineering Protocol #2.
 - [ ] **INFRA-10**: LLM Wiki boros workspace is seeded with the initial page set derived from existing planning docs (`boros_bot_guide.md`, `boros_consolidated_plan.md`, `plan_comparison.md`, the four research docs). Every seed page has `**Status:**` set. `index.md` thematic map + alphabetical listing are both populated.
@@ -143,7 +146,8 @@ Requirements for the v0.5 release. Every requirement is testable (either automat
 
 ### Cross-cutting — Engineering Protocols (apply to every phase)
 
-- [ ] **PROTO-01**: Every run (backtest, paper, live) emits `RUN_MANIFEST` as first log line + sidecar JSON; log lines carry `run_id`. Enforced by INFRA-06.
+- [x] **PROTO-01**: Every run (backtest, paper, live) emits `RUN_MANIFEST` as first log line + sidecar JSON; log lines carry `run_id`. Enforced by INFRA-06
+.
 - [ ] **PROTO-02**: Every commit that touches `python/` or `ts/` source also updates `docs/ARCHITECTURE.md` + `docs/architecture.yml`; pre-commit hook (INFRA-09) blocks non-compliant commits.
 - [ ] **PROTO-03**: Every research / decision / postmortem commit cites at least one `[[wiki-link]]` into the LLM Wiki boros workspace; pre-commit hook (INFRA-11) blocks non-compliant commits.
 - [x] **PROTO-04**: Every new "knob" is added to the Pydantic config schema (INFRA-02
