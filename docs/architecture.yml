@@ -834,6 +834,265 @@ nodes:
     path: python/src/boros_brain/fill_model/cli.py
     public_functions: [main, build_parser]
 
+  # ── Phase 3: Loss Model — Plan 03-01 + Plan 03-04 ───────────────────────────
+  - id: brain.loss_model.config
+    type: module
+    process: brain
+    path: python/src/boros_brain/loss_model/config.py
+    public_functions: []   # LossModelConfig + FeesConfig — Pydantic StrictBase only
+  - id: brain.loss_model.schemas
+    type: module
+    process: brain
+    path: python/src/boros_brain/loss_model/schemas.py
+    public_functions: []   # PerFillPnL, LossGridCell, LossGridArtifact, ExpectedLossInput/Output, LossModelNoFreshGridError
+  - id: brain.loss_model.replay
+    type: module
+    process: brain
+    path: python/src/boros_brain/loss_model/replay.py
+    public_functions: [replay_historical_fills, build_per_fill_pnl_from_frame]
+  - id: brain.loss_model.fit
+    type: module
+    process: brain
+    path: python/src/boros_brain/loss_model/fit.py
+    public_functions: [fit_loss_grid, build_loss_grid_artifact_from_fills]
+  - id: brain.loss_model.expected_loss
+    type: module
+    process: brain
+    path: python/src/boros_brain/loss_model/expected_loss.py
+    public_functions: [expected_loss]
+  - id: brain.loss_model.artifact
+    type: module
+    process: brain
+    path: python/src/boros_brain/loss_model/artifact.py
+    public_functions: [write_loss_grid_artifact]
+  - id: brain.loss_model.refit_loop
+    type: module
+    process: brain
+    path: python/src/boros_brain/loss_model/refit_loop.py
+    public_functions: [refit_once, run_loss_model_refit_loop]
+  - id: brain.loss_model.ou_parametric
+    type: module
+    process: brain
+    path: python/src/boros_brain/loss_model/ou_parametric.py
+    public_functions: [fit_ou_basis]   # NotImplementedError scaffold (LOSS-03)
+  - id: brain.loss_model.cli
+    type: module
+    process: brain
+    path: python/src/boros_brain/loss_model/cli.py
+    public_functions: [main, build_parser]
+
+  # ── Phase 3: Reward-Share Model — Plan 03-02 + Plan 03-04 ───────────────────
+  - id: brain.reward_model.config
+    type: module
+    process: brain
+    path: python/src/boros_brain/reward_model/config.py
+    public_functions: []   # RewardShareModelConfig — Pydantic StrictBase only
+  - id: brain.reward_model.schemas
+    type: module
+    process: brain
+    path: python/src/boros_brain/reward_model/schemas.py
+    public_functions: []   # RewardCurveInput/Output, CompetitionSnapshot, MarketRewardCalibrationSplitError
+  - id: brain.reward_model.competition_tracker
+    type: module
+    process: brain
+    path: python/src/boros_brain/reward_model/competition_tracker.py
+    public_functions: [run_competition_tracker_loop]   # CompetitionTracker is a class
+  - id: brain.reward_model.r_capped
+    type: module
+    process: brain
+    path: python/src/boros_brain/reward_model/r_capped.py
+    public_functions: [r_capped_curve]
+  - id: brain.reward_model.q_cap
+    type: module
+    process: brain
+    path: python/src/boros_brain/reward_model/q_cap.py
+    public_functions: [compute_q_cap]
+  - id: brain.reward_model.calibrate
+    type: module
+    process: brain
+    path: python/src/boros_brain/reward_model/calibrate.py
+    public_functions: [insert_operator_calibration]
+  - id: brain.reward_model.cli
+    type: module
+    process: brain
+    path: python/src/boros_brain/reward_model/cli.py
+    public_functions: [main, build_parser]
+
+  # ── Phase 3: Sizer — Plan 03-03 + Plan 03-04 ────────────────────────────────
+  - id: brain.sizer.config
+    type: module
+    process: brain
+    path: python/src/boros_brain/sizer/config.py
+    public_functions: []   # SizerConfig — Pydantic StrictBase only
+  - id: brain.sizer.schemas
+    type: module
+    process: brain
+    path: python/src/boros_brain/sizer/schemas.py
+    public_functions: []   # SizerInput/Output, InsufficientCollateralError
+  - id: brain.sizer.optimizer
+    type: module
+    process: brain
+    path: python/src/boros_brain/sizer/optimizer.py
+    public_functions: [q_me_target]
+  - id: brain.sizer.cli
+    type: module
+    process: brain
+    path: python/src/boros_brain/sizer/cli.py
+    public_functions: [main, build_parser]
+
+  # ── Phase 3: Pricing — Plan 03-02 + Plan 03-04 ─────────────────────────────
+  - id: brain.pricing.config
+    type: module
+    process: brain
+    path: python/src/boros_brain/pricing/config.py
+    public_functions: []   # PricingConfig — Pydantic StrictBase only
+
+  # ── Phase 3: SQLite writers — Plan 03-01 / 03-02 / 03-04 ───────────────────
+  - id: brain.state.writers.loss_grid_artifacts
+    type: module
+    process: brain
+    path: python/src/boros_brain/state/writers/loss_grid_artifacts.py
+    public_functions: [insert_loss_grid_artifact, get_latest_loss_grid]
+  - id: brain.state.writers.competition_history
+    type: module
+    process: brain
+    path: python/src/boros_brain/state/writers/competition_history.py
+    public_functions: [insert_competition_row, get_latest_competition]
+  - id: brain.state.writers.market_reward_calibration
+    type: module
+    process: brain
+    path: python/src/boros_brain/state/writers/market_reward_calibration.py
+    public_functions: [insert_market_reward_calibration, get_latest_market_reward_calibration]
+
+  # ── Phase 3: SQLite + parquet storage nodes ────────────────────────────────
+  - id: state.loss_grid_artifacts
+    type: storage
+    path: state/state.sqlite#loss_grid_artifacts
+    notes: "SQLite loss_grid_artifacts table (Alembic 0004). PK=(market_id, side, window_end_ts). Single writer: brain.state.writers.loss_grid_artifacts."
+  - id: state.competition_history
+    type: storage
+    path: state/state.sqlite#competition_history
+    notes: "SQLite competition_history table (Alembic 0005). Indexed (market_id, polled_at_utc DESC). Single writer: brain.state.writers.competition_history."
+  - id: state.market_reward_calibration
+    type: storage
+    path: state/state.sqlite#market_reward_calibration
+    notes: "SQLite market_reward_calibration table (Alembic 0006 — LOCKED D-01 2026-04-24). data_source='operator' CHECK. Single writer: brain.state.writers.market_reward_calibration."
+  - id: parquet.loss_grid_artifacts
+    type: storage
+    path: data/parquet/loss_grid_artifacts/**/*.parquet
+    notes: "Hive-partitioned: market_id / side / window_end_ts. Sidecar for loss-grid per-cell aggregation (parquet-FIRST, SQLite-SECOND dual-write)."
+
+  # ── Phase 3: Config knobs — LossModelConfig + FeesConfig (19 leaves) ───────
+  - id: config.loss_model.depth_bucket_edges
+    type: config_knob
+    pydantic_path: BotConfig.loss_model.depth_bucket_edges
+    default: "[0, 1, 2, 4, 8, 16, 32, 10000]"
+  - id: config.loss_model.tau_bucket_edges_days
+    type: config_knob
+    pydantic_path: BotConfig.loss_model.tau_bucket_edges_days
+  - id: config.loss_model.min_samples_per_cell
+    type: config_knob
+    pydantic_path: BotConfig.loss_model.min_samples_per_cell
+  - id: config.loss_model.knn_k
+    type: config_knob
+    pydantic_path: BotConfig.loss_model.knn_k
+  - id: config.loss_model.knn_max_distance
+    type: config_knob
+    pydantic_path: BotConfig.loss_model.knn_max_distance
+  - id: config.loss_model.aggregation_metric
+    type: config_knob
+    pydantic_path: BotConfig.loss_model.aggregation_metric
+  - id: config.loss_model.window_days
+    type: config_knob
+    pydantic_path: BotConfig.loss_model.window_days
+  - id: config.loss_model.refit_cadence_s
+    type: config_knob
+    pydantic_path: BotConfig.loss_model.refit_cadence_s
+  - id: config.loss_model.fit_warn_staleness_s
+    type: config_knob
+    pydantic_path: BotConfig.loss_model.fit_warn_staleness_s
+  - id: config.loss_model.fit_max_staleness_s
+    type: config_knob
+    pydantic_path: BotConfig.loss_model.fit_max_staleness_s
+  - id: config.loss_model.close_latency_budget_s
+    type: config_knob
+    pydantic_path: BotConfig.loss_model.close_latency_budget_s
+  - id: config.loss_model.fees.taker_fee_rate
+    type: config_knob
+    pydantic_path: BotConfig.loss_model.fees.taker_fee_rate
+  - id: config.loss_model.fees.settlement_fee_rate
+    type: config_knob
+    pydantic_path: BotConfig.loss_model.fees.settlement_fee_rate
+  - id: config.loss_model.fees.settlement_period_s
+    type: config_knob
+    pydantic_path: BotConfig.loss_model.fees.settlement_period_s
+  - id: config.loss_model.fees.market_entrance_fee_usd
+    type: config_knob
+    pydantic_path: BotConfig.loss_model.fees.market_entrance_fee_usd
+  - id: config.loss_model.fees.gas_place_gwei
+    type: config_knob
+    pydantic_path: BotConfig.loss_model.fees.gas_place_gwei
+  - id: config.loss_model.fees.gas_cancel_gwei
+    type: config_knob
+    pydantic_path: BotConfig.loss_model.fees.gas_cancel_gwei
+  - id: config.loss_model.fees.gas_close_gwei
+    type: config_knob
+    pydantic_path: BotConfig.loss_model.fees.gas_close_gwei
+  - id: config.loss_model.fees.gas_price_gwei
+    type: config_knob
+    pydantic_path: BotConfig.loss_model.fees.gas_price_gwei
+
+  # ── Phase 3: Config knobs — RewardShareModelConfig (5 leaves) ──────────────
+  - id: config.reward_share_model.competition_poll_interval_s
+    type: config_knob
+    pydantic_path: BotConfig.reward_share_model.competition_poll_interval_s
+  - id: config.reward_share_model.sigma_others_min_pendle
+    type: config_knob
+    pydantic_path: BotConfig.reward_share_model.sigma_others_min_pendle
+  - id: config.reward_share_model.epoch_days
+    type: config_knob
+    pydantic_path: BotConfig.reward_share_model.epoch_days
+  - id: config.reward_share_model.cap_apr_multiple
+    type: config_knob
+    pydantic_path: BotConfig.reward_share_model.cap_apr_multiple
+  - id: config.reward_share_model.fallback_to_parquet_after_rest_fails_n
+    type: config_knob
+    pydantic_path: BotConfig.reward_share_model.fallback_to_parquet_after_rest_fails_n
+
+  # ── Phase 3: Config knobs — PricingConfig (4 leaves) ───────────────────────
+  - id: config.pricing.pendle_price_usd
+    type: config_knob
+    pydantic_path: BotConfig.pricing.pendle_price_usd
+  - id: config.pricing.price_source
+    type: config_knob
+    pydantic_path: BotConfig.pricing.price_source
+  - id: config.pricing.price_staleness_warn_s
+    type: config_knob
+    pydantic_path: BotConfig.pricing.price_staleness_warn_s
+  - id: config.pricing.price_staleness_halt_s
+    type: config_knob
+    pydantic_path: BotConfig.pricing.price_staleness_halt_s
+
+  # ── Phase 3: Config knobs — SizerConfig (6 leaves) ─────────────────────────
+  - id: config.sizer.collateral_usd
+    type: config_knob
+    pydantic_path: BotConfig.sizer.collateral_usd
+  - id: config.sizer.q_min_pendle
+    type: config_knob
+    pydantic_path: BotConfig.sizer.q_min_pendle
+  - id: config.sizer.q_max_safety_margin
+    type: config_knob
+    pydantic_path: BotConfig.sizer.q_max_safety_margin
+  - id: config.sizer.optimizer_grid_points
+    type: config_knob
+    pydantic_path: BotConfig.sizer.optimizer_grid_points
+  - id: config.sizer.optimizer_method
+    type: config_knob
+    pydantic_path: BotConfig.sizer.optimizer_method
+  - id: config.sizer.notional_per_yu_usd
+    type: config_knob
+    pydantic_path: BotConfig.sizer.notional_per_yu_usd
+
 edges:
   # ── brain internal wiring ──────────────────────────────────────────────
   - from: brain
@@ -1799,3 +2058,245 @@ edges:
     to: brain.fill_model.refit_loop
     type: calls
     notes: "refit_once synchronous at boot + run_fill_model_refit_loop spawned as asyncio.create_task"
+
+  # ── Phase 3 Plan 03-01 + 03-04 — Loss Model edges ──────────────────────────
+  - from: brain.loss_model.replay
+    to: parquet.market_trades
+    type: reads
+    notes: "DuckDB replay reads market_trades (fills + opposite-side close candidates)"
+  - from: brain.loss_model.replay
+    to: brain.duckdb_layer.setup
+    type: calls
+    notes: "open_analytical_conn(sqlite_path, parquet_root) for the no-look-ahead SQL"
+  - from: brain.loss_model.replay
+    to: config.pricing.pendle_price_usd
+    type: depends-on-config
+    notes: "Plan 03-04: replace_historical_fills sources pendle_price_usd from PricingConfig"
+  - from: brain.loss_model.fit
+    to: brain.loss_model.replay
+    type: calls
+    notes: "fit_loss_grid → replay_historical_fills → build_loss_grid_artifact_from_fills"
+  - from: brain.loss_model.fit
+    to: brain.loss_model.artifact
+    type: calls
+    notes: "fit_loss_grid persists via write_loss_grid_artifact (parquet-FIRST, SQLite-SECOND)"
+  - from: brain.loss_model.artifact
+    to: brain.state.writers.loss_grid_artifacts
+    type: calls
+    notes: "single-writer-per-table (PROTO-02)"
+  - from: brain.loss_model.artifact
+    to: parquet.loss_grid_artifacts
+    type: writes
+    notes: "Hive-partitioned: market_id / side / window_end_ts (orphan-tolerant sidecar)"
+  - from: brain.state.writers.loss_grid_artifacts
+    to: state.loss_grid_artifacts
+    type: writes
+    notes: "UPSERT on PK (market_id, side, window_end_ts)"
+  - from: brain.state.writers.loss_grid_artifacts
+    to: state.loss_grid_artifacts
+    type: reads
+    notes: "get_latest_loss_grid — ORDER BY window_end_ts DESC LIMIT 1"
+  - from: brain.loss_model.expected_loss
+    to: brain.state.writers.loss_grid_artifacts
+    type: calls
+    notes: "sync sub-10ms hot-path read of latest grid"
+  - from: brain.loss_model.refit_loop
+    to: brain.data.chain_time
+    type: calls
+    notes: "refit_once awaits chain_time.now_cached() for window end-ts (INFRA-14)"
+  - from: brain.loss_model.refit_loop
+    to: brain.loss_model.fit
+    type: calls
+  - from: brain.loss_model.refit_loop
+    to: config.loss_model.refit_cadence_s
+    type: depends-on-config
+    notes: "run_loss_model_refit_loop sleeps refit_cadence_s between fits"
+  - from: brain.loss_model.refit_loop
+    to: config.loss_model.window_days
+    type: depends-on-config
+  - from: brain.loss_model.expected_loss
+    to: config.loss_model.aggregation_metric
+    type: depends-on-config
+    notes: "expected_loss reads aggregation_metric (mean/p50/p95) for cell metric selection"
+  - from: brain.loss_model.expected_loss
+    to: config.loss_model.fit_max_staleness_s
+    type: depends-on-config
+    notes: "stale-grid raises LossModelNoFreshGridError"
+  - from: brain.loss_model.expected_loss
+    to: config.screener.fill_loss_coarse_bound
+    type: depends-on-config
+    notes: "coarse_bound fallback when knn neighbors fail (Plan 03-01 sparse-cell tier)"
+  - from: brain.loss_model.cli
+    to: brain.manifest.writer
+    type: calls
+    notes: "MANIFEST-FIRST boot (PROTO-01)"
+  - from: brain.loss_model.cli
+    to: brain.loss_model.refit_loop
+    type: calls
+    notes: "fit subcommand → refit_once"
+  - from: brain.loss_model.cli
+    to: brain.loss_model.expected_loss
+    type: calls
+    notes: "expected-loss subcommand → expected_loss"
+  - from: brain.main
+    to: brain.loss_model.refit_loop
+    type: calls
+    notes: "Plan 03-04: refit_once synchronous at boot + run_loss_model_refit_loop as asyncio.create_task"
+
+  # ── Phase 3 Plan 03-02 + 03-04 — Reward-Share Model edges ──────────────────
+  - from: brain.reward_model.competition_tracker
+    to: brain.data.rest_client
+    type: calls
+    notes: "POST /open-api/v2/accounts/all-limit-orders for Q_me — wrapped via main.py adapter"
+  - from: brain.reward_model.competition_tracker
+    to: parquet.order_book_raw
+    type: reads
+    notes: "Σ_others reads RAW (NOT combined) per T-03-06 — AMMs do not compete for LO Liquidity Rewards"
+  - from: brain.reward_model.competition_tracker
+    to: state.clo_history
+    type: reads
+    notes: "latest [clo_lower_thresh, clo_upper_thresh] for in-range size aggregation"
+  - from: brain.reward_model.competition_tracker
+    to: brain.duckdb_layer.setup
+    type: calls
+    notes: "open_analytical_conn for Σ_others SQL aggregation"
+  - from: brain.reward_model.competition_tracker
+    to: brain.data.chain_time
+    type: calls
+    notes: "now_cached() for chain_ts on each cycle"
+  - from: brain.reward_model.competition_tracker
+    to: brain.state.writers.competition_history
+    type: calls
+    notes: "one row per market per cycle (single-writer-per-table)"
+  - from: brain.reward_model.competition_tracker
+    to: state.open_orders
+    type: reads
+    notes: "fallback Q_me estimation from SQLite open_orders when REST is degraded"
+  - from: brain.state.writers.competition_history
+    to: state.competition_history
+    type: writes
+  - from: brain.state.writers.competition_history
+    to: state.competition_history
+    type: reads
+    notes: "get_latest_competition — ORDER BY polled_at_utc DESC LIMIT 1"
+  - from: brain.reward_model.competition_tracker
+    to: config.reward_share_model.competition_poll_interval_s
+    type: depends-on-config
+  - from: brain.reward_model.competition_tracker
+    to: config.reward_share_model.fallback_to_parquet_after_rest_fails_n
+    type: depends-on-config
+    notes: "fire-once degraded event after N consecutive REST failures"
+  - from: brain.reward_model.calibrate
+    to: brain.state.writers.market_reward_calibration
+    type: calls
+    notes: "operator-manual calibration writer (LOCKED D-01)"
+  - from: brain.state.writers.market_reward_calibration
+    to: state.market_reward_calibration
+    type: writes
+    notes: "data_source='operator' hardcoded in SQL VALUES literal (LOCKED D-01)"
+  - from: brain.state.writers.market_reward_calibration
+    to: state.market_reward_calibration
+    type: reads
+    notes: "get_latest_market_reward_calibration — ORDER BY calibrated_at_utc DESC LIMIT 1"
+  - from: brain.reward_model.r_capped
+    to: brain.reward_model.schemas
+    type: reads
+    notes: "RewardCurveInput / RewardCurveOutput dataclasses"
+  - from: brain.reward_model.q_cap
+    to: brain.reward_model.schemas
+    type: reads
+  - from: brain.reward_model.r_capped
+    to: brain.screener.economics_gate
+    type: reads
+    notes: "reuses EPOCHS_PER_YEAR constant for epoch-to-APR scaling"
+  - from: brain.reward_model.cli
+    to: brain.manifest.writer
+    type: calls
+    notes: "MANIFEST-FIRST boot (PROTO-01)"
+  - from: brain.reward_model.cli
+    to: brain.reward_model.r_capped
+    type: calls
+    notes: "curve subcommand"
+  - from: brain.reward_model.cli
+    to: brain.reward_model.competition_tracker
+    type: calls
+    notes: "competition-snapshot subcommand"
+  - from: brain.reward_model.cli
+    to: brain.reward_model.calibrate
+    type: calls
+    notes: "calibrate subcommand → insert_operator_calibration"
+  - from: brain.main
+    to: brain.reward_model.competition_tracker
+    type: calls
+    notes: "Plan 03-04: run_competition_tracker_loop spawned as asyncio.create_task"
+
+  # ── Phase 3 Plan 03-03 + 03-04 — Sizer edges ───────────────────────────────
+  - from: brain.sizer.optimizer
+    to: brain.fill_model.predict
+    type: calls
+    notes: "Phase-2 LOCKED predict() — sub-10ms sync hot path; consumed unchanged"
+  - from: brain.sizer.optimizer
+    to: brain.loss_model.expected_loss
+    type: calls
+    notes: "Phase-3 LOCKED expected_loss() — sub-10ms sync; coarse_bound fallback safety net"
+  - from: brain.sizer.optimizer
+    to: brain.reward_model.r_capped
+    type: calls
+    notes: "r_capped_curve at each grid point + final regime tag"
+  - from: brain.sizer.optimizer
+    to: brain.reward_model.q_cap
+    type: calls
+    notes: "Q_cap boundary — REWARD-04 algebra"
+  - from: brain.sizer.optimizer
+    to: config.sizer.collateral_usd
+    type: depends-on-config
+  - from: brain.sizer.optimizer
+    to: config.sizer.q_min_pendle
+    type: depends-on-config
+  - from: brain.sizer.optimizer
+    to: config.sizer.q_max_safety_margin
+    type: depends-on-config
+  - from: brain.sizer.optimizer
+    to: config.sizer.optimizer_grid_points
+    type: depends-on-config
+  - from: brain.sizer.optimizer
+    to: config.sizer.optimizer_method
+    type: depends-on-config
+  - from: brain.sizer.optimizer
+    to: config.sizer.notional_per_yu_usd
+    type: depends-on-config
+    notes: "operator-calibrated per-market USD↔PENDLE-YU conversion"
+  - from: brain.sizer.optimizer
+    to: config.pricing.pendle_price_usd
+    type: depends-on-config
+    notes: "USD-boundary conversion — PENDLE-units discipline per [[unit-consistency-pendle-units-v05]]"
+  - from: brain.sizer.optimizer
+    to: config.reward_share_model.epoch_days
+    type: depends-on-config
+    notes: "cap_budget formula: 10 × collateral × (epoch_days/365) / pendle_price_usd"
+  - from: brain.sizer.cli
+    to: brain.manifest.writer
+    type: calls
+    notes: "MANIFEST-FIRST boot (PROTO-01)"
+  - from: brain.sizer.cli
+    to: brain.sizer.optimizer
+    type: calls
+    notes: "target subcommand → q_me_target"
+
+  # ── Phase 3 Plan 03-04 — Pricing pseudo-edges (PricingConfig is a config-only sub-model) ─
+  - from: brain.config.schema
+    to: brain.pricing.config
+    type: calls
+    notes: "BotConfig.pricing: PricingConfig — Plan 03-02 attached, Plan 03-04 wired into LossModel + Sizer"
+  - from: brain.config.schema
+    to: brain.loss_model.config
+    type: calls
+    notes: "BotConfig.loss_model: LossModelConfig — Plan 03-02 attached"
+  - from: brain.config.schema
+    to: brain.reward_model.config
+    type: calls
+    notes: "BotConfig.reward_share_model: RewardShareModelConfig — Plan 03-02 attached"
+  - from: brain.config.schema
+    to: brain.sizer.config
+    type: calls
+    notes: "BotConfig.sizer: SizerConfig — Plan 03-03 attached"
