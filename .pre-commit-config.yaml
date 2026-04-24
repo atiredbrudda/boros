@@ -44,14 +44,14 @@ repos:
         types: [text]
         files: '\.(py|ts)$'
 
-      - id: no-plain-keys
-        name: Block plaintext private-key patterns (T-04-03)
+      - id: no_plain_keys
+        name: Reject plaintext private keys (INFRA-12 / T-01-06-01)
         entry: python3 scripts/no_plain_keys.py
         language: system
-        types: [text]
-        # Exclude planning docs — they contain key patterns as documentation examples only.
-        # Actual source code, config, and env files are still fully policed.
-        exclude: '^\.planning/'
+        stages: [pre-commit]
+        pass_filenames: false
+        # Hook reads staged files via git diff --cached internally.
+        # .planning/ docs are excluded at hook level (grep skips .env.vault by name).
 
       - id: config-round-trip-test
         name: BotConfig round-trip test (INFRA-02 / PROTO-04)

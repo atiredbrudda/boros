@@ -48,6 +48,7 @@ flowchart TB
         brain_manifest_schema["manifest/schema.py<br/>RunManifest"]
         brain_log_setup["logging/structlog_setup.py<br/>configure_logging, get_logger"]
         brain_log_schema["logging/schema.py<br/>LogRecord"]
+        brain_log_redaction["logging/redaction.py<br/>redact_sensitive (01-06)"]
         brain_bus_cmd["bus/cmd.py<br/>CmdBus (ZMQ PUSH)"]
         brain_bus_events["bus/events.py<br/>EventBus (ZMQ PUB/SUB)"]
         brain_bus_heartbeat["bus/heartbeat.py<br/>HeartbeatMonitor"]
@@ -96,8 +97,7 @@ flowchart TB
     brain_wrapper -- "exec dotenvx run -- uv run python -m boros_brain.main" --> brain_main
     hands_wrapper -- "exec dotenvx run -- pnpm start:hands" --> hands_main
 
-    %% redaction processor (01-06)
-    brain_log_redaction["logging/redaction.py<br/>redact_sensitive"]
+    %% redaction processor (01-06) — node declared in brain subgraph above
     brain_log_redaction -- "extra_processor before JSONRenderer" --> brain_log_setup
 
     %% brain wiring

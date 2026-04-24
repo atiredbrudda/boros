@@ -442,7 +442,12 @@ nodes:
     notes: "pre-commit hook: greps staged files for plaintext private keys (INFRA-12 / T-01-06-01)"
     path: scripts/no_plain_keys.py
 
-  # brain.logging.redaction added in 01-06 Task 2 commit (file created there)
+  # ── Log redaction processor (01-06 Task 2) ─────────────────────────────
+  - id: brain.logging.redaction
+    type: module
+    process: brain
+    path: python/src/boros_brain/logging/redaction.py
+    public_functions: [redact_sensitive]
 
 edges:
   # ── brain internal wiring ──────────────────────────────────────────────
@@ -701,4 +706,12 @@ edges:
     type: calls
     notes: "exec dotenvx run -- pnpm -C ts start:hands"
 
-  # brain.logging.redaction and scripts.no_plain_keys edges added in 01-06 Task 2 commit
+  - from: brain.logging.redaction
+    to: brain.logging.structlog_setup
+    type: calls
+    notes: "inserted as extra_processor before JSONRenderer via configure_logging(extra_processors=[redact_sensitive])"
+
+  - from: scripts.no_plain_keys
+    to: brain
+    type: calls
+    notes: "pre-commit hook: greps staged diff, blocks plaintext private keys (INFRA-12 T-01-06-01)"
