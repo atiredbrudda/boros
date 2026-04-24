@@ -86,7 +86,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Depends on**: Phase 1
 **Requirements**: FILL-01, FILL-02, FILL-03, FILL-04, FILL-05, FILL-06
 **Scope**:
-  - NHPP fit per market-side `λ_s(δ, t) = exp(β_0 + Σ β_i feature_i(t))` using `tick` 0.8.0.1 (FILL-01).
+  - NHPP fit per market-side `λ_s(δ, t) = exp(β_0 + Σ β_i feature_i(t))` via `statsmodels.GLM(family=Poisson(link=log), exposure=bin_duration_s)` — the Poisson-GLM equivalent of the hand-rolled scipy MLE endorsed as the fallback in `STACK.md` §Fallbacks. `tick` 0.8.0.1 remains pinned for `SimuInhomogeneousPoisson` simulation support + v1.0 Hawkes staging; it does not ship a covariate-driven NHPP learner. Supersedence recorded at `[[Fill model library decision tick vs statsmodels]]` (filed in Plan 02-01) (FILL-01).
   - Covariates: time-since-funding-settlement (mod 8h), basis spread `B(t) = Implied − Underlying`, order-book imbalance, EWMA realized-vol of mid-rate (last 5min), underlying CEX spot move (last 5min), time-to-maturity, `dRate/dt` of mark APR (FILL-02).
   - Queue-position tracker: replay `market-trades/` tape between hourly `raw/` snapshots, decrement resting size as takers consume, with drift-direction bias diagnostic and pessimistic/optimistic bounds (FILL-03, absorbs pitfall B1).
   - AMM consumption model: subtract `combined_size − raw_book_size` AMM share from incoming taker flow before crediting resting book (FILL-04, absorbs pitfall B3 model-side portion).
