@@ -280,21 +280,33 @@ flowchart TB
     brain -- "eth_call fIndexOracle" --> ext_rpc
     brain -- "NDJSON download market-trades, order-book" --> ext_hist
 
-    %% Phase 2 Fill Model (Plans 02-01 + 02-02)
-    subgraph fill_model["Fill Model (Phase 2, Plans 02-01/02-02)"]
+    %% Phase 2 Fill Model (Plans 02-01 + 02-02 + 02-03)
+    subgraph fill_model["Fill Model (Phase 2, Plans 02-01/02/03)"]
         fill_features_mod["fill_model/features.py<br/>build_features_table (FILL-02)"]
         fill_config_mod["fill_model/config.py<br/>FillModelConfig (11 knobs)"]
         fill_constants_mod["fill_model/constants.py<br/>ALLOWED_COVARIATES + DEFAULT_*"]
         parquet_fill_features[("parquet/fill_features<br/>market_id / side")]
         fill_queue_tracker["fill_model/queue_tracker.py<br/>QueueTracker + compute_drift_diagnostic (FILL-03)"]
         fill_amm_consumption["fill_model/amm_consumption.py<br/>compute_amm_share_timeseries + assert_epoch_conservation (FILL-04)"]
-        fill_schemas["fill_model/schemas.py<br/>ReplayResult + EpochFlowSnapshot + AMMConsumptionIdentityError"]
+        fill_schemas["fill_model/schemas.py<br/>ReplayResult + EpochFlowSnapshot +<br/>AMMConsumptionIdentityError +<br/>FitArtifact + PredictInput/Output +<br/>FillModelStaleFeatureError + FillModelNoFreshFitError"]
+        FitMod["fill_model/fit.py<br/>fit_market_side (FILL-01)"]
+        PredictMod["fill_model/predict.py<br/>predict() SYNC (FILL-05)"]
+        Artifact["fill_model/artifact.py<br/>write_fit_artifact"]
+        FillFitsWriter["state/writers/fill_model_fits.py<br/>insert_fit_artifact + get_latest_fit"]
+        StateFillFits[("state.fill_model_fits<br/>SQLite table — PK market/side/end_ts")]
+        ParquetFitArtifacts[("parquet/fill_model_artifacts<br/>market_id / side / window_end_ts")]
 
         fill_features_mod -->|writes| parquet_fill_features
         fill_config_mod -->|reads| fill_constants_mod
         fill_queue_tracker -->|calls| fill_amm_consumption
         fill_queue_tracker -->|uses| fill_schemas
         fill_amm_consumption -->|uses| fill_schemas
+        FitMod -->|calls| Artifact
+        Artifact -->|calls single-writer| FillFitsWriter
+        Artifact -->|writes parquet-first| ParquetFitArtifacts
+        FillFitsWriter -->|writes| StateFillFits
+        PredictMod -->|reads| FillFitsWriter
+        parquet_fill_features -->|consumed by| FitMod
     end
 
     parquet_mt -->|"DuckDB market_trades view"| fill_features_mod
@@ -309,7 +321,7 @@ flowchart TB
     parquet_ob_comb -->|"per-tick combined size"| fill_amm_consumption
 ```
 
-### Phase 2 Fill Model (Plans 02-01 + 02-02)
+### Phase 2 Fill Model (Plans 02-01 + 02-02 + 02-03)
 
 The fill model consumes Phase 1's data pipeline outputs through a DuckDB-joined
 feature table. `build_features_table` (in `brain.fill_model.features`) produces
@@ -328,10 +340,24 @@ log events. `AMMConsumption` is the runtime analogue of Phase 1's `DATA-05`
 ingest-time assertion — per-tick `amm_share = max(combined - raw, 0.0)` and a
 per-epoch flow-identity check that raises `AMMConsumptionIdentityError` on
 violation. PITFALLS §B1 (queue-drift blindness) and §B3 (AMM double-count) are
-defused. Subsequent plans (02-03/04) add Poisson GLM fit, predict, and the refit loop.
+defused.
+
+**Plan 02-03 additions:** `fit_market_side` (in `brain.fill_model.fit`) runs
+`statsmodels.GLM(Poisson, log, exposure=bin_duration_s)` on feature rows from
+Plan 02-01's `build_features_table`. The `FitArtifact` is written atomically
+via `brain.fill_model.artifact.write_fit_artifact` — parquet sidecar first (for
+orphan-tolerance), then a SQLite row via `brain.state.writers.fill_model_fits.
+insert_fit_artifact` (single-writer-per-table; only module allowed to INSERT).
+`brain.fill_model.predict` is the sync entry point Phase 4's DecisionEngine
+calls at 1 Hz; NaN covariates raise `FillModelStaleFeatureError` (never silent
+fallback; see [[known-issues-nan-covariate-silent-fallback-do-not]]); stale fits
+raise `FillModelNoFreshFitError`. The `fill_model_fits` SQLite schema is
+installed via Alembic migration `0003_fill_model_fits`. Plan 02-04 adds the
+GoF calibration loop on top.
 
 See [[fill-model-library-decision-tick-vs-statsmodels]], [[covariate-selection-v05]],
-[[queue-tracker-algorithm-v05]], and [[amm-consumption-model-v05]].
+[[queue-tracker-algorithm-v05]], [[amm-consumption-model-v05]],
+[[nhpp-log-linear-glm-fit-procedure]], and [[fill-model-predict-contract]].
 
 ## What's declared in `docs/architecture.yml`
 
@@ -340,9 +366,10 @@ The YAML manifest enumerates:
 - **2 process nodes** — `brain` (Python), `hands` (TypeScript).
 - **~22 module nodes** — every `.py` under `python/src/boros_brain/` and every
   `.ts` under `ts/src/boros_hands/` that exists today.
-- **8 storage nodes** — one per SQLite table (`open_orders`, `decisions`,
+- **10 storage nodes** — one per SQLite table (`open_orders`, `decisions`,
   `tx_receipts`, `queue_positions`, `run_manifests`, `epoch_rewards`,
-  `clo_history`, `reward_budget_history`).
+  `clo_history`, `reward_budget_history`, `fill_model_fits`) plus parquet
+  artifact store (`parquet.fill_model_artifacts`).
 - **N config_knob nodes** — one per leaf of `BotConfig` / `StrategyConfig` /
   `ExecutionConfig` / `DataConfig` / `InfraConfig` / `ScreenerConfig`. Every
   leaf that exists in the Pydantic schema is a node here too. Adding a knob
