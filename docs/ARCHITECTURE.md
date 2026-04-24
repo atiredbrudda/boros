@@ -199,7 +199,7 @@ flowchart TB
     %% DATA-08 filter + report + CLI (01-11 Task 3)
     screener_filter["screener/filter.py<br/>apply_screener_filters — 6 filters + A8 wall flag<br/>T-01-11-03: shortlist cap at 4 by r_apr_potential rank<br/>(DATA-08, 01-11)"]
     screener_report["screener/report.py<br/>write_screener_metrics_report<br/>(DATA-08, 01-11)"]
-    screener_cli["screener/cli.py<br/>main — python -m boros_brain.screener<br/>RUN_MANIFEST-first + DATA-09 consumer entrypoint"]
+    screener_cli["screener/cli.py<br/>main, run_screener<br/>--run DATA-08, --economics-gate DATA-09<br/>RUN_MANIFEST-first (01-11 + 01-12)"]
     screener_out[("var/reports/screener_metrics.json<br/>shortlist + full metric tree")]
     screener_filter -- "calls all 6 compute_* fns" --> screener_metrics
     screener_filter -- "get_calibration_pairs + calibrate_scale (non-blocking)" --> screener_scale_cal
@@ -209,6 +209,29 @@ flowchart TB
     screener_cli -- "apply_screener_filters" --> screener_filter
     screener_cli -- "write_screener_metrics_report" --> screener_report
     screener_cli -- "build_run_manifest + write_manifest (PROTO-01)" --> brain_manifest_writer
+
+    %% DATA-09 economics kill-switch (01-12 Task 1)
+    screener_economics_gate["screener/economics_gate.py<br/>compute_r_apr_on_collateral_pendle<br/>run_economics_gate, ConfigError, ProjectHalt<br/>(DATA-09, 01-12)"]
+    screener_kill_report["screener/kill_report.py<br/>write_kill_report<br/>(T-01-12-04, 01-12)"]
+    kill_report_template[("docs/kill-report-template.md<br/>template for halt artifact")]
+    kill_report_out[("docs/kill-report-YYYYMMDD.md<br/>halt artifact: R_apr table + knob tree")]
+    economics_gate_out[("var/reports/economics_gate.json<br/>per-market DATA-09 decisions")]
+    screener_cli -- "--economics-gate: run_economics_gate" --> screener_economics_gate
+    screener_economics_gate -- "load_raw_yaml + load_config" --> brain_cfg_loader
+    screener_economics_gate -- "reads r_apr_potential for each filter_pass market" --> screener_out
+    screener_economics_gate -- "calls write_kill_report on empty shortlist" --> screener_kill_report
+    screener_economics_gate -- writes --> economics_gate_out
+    screener_kill_report -- "reads template" --> kill_report_template
+    screener_kill_report -- writes --> kill_report_out
+
+    %% DATA-10 daily re-screen (01-12 Task 2)
+    screener_rescreen["screener/rescreen.py<br/>run_daily_rescreen<br/>ingest -> screener -> economics gate -> diff<br/>(DATA-10, 01-12)"]
+    launchd_rescreen["launchd.com.boros.rescreen<br/>CalendarInterval 03:00 UTC<br/>KeepAlive=false (one-shot daily)"]
+    rescreen_diff_out[("var/reports/rescreen_diff.json<br/>new_entrants + dropped + unchanged")]
+    launchd_rescreen -- "python -m boros_brain.screener.rescreen" --> screener_rescreen
+    screener_rescreen -- "run_screener (DATA-08 stage)" --> screener_cli
+    screener_rescreen -- "run_economics_gate (DATA-09 stage)" --> screener_economics_gate
+    screener_rescreen -- writes --> rescreen_diff_out
 
     %% brain wiring
     brain_main --> brain_cfg_loader --> brain_cfg_schema

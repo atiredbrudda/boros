@@ -1,0 +1,49 @@
+# Fixture: alt_yield set to 5.0 (500% APR) instead of 0.05 (5% APR).
+# Tests T-01-12-02 unit-confusion guard: economics_gate MUST raise ConfigError.
+mode: paper
+strategy_version: v0.5.0
+market_id: BINANCE-ETHUSDT-29MAY2026
+side: long
+root_wallet_address: TBD
+agent_wallet_address: TBD
+
+strategy:
+  voluntary_cancel_forfeits_accumulated: false
+  target_share: 0.05
+
+execution:
+  cancel_latency_budget_s: 5.0
+  require_success_default: true
+  agent_wallet_gas_warn_multiples: 50
+  agent_wallet_gas_halt_multiples: 20
+  agent_wallet_gas_emergency_multiples: 5
+
+data:
+  markets_poll_interval_s: 30.0
+  e_liq_poll_interval_s: 5.0
+  chain_time_cache_ttl_s: 1.0
+  rpc_url_arbitrum: "https://arb1.arbitrum.io/rpc"
+  boros_rest_base: "https://api.boros.finance/open-api/v1"
+
+infra:
+  sqlite_path: "state/state.sqlite"
+  logs_dir: "logs"
+  zmq_cmd_endpoint: "ipc:///tmp/boros.cmd"
+  zmq_events_brain_endpoint: "ipc:///tmp/boros.events.brain"
+  zmq_events_hands_endpoint: "ipc:///tmp/boros.events.hands"
+  zmq_kill_endpoint: "ipc:///tmp/boros.cmd.kill"
+  heartbeat_interval_s: 5.0
+  heartbeat_timeout_misses: 3
+  chain_drift_warn_s: 5.0
+  chain_drift_halt_s: 30.0
+
+screener:
+  min_time_to_maturity_days: 30
+  trades_window_days: 60
+  realized_vol_window_days: 14
+  reversal_count_window_days: 3
+  # alt_yield deliberately out of range (5.0 = 500% APR) — T-01-12-02 unit confusion guard
+  alt_yield: 5.0
+  fill_loss_coarse_bound: 0.02
+
+markets: []

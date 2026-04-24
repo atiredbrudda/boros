@@ -1,0 +1,56 @@
+{
+  "results": [
+    {
+      "market_id": "BINANCE-ETHUSDT-29MAY2026",
+      "cv": 2.5,
+      "realized_vol": 0.003,
+      "reversal_count": 5,
+      "depth_at_clo_edge": 150.0,
+      "outside_range_wall_ratio": 0.8,
+      "outside_range_wall_flag": false,
+      "clo_lower": 9300.0,
+      "clo_upper": 9500.0,
+      "time_to_maturity_days": 35,
+      "scale": 0.01,
+      "scale_unstable": false,
+      "r_apr_potential": 0.15,
+      "filter_pass": true,
+      "filter_failure_reasons": []
+    },
+    {
+      "market_id": "BINANCE-BTCUSDT-29MAY2026",
+      "cv": 1.2,
+      "realized_vol": 0.002,
+      "reversal_count": 3,
+      "depth_at_clo_edge": 80.0,
+      "outside_range_wall_ratio": 1.0,
+      "outside_range_wall_flag": false,
+      "clo_lower": 309.69,
+      "clo_upper": 316.35,
+      "time_to_maturity_days": 35,
+      "scale": 0.008,
+      "scale_unstable": false,
+      "r_apr_potential": 0.03,
+      "filter_pass": true,
+      "filter_failure_reasons": []
+    },
+    {
+      "market_id": "HYPERLIQUID-SOLUSDT-29MAY2026",
+      "cv": null,
+      "realized_vol": null,
+      "reversal_count": 0,
+      "depth_at_clo_edge": 0.0,
+      "outside_range_wall_ratio": null,
+      "outside_range_wall_flag": false,
+      "clo_lower": 0.0,
+      "clo_upper": 0.0,
+      "time_to_maturity_days": 35,
+      "scale": null,
+      "scale_unstable": false,
+      "r_apr_potential": null,
+      "filter_pass": false,
+      "filter_failure_reasons": ["cv_unavailable", "realized_vol_invalid", "clo_bounds_zero"]
+    }
+  ],
+  "shortlist": ["BINANCE-ETHUSDT-29MAY2026", "BINANCE-BTCUSDT-29MAY2026"]
+}

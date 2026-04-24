@@ -36,7 +36,7 @@ nodes:
     type: module
     process: brain
     path: python/src/boros_brain/config/loader.py
-    public_functions: [load_config]
+    public_functions: [load_config, load_raw_yaml]
 
   - id: brain.state.db
     type: module
@@ -621,13 +621,54 @@ nodes:
     type: module
     process: brain
     path: python/src/boros_brain/screener/cli.py
-    public_functions: [main]
+    public_functions: [main, run_screener]
+
+  # ── DATA-09 economics gate + kill-report (01-12 Task 1) ───────────────────────
+  - id: brain.screener.economics_gate
+    type: module
+    process: brain
+    path: python/src/boros_brain/screener/economics_gate.py
+    public_functions: [compute_r_apr_on_collateral_pendle, run_economics_gate]
+
+  - id: brain.screener.kill_report
+    type: module
+    process: brain
+    path: python/src/boros_brain/screener/kill_report.py
+    public_functions: [write_kill_report]
+
+  # ── DATA-10 daily re-screen scheduler (01-12 Task 2) ─────────────────────────
+  # brain.screener.rescreen module node added in Task 2 commit (file not yet created)
+
+  - id: launchd.com.boros.rescreen
+    type: external
+    notes: "macOS LaunchAgent com.boros.rescreen -- CalendarInterval daily 03:00 UTC, KeepAlive=false"
+    path: scripts/launchd/com.boros.rescreen.plist
 
   # ── screener report output ──────────────────────────────────────────────────
   - id: var.reports.screener_metrics
     type: storage
     path: var/reports/screener_metrics.json
     notes: "Screener output: full metric tree + shortlist <= 4 markets (DATA-08)"
+
+  - id: var.reports.economics_gate
+    type: storage
+    path: var/reports/economics_gate.json
+    notes: "DATA-09 economics gate per-market decisions + shortlist (01-12)"
+
+  - id: var.reports.rescreen_diff
+    type: storage
+    path: var/reports/rescreen_diff.json
+    notes: "DATA-10 daily diff: new_entrants + dropped + unchanged markets (01-12)"
+
+  - id: docs.kill_report
+    type: storage
+    path: docs/kill-report-YYYYMMDD.md
+    notes: "DATA-09 halt artifact: per-market R_apr table + knob tree + halt semantics (01-12)"
+
+  - id: docs.kill_report_template
+    type: storage
+    path: docs/kill-report-template.md
+    notes: "Template used by kill_report.py to render docs/kill-report-YYYYMMDD.md"
 
 edges:
   # ── brain internal wiring ──────────────────────────────────────────────
@@ -1273,3 +1314,76 @@ edges:
     to: brain.manifest.writer
     type: calls
     notes: "main() calls build_run_manifest + write_manifest first (PROTO-01)"
+
+  # ── DATA-09 economics gate edges (01-12 Task 1) ─────────────────────────────
+  - from: brain.screener.economics_gate
+    to: brain.config.loader
+    type: calls
+    notes: "load_raw_yaml() + load_config() -- raw for explicit-key check, validated for knob values"
+
+  - from: brain.screener.economics_gate
+    to: config.screener.alt_yield
+    type: depends-on-config
+    notes: "T-01-12-01: asserts alt_yield present as explicit YAML key; T-01-12-02: range check (0.0, 0.5)"
+
+  - from: brain.screener.economics_gate
+    to: config.screener.fill_loss_coarse_bound
+    type: depends-on-config
+    notes: "T-01-12-01: asserts fill_loss_coarse_bound present; T-01-12-02: range check (0.0, 0.2)"
+
+  - from: brain.screener.economics_gate
+    to: var.reports.screener_metrics
+    type: reads
+    notes: "reads screener_metrics.json to evaluate filter_pass=True markets for DATA-09 gate"
+
+  - from: brain.screener.economics_gate
+    to: brain.screener.kill_report
+    type: calls
+    notes: "calls write_kill_report() on empty shortlist before raising ProjectHalt"
+
+  - from: brain.screener.economics_gate
+    to: var.reports.economics_gate
+    type: writes
+    notes: "writes per-market R_apr decisions + shortlist (non-halt audit trail)"
+
+  - from: brain.screener.kill_report
+    to: docs.kill_report_template
+    type: reads
+    notes: "reads kill-report-template.md, renders with per-market table + knob tree"
+
+  - from: brain.screener.kill_report
+    to: docs.kill_report
+    type: writes
+    notes: "writes docs/kill-report-YYYYMMDD.md on ProjectHalt (T-01-12-04)"
+
+  - from: brain.screener.cli
+    to: brain.screener.economics_gate
+    type: calls
+    notes: "--economics-gate flag invokes run_economics_gate(); exit 1 on ProjectHalt, exit 2 on ConfigError"
+
+  # ── DATA-10 daily re-screen edges (01-12 Task 2) ────────────────────────────
+  - from: brain.screener.rescreen
+    to: brain.screener.cli
+    type: calls
+    notes: "run_daily_rescreen invokes screener programmatically (DATA-08 stage)"
+
+  - from: brain.screener.rescreen
+    to: brain.screener.economics_gate
+    type: calls
+    notes: "run_daily_rescreen invokes run_economics_gate (DATA-09 stage)"
+
+  - from: brain.screener.rescreen
+    to: var.reports.rescreen_diff
+    type: writes
+    notes: "writes rescreen_diff.json with new_entrants + dropped + unchanged markets"
+
+  - from: launchd.com.boros.rescreen
+    to: brain.screener.rescreen
+    type: calls
+    notes: "CalendarInterval 03:00 UTC daily -- python -m boros_brain.screener.rescreen"
+
+  # ── load_raw_yaml addition to config.loader (01-12) ─────────────────────────
+  - from: brain.config.loader
+    to: brain.config.schema
+    type: reads
+    notes: "load_raw_yaml() returns raw dict; load_config() calls BotConfig.model_validate -- both used by economics_gate"
