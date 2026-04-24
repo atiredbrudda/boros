@@ -20,6 +20,7 @@ from ..fill_model.config import FillModelConfig
 from ..loss_model.config import LossModelConfig
 from ..pricing.config import PricingConfig
 from ..reward_model.config import RewardShareModelConfig
+from ..sizer.config import SizerConfig
 
 
 class StrictBase(BaseModel):
@@ -183,5 +184,7 @@ class BotConfig(StrictBase):
     loss_model: LossModelConfig = Field(default_factory=LossModelConfig)  # type: ignore
     reward_share_model: RewardShareModelConfig = Field(default_factory=RewardShareModelConfig)  # type: ignore
     pricing: PricingConfig = Field(default_factory=PricingConfig)  # type: ignore
-    # sizer: SizerConfig = Field(default_factory=SizerConfig)  # Plan 03-03 will attach; deferred to avoid forward-import order issues
+    # Plan 03-03 — SizerConfig attachment (deferred from 03-02 because sizer
+    # imports from loss_model + reward_model which are 03-01/02 artifacts).
+    sizer: SizerConfig = Field(default_factory=SizerConfig)  # type: ignore
     markets: list[MarketCalibration] = Field(default_factory=list, max_length=1)

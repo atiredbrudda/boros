@@ -114,6 +114,20 @@ pricing:
   price_staleness_warn_s: 86400.0
   price_staleness_halt_s: 604800.0
 
+# Phase 3: Sizing optimizer (REWARD-03/04 — Plan 03-03)
+# notional_per_yu_usd=90000 is the ETHUSDT-29MAY2026 placeholder so that at
+#   collateral_usd=100, q_max_safety_margin=0.9
+#   Q_max = 100 × 0.9 / 90000 = 0.001 = q_min_pendle  (collateral-constrained
+#   sub-cap regime fixed point — Phase 3 ROADMAP Success Criterion #3).
+# Operator must re-tune notional_per_yu_usd per market at daily re-screen.
+sizer:
+  collateral_usd: 100.0
+  q_min_pendle: 0.001
+  q_max_safety_margin: 0.9
+  optimizer_grid_points: 50
+  optimizer_method: grid_plus_scipy
+  notional_per_yu_usd: 90000.0
+
 # markets:
 #   - market_id: BINANCE-ETHUSDT-29MAY2026
 #     scale: ...
