@@ -56,30 +56,21 @@ def _make_findex_reader(floatingIndex: int = 123_456_789_000_000_000) -> Any:
 
 
 def _init_db(sqlite_path: Path) -> None:
-    """Apply the 0001_initial_8_tables migration to create clo_history table."""
-    import sys
+    """Apply the 0001_initial_8_tables Alembic migration to create clo_history table."""
+    from alembic import command
+    from alembic.config import Config
 
-    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+    from boros_brain.state.db import open_connection
 
-    from scripts_helper import apply_alembic_migration  # type: ignore[import]
+    # Pre-create file with WAL + FKs (mirrors production open_connection contract).
+    with open_connection(sqlite_path):
+        pass
 
-    try:
-        apply_alembic_migration(sqlite_path)
-    except ImportError:
-        # Fallback: create the table directly (mirrors the Alembic migration DDL)
-        conn = sqlite3.connect(str(sqlite_path))
-        conn.execute(
-            "CREATE TABLE IF NOT EXISTS clo_history ("
-            "snapshot_ts INTEGER NOT NULL, "
-            "market_id TEXT NOT NULL, "
-            "clo_lower_thresh REAL NOT NULL, "
-            "clo_upper_thresh REAL NOT NULL, "
-            "f_index_raw INTEGER, "
-            "PRIMARY KEY(snapshot_ts, market_id)"
-            ")"
-        )
-        conn.commit()
-        conn.close()
+    alembic_ini = Path(__file__).resolve().parents[1] / "src" / "boros_brain" / "state" / "migrations" / "alembic.ini"
+    cfg = Config(str(alembic_ini))
+    cfg.set_main_option("script_location", str(alembic_ini.parent))
+    cfg.set_main_option("sqlalchemy.url", f"sqlite:///{sqlite_path}")
+    command.upgrade(cfg, "head")
 
 
 def _build_config(sqlite_path: Path) -> Any:
@@ -91,7 +82,7 @@ def _build_config(sqlite_path: Path) -> Any:
             "mode": "backtest",
             "strategy_version": "v0.5.0",
             "market_id": "BINANCE-ETHUSDT-29MAY2026",
-            "side": "Short",
+            "side": "short",
             "root_wallet_address": "0xTBD",
             "agent_wallet_address": "0xTBD",
             "data": {

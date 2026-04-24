@@ -52,6 +52,10 @@ flowchart TB
         brain_log_redaction["logging/redaction.py<br/>redact_sensitive (01-06)"]
         brain_data_rpc["data/rpc_client.py<br/>make_arbitrum_rpc, get_latest_block_timestamp (01-07)"]
         brain_data_chain_time["data/chain_time.py<br/>ChainTimeCache, now_cached, startup_check,<br/>drift_monitor_tick (INFRA-14, 01-07)"]
+        brain_data_rest_client["data/rest_client.py<br/>make_boros_rest_client, BorosApiError (01-09)"]
+        brain_data_findex_reader["data/findex_reader.py<br/>FIndexReader, decode_findex_bytes,<br/>fIndex_display (DATA-07, 01-09)"]
+        brain_data_poller_schemas["data/poller/schemas.py<br/>MarketsResponse, Market, MarketConfig (01-09)"]
+        brain_data_poller_markets["data/poller/markets_poller.py<br/>MarketsPoller, run_markets_poller (DATA-06, 01-09)"]
         brain_duckdb_setup["duckdb_layer/setup.py<br/>open_analytical_conn (INFRA-04, 01-07)<br/>ANALYTICAL ONLY — not on hot path"]
         brain_bus_cmd["bus/cmd.py<br/>CmdBus (ZMQ PUSH)"]
         brain_bus_events["bus/events.py<br/>EventBus (ZMQ PUB/SUB)"]
@@ -109,6 +113,15 @@ flowchart TB
     brain_data_rpc -- "AsyncHTTPProvider(rpc_url_arbitrum)" --> ext_rpc
     brain_data_chain_time -- "halt_callback → KILL lane on drift > 30s" --> brain_bus_cmd
     no_time_time -- "pre-commit: rejects time.time() in brain/{decision,data,screener}" --> brain
+
+    %% DATA-06 /markets poller + DATA-07 fIndexOracle reader (01-09)
+    brain_data_poller_markets -- "make_boros_rest_client GET /markets" --> brain_data_rest_client
+    brain_data_rest_client -- "httpx.AsyncClient" --> ext_boros
+    brain_data_poller_markets -- "MarketsResponse.model_validate_json" --> brain_data_poller_schemas
+    brain_data_poller_markets -- "now_cached() snapshot_ts" --> brain_data_chain_time
+    brain_data_poller_markets -- "FIndexReader.get_latest_fIndex()" --> brain_data_findex_reader
+    brain_data_findex_reader -- "eth_call getLatestFIndex bytes32" --> brain_data_rpc
+    brain_data_poller_markets -- "insert_clo_history on change only" --> brain_writers_clo
 
     %% DuckDB analytical layer (01-07 INFRA-04)
     brain_duckdb_setup -- "sqlite_scanner read-only attach" --> state_clo

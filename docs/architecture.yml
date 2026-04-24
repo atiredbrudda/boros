@@ -84,7 +84,7 @@ nodes:
     type: module
     process: brain
     path: python/src/boros_brain/state/writers/clo_history.py
-    public_functions: [insert_clo_snapshot]
+    public_functions: [insert_clo_snapshot, insert_clo_history]
 
   - id: brain.state.writers.reward_budget_history
     type: module
@@ -466,6 +466,32 @@ nodes:
     type: external
     notes: "pre-commit hook: rejects time.time() in brain/{decision,data,screener}/ (INFRA-14 / PITFALLS §C7)"
     path: scripts/no_time_time_lint.py
+
+  # ── DATA-06 /markets REST client + poller (01-09) ──────────────────────
+  - id: brain.data.rest_client
+    type: module
+    process: brain
+    path: python/src/boros_brain/data/rest_client.py
+    public_functions: [make_boros_rest_client]   # BorosApiError is a class (not a fn)
+
+  - id: brain.data.poller.schemas
+    type: module
+    process: brain
+    path: python/src/boros_brain/data/poller/schemas.py
+    public_functions: []   # Pydantic models only — MarketsResponse, Market, MarketConfig etc.
+
+  - id: brain.data.poller.markets_poller
+    type: module
+    process: brain
+    path: python/src/boros_brain/data/poller/markets_poller.py
+    public_functions: [run_markets_poller]   # MarketsPoller is a class (not a fn)
+
+  # ── DATA-07 fIndexOracle reader (01-09) ─────────────────────────────────
+  - id: brain.data.findex_reader
+    type: module
+    process: brain
+    path: python/src/boros_brain/data/findex_reader.py
+    public_functions: [decode_findex_bytes, fIndex_display]   # FIndexReader/FIndexDecodeError are classes; FINDEX_ABI/KNOWN_ORACLES are constants
 
   # ── INFRA-04 DuckDB analytical layer (01-07 Task 2) ────────────────────
   - id: brain.duckdb_layer.setup
@@ -870,6 +896,68 @@ edges:
     to: brain.duckdb_layer.views_sql
     type: reads
     notes: "register_parquet_views() reads views.sql DDL at runtime"
+
+  # ── DATA-06 /markets poller edges (01-09) ───────────────────────────────
+  - from: brain.data.poller.markets_poller
+    to: brain.data.rest_client
+    type: calls
+    notes: "make_boros_rest_client → httpx.AsyncClient GET /markets"
+
+  - from: brain.data.rest_client
+    to: ext.boros_rest
+    type: calls
+    notes: "GET /open-api/v1/markets (DATA-06) and future /epoch-rewards (DATA-11)"
+
+  - from: brain.data.poller.markets_poller
+    to: brain.data.poller.schemas
+    type: reads
+    notes: "MarketsResponse.model_validate_json for /markets response"
+
+  - from: brain.data.poller.markets_poller
+    to: brain.data.chain_time
+    type: calls
+    notes: "now_cached() for snapshot_ts on each tick"
+
+  - from: brain.data.poller.markets_poller
+    to: brain.data.findex_reader
+    type: calls
+    notes: "FIndexReader.get_latest_fIndex() per market — f_index_raw for clo_history"
+
+  - from: brain.data.poller.markets_poller
+    to: brain.state.writers.clo_history
+    type: calls
+    notes: "insert_clo_history() on change only — single-writer INFRA-03"
+
+  - from: brain.state.writers.clo_history
+    to: state.clo_history
+    type: writes
+    notes: "insert_clo_history / insert_clo_snapshot → clo_history table"
+
+  - from: brain.data.poller.markets_poller
+    to: config.data.markets_poll_interval_s
+    type: depends-on-config
+    notes: "run_markets_poller sleeps markets_poll_interval_s between ticks"
+
+  - from: brain.data.poller.markets_poller
+    to: config.infra.sqlite_path
+    type: depends-on-config
+    notes: "insert_clo_history(sqlite_path=config.infra.sqlite_path)"
+
+  - from: brain.data.poller.markets_poller
+    to: config.data.chain_time_cache_ttl_s
+    type: depends-on-config
+    notes: "FIndexReader(ttl_s=config.data.chain_time_cache_ttl_s)"
+
+  # ── DATA-07 fIndexOracle reader edges (01-09) ────────────────────────────
+  - from: brain.data.findex_reader
+    to: brain.data.rpc_client
+    type: calls
+    notes: "make_arbitrum_rpc shared AsyncWeb3 — lazy-created per market in poller"
+
+  - from: brain.data.findex_reader
+    to: ext.arbitrum_rpc
+    type: calls
+    notes: "eth_call getLatestFIndex() — bytes32 payload decode"
 
   # ── DATA-01..04 ingester edges (01-08) ──────────────────────────────────
   - from: brain.data.ingester.cli

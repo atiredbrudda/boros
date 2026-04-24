@@ -18,8 +18,8 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-# Paths
-REPO_ROOT = Path(__file__).resolve().parents[3]
+# Paths — parents[2] = repo root (python/tests → python → repo-root)
+REPO_ROOT = Path(__file__).resolve().parents[2]
 REAL_RESPONSE_PATH = REPO_ROOT / "docs" / "samples" / "markets-response.json"
 FIXTURE_PATH = Path(__file__).parent / "fixtures" / "markets_response_fixture.json"
 
@@ -27,7 +27,12 @@ FIXTURE_PATH = Path(__file__).parent / "fixtures" / "markets_response_fixture.js
 def test_markets_response_schema_parses_captured_sample() -> None:
     """MarketsResponse.model_validate_json must parse the real captured response
     without raising. Every market must have cloLowerThresh, cloUpperThresh, and
-    a unique symbol used as string market identifier.
+    a non-empty symbol. The contract address is unique per market.
+
+    Note: imData.symbol is NOT guaranteed unique in the API — discovered that
+    HYPERLIQUID-BTC-29MAY2026 appears twice with different marketId/address.
+    Uniqueness is on `address` (contract address), not `symbol`.
+    See docs/samples/markets-schema-notes.md for the full A5 reconciliation.
     """
     from boros_brain.data.poller.schemas import MarketsResponse
 
@@ -36,14 +41,16 @@ def test_markets_response_schema_parses_captured_sample() -> None:
 
     assert len(response.results) > 0, "Response must have at least one market"
 
-    symbols_seen: set[str] = set()
+    addresses_seen: set[str] = set()
     for market in response.results:
         assert market.config.clo_lower_thresh is not None, f"Market missing cloLowerThresh: {market.im_data.symbol}"
         assert market.config.clo_upper_thresh is not None, f"Market missing cloUpperThresh: {market.im_data.symbol}"
         sym = market.im_data.symbol
         assert sym, "Every market must have a non-empty imData.symbol"
-        assert sym not in symbols_seen, f"Duplicate symbol: {sym}"
-        symbols_seen.add(sym)
+        # Address is the true unique identifier
+        addr = market.address or ""
+        assert addr not in addresses_seen, f"Duplicate address: {addr} on market {sym}"
+        addresses_seen.add(addr)
 
 
 def test_markets_response_schema_forbids_missing_critical_fields() -> None:
