@@ -107,7 +107,7 @@ def apply_screener_filters(
         # ── Fetch trades for this market ──────────────────────────────────
         _trades_q = duck_conn.execute(
             """
-            SELECT blockTimestamp, eventIndex, datetime, rate, side, size, txHash, market_id
+            SELECT blockTimestamp, eventIndex, datetime, rate, side, size_float AS size, txHash, market_id
             FROM market_trades
             WHERE market_id = ?
               AND blockTimestamp >= ?
@@ -160,7 +160,7 @@ def apply_screener_filters(
         # ── Fetch order book for depth / wall ratio ────────────────────────
         _book_q = duck_conn.execute(
             """
-            SELECT snapshot_ts, market_id, tick_size, tick, size
+            SELECT snapshot_ts, market_id, tick_size, tick, sz_combined_float AS size
             FROM order_book_combined
             WHERE market_id = ?
             ORDER BY snapshot_ts DESC
