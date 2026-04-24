@@ -637,7 +637,11 @@ nodes:
     public_functions: [write_kill_report]
 
   # ── DATA-10 daily re-screen scheduler (01-12 Task 2) ─────────────────────────
-  # brain.screener.rescreen module node added in Task 2 commit (file not yet created)
+  - id: brain.screener.rescreen
+    type: module
+    process: brain
+    path: python/src/boros_brain/screener/rescreen.py
+    public_functions: [run_daily_rescreen]
 
   - id: launchd.com.boros.rescreen
     type: external
