@@ -279,7 +279,38 @@ flowchart TB
     brain -- "HTTPS GET /markets, /epoch-rewards" --> ext_boros
     brain -- "eth_call fIndexOracle" --> ext_rpc
     brain -- "NDJSON download market-trades, order-book" --> ext_hist
+
+    %% Phase 2 Fill Model (Plan 02-01)
+    subgraph fill_model["Fill Model (Phase 2, Plan 02-01)"]
+        fill_features_mod["fill_model/features.py<br/>build_features_table (FILL-02)"]
+        fill_config_mod["fill_model/config.py<br/>FillModelConfig (11 knobs)"]
+        fill_constants_mod["fill_model/constants.py<br/>ALLOWED_COVARIATES + DEFAULT_*"]
+        parquet_fill_features[("parquet/fill_features<br/>market_id / side")]
+
+        fill_features_mod -->|writes| parquet_fill_features
+        fill_config_mod -->|reads| fill_constants_mod
+    end
+
+    parquet_mt -->|"DuckDB market_trades view"| fill_features_mod
+    parquet_ob_comb -->|"DuckDB order_book_combined view"| fill_features_mod
+    parquet_apr -->|"DuckDB underlying_apr view"| fill_features_mod
+    state_clo -->|"sqlite_scanner read-only"| fill_features_mod
+    fill_features_mod -->|"open_analytical_conn"| brain_duckdb_setup
+    brain_cfg_schema -->|"BotConfig.fill_model attach-point"| fill_config_mod
 ```
+
+### Phase 2 Fill Model (Plan 02-01)
+
+The fill model consumes Phase 1's data pipeline outputs through a DuckDB-joined
+feature table. `build_features_table` (in `brain.fill_model.features`) produces
+per-(market, side, bin) rows with 5 covariates: `basis_spread`, `imbalance`,
+`sin_settlement`, `cos_settlement`, `ewma_vol`. The EWMA uses a strict
+left-closed window (`ROWS BETWEEN 5 PRECEDING AND 1 PRECEDING`) — no
+look-ahead (T-02-F-02). `FillModelConfig` carries 11 knobs; all auto-surface
+in RUN_MANIFEST via reflection (T-02-R-01). Subsequent plans (02-02/03/04) add
+QueueTracker, AMMConsumption, Poisson GLM fit, predict, and the refit loop.
+
+See [[fill-model-library-decision-tick-vs-statsmodels]] and [[covariate-selection-v05]].
 
 ## What's declared in `docs/architecture.yml`
 
