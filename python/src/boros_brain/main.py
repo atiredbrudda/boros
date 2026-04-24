@@ -121,9 +121,16 @@ async def run(config_path: Path, dry_run: bool = False) -> int:
 
     ingest_task = asyncio.create_task(_peer_heartbeat_ingest())
 
+    # Phase 2 Plan 02-04: synchronous initial fit (blocks ~30s on a warm market;
+    # required so predict() has an artifact before the 1 Hz decision loop starts).
+    # Skipped automatically in dry-run mode (the `return` above short-circuits).
+    from .fill_model.refit_loop import refit_once, run_fill_model_refit_loop
+    await refit_once(cfg, manifest.run_id)
+    refit_task = asyncio.create_task(run_fill_model_refit_loop(cfg, manifest.run_id))
+
     await stop.wait()
     heartbeat.stop()
-    for t in (send_task, monitor_task, ingest_task):
+    for t in (send_task, monitor_task, ingest_task, refit_task):
         t.cancel()
         with contextlib.suppress(asyncio.CancelledError):
             await t
