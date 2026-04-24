@@ -486,6 +486,12 @@ nodes:
     path: python/src/boros_brain/data/poller/markets_poller.py
     public_functions: [run_markets_poller]   # MarketsPoller is a class (not a fn)
 
+  - id: brain.data.poller.e_liq_poller
+    type: module
+    process: brain
+    path: python/src/boros_brain/data/poller/e_liq_poller.py
+    public_functions: []   # ELiqPoller is a class (not a fn)
+
   # ── DATA-07 fIndexOracle reader (01-09) ─────────────────────────────────
   - id: brain.data.findex_reader
     type: module
@@ -1095,6 +1101,32 @@ edges:
     to: ext.boros_historical_data
     type: reads
     notes: "NDJSON files downloaded from historical-data.boros.finance then passed as --src"
+
+  # ── DATA-11 E_liq poller edges (01-10) ─────────────────────────────────────
+  - from: brain.data.poller.e_liq_poller
+    to: brain.data.rest_client
+    type: calls
+    notes: "get_markets() — GET /open-api/v1/markets for E_liq_per_epoch + Long/Short budgets"
+
+  - from: brain.data.poller.e_liq_poller
+    to: brain.data.chain_time
+    type: calls
+    notes: "get_chain_time_cached() for chain_ts on each polled row"
+
+  - from: brain.data.poller.e_liq_poller
+    to: brain.state.writers.reward_budget_history
+    type: calls
+    notes: "insert_reward_budget_row() — one row per market per cycle, NO cache (PITFALLS §A2)"
+
+  - from: brain.data.poller.e_liq_poller
+    to: config.data.e_liq_poll_interval_s
+    type: depends-on-config
+    notes: "loop() sleeps e_liq_poll_interval_s between cycles (default 5s)"
+
+  - from: brain.data.poller.e_liq_poller
+    to: config.data.boros_rest_base
+    type: depends-on-config
+    notes: "BorosRestClient uses boros_rest_base for GET /markets"
 
   # ── DATA-05 AMM conservation assertion (01-10) ───────────────────────────
   - from: brain.data.ingester.order_book

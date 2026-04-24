@@ -56,6 +56,7 @@ flowchart TB
         brain_data_findex_reader["data/findex_reader.py<br/>FIndexReader, decode_findex_bytes,<br/>fIndex_display (DATA-07, 01-09)"]
         brain_data_poller_schemas["data/poller/schemas.py<br/>MarketsResponse, Market, MarketConfig (01-09)"]
         brain_data_poller_markets["data/poller/markets_poller.py<br/>MarketsPoller, run_markets_poller (DATA-06, 01-09)"]
+        brain_data_poller_e_liq["data/poller/e_liq_poller.py<br/>ELiqPoller (DATA-11, 01-10)<br/>NO cross-poll cache — PITFALLS §A2"]
         brain_duckdb_setup["duckdb_layer/setup.py<br/>open_analytical_conn (INFRA-04, 01-07)<br/>ANALYTICAL ONLY — not on hot path"]
         brain_bus_cmd["bus/cmd.py<br/>CmdBus (ZMQ PUSH)"]
         brain_bus_events["bus/events.py<br/>EventBus (ZMQ PUB/SUB)"]
@@ -113,6 +114,12 @@ flowchart TB
     brain_data_rpc -- "AsyncHTTPProvider(rpc_url_arbitrum)" --> ext_rpc
     brain_data_chain_time -- "halt_callback → KILL lane on drift > 30s" --> brain_bus_cmd
     no_time_time -- "pre-commit: rejects time.time() in brain/{decision,data,screener}" --> brain
+
+    %% DATA-11 E_liq poller (01-10)
+    brain_data_poller_e_liq -- "GET /markets E_liq_per_epoch" --> brain_data_rest_client
+    brain_data_poller_e_liq -- "get_chain_time_cached() chain_ts" --> brain_data_chain_time
+    brain_data_poller_e_liq -- "insert_reward_budget_row one row/cycle/market" --> brain_writers_budget
+    brain_writers_budget -- writes --> state_budget
 
     %% DATA-06 /markets poller + DATA-07 fIndexOracle reader (01-09)
     brain_data_poller_markets -- "make_boros_rest_client GET /markets" --> brain_data_rest_client
