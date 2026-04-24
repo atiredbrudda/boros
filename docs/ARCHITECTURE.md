@@ -196,6 +196,20 @@ flowchart TB
     screener_scale_cal -- "reads snapshot_ts/clo_lower_thresh/f_index_raw" --> state_clo
     screener_scale_cal -- "fIndexOracle bytes decoded by poller, stored as f_index_raw" --> brain_data_rpc
 
+    %% DATA-08 filter + report + CLI (01-11 Task 3)
+    screener_filter["screener/filter.py<br/>apply_screener_filters — 6 filters + A8 wall flag<br/>T-01-11-03: shortlist cap at 4 by r_apr_potential rank<br/>(DATA-08, 01-11)"]
+    screener_report["screener/report.py<br/>write_screener_metrics_report<br/>(DATA-08, 01-11)"]
+    screener_cli["screener/cli.py<br/>main — python -m boros_brain.screener<br/>RUN_MANIFEST-first + DATA-09 consumer entrypoint"]
+    screener_out[("var/reports/screener_metrics.json<br/>shortlist + full metric tree")]
+    screener_filter -- "calls all 6 compute_* fns" --> screener_metrics
+    screener_filter -- "get_calibration_pairs + calibrate_scale (non-blocking)" --> screener_scale_cal
+    screener_filter -- "reads clo_lower_thresh/clo_upper_thresh" --> state_clo
+    screener_filter -- "reads e_liq_per_epoch for r_apr_potential ranking" --> state_budget
+    screener_report -- writes --> screener_out
+    screener_cli -- "apply_screener_filters" --> screener_filter
+    screener_cli -- "write_screener_metrics_report" --> screener_report
+    screener_cli -- "build_run_manifest + write_manifest (PROTO-01)" --> brain_manifest_writer
+
     %% brain wiring
     brain_main --> brain_cfg_loader --> brain_cfg_schema
     brain_main --> brain_manifest_writer --> brain_manifest_schema

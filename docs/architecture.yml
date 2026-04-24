@@ -604,6 +604,31 @@ nodes:
     path: python/src/boros_brain/screener/scale_calibration.py
     public_functions: [calibrate_scale, get_calibration_pairs]
 
+  # ── DATA-08 screener filter + report + CLI (01-11 Task 3) ─────────────────
+  - id: brain.screener.filter
+    type: module
+    process: brain
+    path: python/src/boros_brain/screener/filter.py
+    public_functions: [apply_screener_filters]
+
+  - id: brain.screener.report
+    type: module
+    process: brain
+    path: python/src/boros_brain/screener/report.py
+    public_functions: [write_screener_metrics_report]
+
+  - id: brain.screener.cli
+    type: module
+    process: brain
+    path: python/src/boros_brain/screener/cli.py
+    public_functions: [main]
+
+  # ── screener report output ──────────────────────────────────────────────────
+  - id: var.reports.screener_metrics
+    type: storage
+    path: var/reports/screener_metrics.json
+    notes: "Screener output: full metric tree + shortlist <= 4 markets (DATA-08)"
+
 edges:
   # ── brain internal wiring ──────────────────────────────────────────────
   - from: brain
@@ -1202,3 +1227,49 @@ edges:
     to: brain.data.rpc_client
     type: reads
     notes: "fIndexOracle raw bytes decoded by FIndexReader in poller; scale_calibration reads the stored f_index_raw from clo_history"
+
+  # ── DATA-08 filter + report + CLI edges (01-11 Task 3) ─────────────────────
+  - from: brain.screener.filter
+    to: brain.screener.metrics
+    type: calls
+    notes: "apply_screener_filters calls all 6 compute_* functions per market"
+
+  - from: brain.screener.filter
+    to: brain.screener.scale_calibration
+    type: calls
+    notes: "apply_screener_filters calls get_calibration_pairs + calibrate_scale (non-blocking)"
+
+  - from: brain.screener.filter
+    to: state.clo_history
+    type: reads
+    notes: "reads clo_lower_thresh/clo_upper_thresh for CLO bounds filters"
+
+  - from: brain.screener.filter
+    to: state.reward_budget_history
+    type: reads
+    notes: "reads e_liq_per_epoch for r_apr_potential ranking (T-01-11-03)"
+
+  - from: brain.screener.filter
+    to: config.screener
+    type: depends-on-config
+    notes: "reads all ScreenerConfig knobs: min_time_to_maturity_days, trades_window_days, etc."
+
+  - from: brain.screener.report
+    to: var.reports.screener_metrics
+    type: writes
+    notes: "write_screener_metrics_report writes shortlist + full metric tree"
+
+  - from: brain.screener.cli
+    to: brain.screener.filter
+    type: calls
+    notes: "main() calls apply_screener_filters for each market in config.markets"
+
+  - from: brain.screener.cli
+    to: brain.screener.report
+    type: calls
+    notes: "main() calls write_screener_metrics_report after filtering"
+
+  - from: brain.screener.cli
+    to: brain.manifest.writer
+    type: calls
+    notes: "main() calls build_run_manifest + write_manifest first (PROTO-01)"

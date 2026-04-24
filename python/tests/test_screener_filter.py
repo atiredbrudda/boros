@@ -106,7 +106,7 @@ def _make_duck_conn(
     """)
 
     for mid in market_ids:
-        base_ts = now - 70 * 86400  # 70 days back
+        base_ts = now - 10 * 86400  # 10 days back — within the 60-day screener window
         t = float(base_ts)
         prev_rate = 9400.0
         direction = 1
