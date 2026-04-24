@@ -202,3 +202,47 @@ CREATE TABLE IF NOT EXISTS fill_model_fits (
 
 CREATE INDEX IF NOT EXISTS ix_fill_model_fits_market_side_end
     ON fill_model_fits(market_id, side, fit_window_end_ts DESC);
+
+-- ---------------------------------------------------------------------------
+-- loss_grid_artifacts  (brain-owned) — LOSS-01 + LOSS-02 empirical loss-grid artifact
+-- ---------------------------------------------------------------------------
+-- Single writer: brain.state.writers.loss_grid_artifacts.
+-- Read by:       brain.loss_model.expected_loss, brain.sizer.optimizer (Plan 03-03).
+--
+-- One row per successful refit per (market, side). Primary key ordered so the
+-- common "get latest grid" query is an index seek:
+--   (market_id, side, window_end_ts DESC).
+--
+-- depth_bucket_edges, tau_bucket_edges_days, cells_json are JSON TEXT columns
+-- (matches run_manifests.config_json + fill_model_fits.beta JSON-as-TEXT pattern).
+-- cells_json is `list[LossGridCell.model_dump()]`; deserialised via json.loads in
+-- get_latest_loss_grid.
+--
+-- fit_status:
+--   ok       — full coverage, all cells have n_samples >= min_samples_per_cell.
+--   degraded — half or more grid cells sparse, OR fit raised on no_data.
+--   stale    — emitted by expected_loss when fit_age_s > fit_warn_staleness_s
+--              and still the most-recent; row is updated via insert_loss_grid_artifact
+--              re-insert (single-writer discipline forbids UPDATE from any other writer).
+--
+-- event_index_coverage: 'full' when every replay fill had a non-null fill_event_index,
+-- 'degraded' when any fill in the window lacked eventIndex (degraded-mode replay).
+
+CREATE TABLE IF NOT EXISTS loss_grid_artifacts (
+    run_id                TEXT NOT NULL,
+    market_id             TEXT NOT NULL,
+    side                  TEXT NOT NULL CHECK(side IN ('long','short')),
+    window_start_ts       INTEGER NOT NULL,
+    window_end_ts         INTEGER NOT NULL,
+    fit_status            TEXT NOT NULL CHECK(fit_status IN ('ok','degraded','stale')),
+    depth_bucket_edges    TEXT NOT NULL,   -- JSON list[float]
+    tau_bucket_edges_days TEXT NOT NULL,   -- JSON list[float]
+    cells_json            TEXT NOT NULL,   -- JSON list[LossGridCell]
+    event_index_coverage  TEXT NOT NULL DEFAULT 'full'
+        CHECK(event_index_coverage IN ('full','degraded')),
+    created_at            INTEGER NOT NULL,
+    PRIMARY KEY (market_id, side, window_end_ts)
+);
+
+CREATE INDEX IF NOT EXISTS ix_loss_grid_artifacts_market_side_end
+    ON loss_grid_artifacts(market_id, side, window_end_ts DESC);
