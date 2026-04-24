@@ -12,7 +12,7 @@ listed below.
 
 ## 2026-04-24 — Bootstrap commit: create docs/architecture.yml + docs/ARCHITECTURE.md + docs/override-log.md
 
-- **Commit:** (filled in after commit lands — see git log docs/architecture.yml)
+- **Commit:** 9f6db24 — `docs(phase-01): bootstrap architecture.yml + ARCHITECTURE.md + override-log.md  #override: bootstrap`
 - **Override tag:** `#override: bootstrap`
 - **Reason:** `scripts/architecture_lint.py` cannot lint a file that is being created in
   the same commit as the lint target (circular dependency: the file being validated does
