@@ -28,7 +28,8 @@ Requirements for the v0.5 release. Every requirement is testable (either automat
 **: A single **Pydantic v2 config schema** is the source of truth for every "knob" (strategy params, thresholds, market targets, API URLs, wallet addresses). Config loads once per run; hot-reload not supported for v0.5.
 - [x] **INFRA-03
 **: A **SQLite database with WAL mode** holds shared cross-process state: in-flight orders, queue-position estimates, reward accrual tracker, recent fills/PnL. Single-writer-per-table discipline is documented and linted.
-- [ ] **INFRA-04**: **DuckDB read-only** layer sits over the NDJSON parquet + SQLite for backtest / analysis queries — no writes, pure analytical reads.
+- [x] **INFRA-04
+**: **DuckDB read-only** layer sits over the NDJSON parquet + SQLite for backtest / analysis queries — no writes, pure analytical reads.
 - [x] **INFRA-05
 **: **ZMQ IPC** between Python `brain` and TypeScript `hands` over two sockets: `ipc:///tmp/boros.cmd` (PUSH/PULL, priority lanes so KILL preempts placements) and `ipc:///tmp/boros.events` (PUB/SUB).
 - [x] **INFRA-06
@@ -47,7 +48,8 @@ Requirements for the v0.5 release. Every requirement is testable (either automat
 **: Secrets (agent wallet private key, RPC URLs, API keys) are loaded via **`dotenvx`** encrypted envs, never committed plaintext. `.env.vault` is committed; `.env.keys` is gitignored and stored in macOS Keychain.
 - [x] **INFRA-13
 **: **Process supervision via `launchd`** plist (macOS native) — separate plists for `brain` and `hands`, each auto-restarts on crash, logs to `logs/supervisor/`.
-- [ ] **INFRA-14**: An **NTP / chain-time drift monitor** runs in `brain` and logs delta between `time.time()` and Arbitrum block time every minute; excessive drift (>5s) triggers a warning, >30s a halt.
+- [x] **INFRA-14
+**: An **NTP / chain-time drift monitor** runs in `brain` and logs delta between `time.time()` and Arbitrum block time every minute; excessive drift (>5s) triggers a warning, >30s a halt.
 
 ### Phase 1b–d — Data Pipeline + Market Screener + Economics Gate
 

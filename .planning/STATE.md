@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-06-PLAN.md — encrypted-secret + process-supervision spine (INFRA-12, INFRA-13)
-last_updated: "2026-04-24T01:33:37.922Z"
+stopped_at: Completed 01-07-PLAN.md — chain-time cache + DuckDB analytical layer (INFRA-14, INFRA-04)
+last_updated: "2026-04-24T01:47:45.894Z"
 last_activity: 2026-04-24
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 12
-  completed_plans: 6
-  percent: 50
+  completed_plans: 7
+  percent: 58
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-23)
 ## Current Position
 
 Phase: 01 (foundation-infrastructure-spine-data-pipeline-economics-gate) — EXECUTING
-Plan: 6 of 12
+Plan: 7 of 12
 Status: Ready to execute
 Last activity: 2026-04-24
 
-Progress: [█████░░░░░] 50%
+Progress: [██████░░░░] 58%
 
 ## Performance Metrics
 
@@ -58,6 +58,7 @@ Progress: [█████░░░░░] 50%
 | Phase 01 P01-04 | 22 | 3 tasks | 82 files |
 | Phase 01 P01-05 | 15 | 2 tasks | 27 files |
 | Phase 01 P01-06 | 9 | 3 tasks | 17 files |
+| Phase 01 P01-07 | 11 | 2 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -103,6 +104,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - Keychain -A flag mandatory for headless launchd spawn (A3 landmine); without it launchd-spawned processes trigger GUI prompt — documented in docs/runbook-secrets.md
 - no_plain_keys.py rewritten to pass_filenames:false (git diff --cached) — hook reads its own staged file list; .env.vault excluded by filename
 - launchd plist paths are absolute (launchd does not expand HOME); wrapper scripts use HOME variable (bash does expand it)
+- chain_drift thresholds: startup halt = chain_drift_warn_s (5s), runtime halt = chain_drift_halt_s (30s); startup is stricter than runtime halt by design
+- sqlite_scanner: CALL sqlite_attach() chosen over ATTACH…USE live — USE live redirects default DDL catalog to read-only attach, breaking CREATE VIEW
+- no_time_time_lint: full-tree walk (not git diff --cached fallback) so tests can inject files without staging them
 
 ### Pending Todos
 
@@ -117,8 +121,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-24T01:33:37.918Z
-Stopped at: Completed 01-06-PLAN.md — encrypted-secret + process-supervision spine (INFRA-12, INFRA-13)
+Last session: 2026-04-24T01:47:45.890Z
+Stopped at: Completed 01-07-PLAN.md — chain-time cache + DuckDB analytical layer (INFRA-14, INFRA-04)
 Resume file: None
 
 **Planned Phase:** 01 (Foundation (Infrastructure Spine + Data Pipeline + Economics Gate)) — 12 plans — 2026-04-23T20:08:16.743Z
