@@ -115,6 +115,14 @@ class ChainTimeCache:
                 self._value = await asyncio.wait_for(get_latest_block_timestamp(self.w3), timeout=5.0)
                 self._ts = now_wall
             except TimeoutError:
+                if self._value is None:
+                    # Cold-cache timeout: no prior value to fall back to.
+                    # Returning None typed as int would crash any arithmetic caller.
+                    # Raise explicitly so the caller gets a clear error. (IN-01 fix)
+                    raise RuntimeError(
+                        "chain_time.rpc_timeout on cold cache — no cached value to return. "
+                        "Check Arbitrum RPC connectivity before retrying."
+                    ) from None
                 log.warning(
                     "chain_time.rpc_timeout",
                     last_value=self._value,
