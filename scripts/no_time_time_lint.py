@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Pre-commit hook: rejects ``time.time()`` in brain/{decision,data,screener}/.
+"""Pre-commit hook: rejects ``time.time()`` in brain/{decision,data,screener,fill_model}/.
 
 PITFALLS §C7 (clock drift during macOS sleep/wake): comparing to ``time.time()``
 silently miscomputes oracle-staleness breakers and fIndex ``fTime`` comparisons
@@ -40,6 +40,7 @@ PROTECTED_DIRS = (
     "python/src/boros_brain/decision/",
     "python/src/boros_brain/data/",
     "python/src/boros_brain/screener/",
+    "python/src/boros_brain/fill_model/",
 )
 
 # chain_time.py is explicitly allowed — it measures wall-clock vs chain-time.
