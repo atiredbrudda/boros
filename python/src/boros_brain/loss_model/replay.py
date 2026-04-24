@@ -10,8 +10,9 @@ This is the T-03-05 mitigation. P3-6 guard. Test
 ``test_loss_model_replay.py::test_no_look_ahead`` covers.
 
 A6 absorption: fees subtracted per [[fee-cost-term-in-expected-loss]].
-USD enters ONLY via ``pendle_price_usd`` (default 1.0; threaded from PricingConfig
-in Plan 03-04 — TODO).
+USD enters ONLY via ``pendle_price_usd`` — Plan 03-04 wires this from
+``config.pricing.pendle_price_usd`` (PricingConfig landed in Plan 03-02). Test
+seams may still pass an explicit value via ``build_per_fill_pnl_from_frame``.
 
 Note: the wall-clock call is banned in loss_model/ by no_time_time_lint.py
 (extension lands in Plan 03-04; pre-emptive discipline). All ts values come
@@ -97,7 +98,6 @@ def replay_historical_fills(
     window_start_ts: int,
     window_end_ts: int,
     *,
-    pendle_price_usd: float = 1.0,  # TODO Plan 03-04: thread from config.pricing
     fills_frame: pl.DataFrame | None = None,
 ) -> list[PerFillPnL]:
     """Return per-fill P&L list under the immediate-close policy.
@@ -108,8 +108,10 @@ def replay_historical_fills(
     forward-matchable close inside ``config.loss_model.close_latency_budget_s``
     are skipped (with a warning log) rather than emitted with a fabricated close.
 
-    pendle_price_usd defaults to 1.0; Plan 03-04 wires the real value via
-    config.pricing once that sub-model lands. See [[fee-cost-term-in-expected-loss]].
+    ``pendle_price_usd`` is sourced from ``config.pricing.pendle_price_usd`` —
+    Plan 03-04 wired this from the PricingConfig sub-model that Plan 03-02
+    attached to BotConfig. See [[fee-cost-term-in-expected-loss]] +
+    [[unit-consistency-pendle-units-v05]] for the unit-discipline contract.
 
     The optional ``fills_frame`` argument is a test-injection seam: callers may
     pass a polars DataFrame matching the SQL output schema to bypass DuckDB. This
@@ -117,6 +119,7 @@ def replay_historical_fills(
     standing up the full Phase-1 parquet tree.
     """
     lcfg = _get_loss_model_config(config)
+    pendle_price_usd = config.pricing.pendle_price_usd
     if fills_frame is not None:
         df = fills_frame
     else:
@@ -165,7 +168,7 @@ def build_per_fill_pnl_from_frame(
     *,
     config: BotConfig,
     market_id: str,
-    pendle_price_usd: float = 1.0,
+    pendle_price_usd: float | None = None,
 ) -> list[PerFillPnL]:
     """Compute PerFillPnL rows from a polars DataFrame matching the replay SQL output.
 
@@ -176,12 +179,18 @@ def build_per_fill_pnl_from_frame(
     — the Phase-1 parquet does not yet carry it; the screener tick helper lands in
     Plan 03-04. For test fixtures, callers pass it through directly.
 
+    ``pendle_price_usd`` defaults to ``config.pricing.pendle_price_usd`` when
+    omitted (Plan 03-04 wiring). Tests may pass an explicit value to exercise
+    edge cases without rebuilding a full BotConfig.
+
     Fee terms (PENDLE-units) per [[fee-cost-term-in-expected-loss]]:
         fee_taker = size × fill_rate × (tau_days / 365) × fees.taker_fee_rate
         fee_settlement = size × fill_rate × (settlement_period_s / 86400 / 365) × settlement_fee_rate
         fee_entrance = market_entrance_fee_usd / pendle_price_usd / 100.0  (100-fill amortization)
         fee_gas = (gas_place + gas_cancel + gas_close) × gas_price × 1e-9 / pendle_price_usd
     """
+    if pendle_price_usd is None:
+        pendle_price_usd = config.pricing.pendle_price_usd
     fees = _get_loss_model_config(config).fees
     maturity_ts = _maturity_ts_for_market(config, market_id)
 

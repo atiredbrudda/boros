@@ -134,6 +134,68 @@ def test_fill_model_leaves_surfaced(default_config: BotConfig) -> None:
     assert "fill_model.covariate_whitelist" in fill_model_leaves
 
 
+def test_phase3_leaves_surfaced(default_config: BotConfig) -> None:
+    """PROTO-04 (Plan 03-04): every Phase-3 knob auto-surfaces via reflection.
+
+    Covers loss_model (incl. nested fees.*), reward_share_model, pricing, sizer.
+    Expected leaf count: ~35 (8 fees + 12 loss_model leaves + 5 reward_share_model
+    + 4 pricing + 6 sizer). The reflection collector counts the nested
+    ``loss_model.fees`` sub-model leaves under their full ``loss_model.fees.*``
+    path, so 11 LossModelConfig fields + 8 FeesConfig fields = 19 loss_model
+    leaves total (the ``fees`` field itself is not a leaf because it's a
+    StrictBase sub-model).
+    """
+    leaves = _collect_leaf_paths(BotConfig)
+    leaf_strs = [".".join(leaf) for leaf in leaves]
+
+    loss_leaves = [s for s in leaf_strs if s.startswith("loss_model.")]
+    reward_share_leaves = [s for s in leaf_strs if s.startswith("reward_share_model.")]
+    pricing_leaves = [s for s in leaf_strs if s.startswith("pricing.")]
+    sizer_leaves = [s for s in leaf_strs if s.startswith("sizer.")]
+
+    assert len(loss_leaves) >= 12, (
+        f"expected >=12 loss_model leaves (incl. fees.*), got {len(loss_leaves)}: {loss_leaves}"
+    )
+    assert len(reward_share_leaves) >= 5, (
+        f"expected >=5 reward_share_model leaves, got {reward_share_leaves}"
+    )
+    assert len(pricing_leaves) >= 4, (
+        f"expected >=4 pricing leaves, got {pricing_leaves}"
+    )
+    assert len(sizer_leaves) >= 6, (
+        f"expected >=6 sizer leaves, got {sizer_leaves}"
+    )
+
+    # Aggregate count: 11 LossModelConfig leaves (depth_bucket_edges,
+    # tau_bucket_edges_days, min_samples_per_cell, knn_k, knn_max_distance,
+    # aggregation_metric, window_days, refit_cadence_s, fit_warn_staleness_s,
+    # fit_max_staleness_s, close_latency_budget_s — `fees` itself is a
+    # StrictBase sub-model so does NOT count as a leaf) + 8 FeesConfig leaves
+    # (taker_fee_rate, settlement_fee_rate, settlement_period_s,
+    # market_entrance_fee_usd, gas_place_gwei, gas_cancel_gwei, gas_close_gwei,
+    # gas_price_gwei) + 5 RewardShareModelConfig + 4 PricingConfig + 6
+    # SizerConfig = 34 total. Plan 03-04 acceptance criterion §6 stated 35 as
+    # a rough upper-bound; the actual leaf count is 34 (Plan 03-04 plan-prose
+    # off-by-one — see SUMMARY.md Deviations §1).
+    phase3_leaves = loss_leaves + reward_share_leaves + pricing_leaves + sizer_leaves
+    assert len(phase3_leaves) >= 34, (
+        f"expected >=34 total Phase-3 leaves, got {len(phase3_leaves)}: {phase3_leaves}"
+    )
+
+    # Spot-check specific critical knobs (one from each sub-model + fees nested).
+    assert "loss_model.depth_bucket_edges" in loss_leaves
+    assert "loss_model.fees.taker_fee_rate" in loss_leaves
+    assert "loss_model.fees.settlement_fee_rate" in loss_leaves
+    assert "loss_model.fees.gas_price_gwei" in loss_leaves
+    assert "reward_share_model.competition_poll_interval_s" in reward_share_leaves
+    assert "reward_share_model.cap_apr_multiple" in reward_share_leaves
+    assert "pricing.pendle_price_usd" in pricing_leaves
+    assert "pricing.price_source" in pricing_leaves
+    assert "sizer.collateral_usd" in sizer_leaves
+    assert "sizer.q_min_pendle" in sizer_leaves
+    assert "sizer.notional_per_yu_usd" in sizer_leaves
+
+
 def test_git_sha_and_dirty_captured(default_config: BotConfig) -> None:
     m = build_run_manifest(default_config)
     assert isinstance(m.git_sha, str) and len(m.git_sha) >= 7

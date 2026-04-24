@@ -333,6 +333,120 @@ flowchart TB
     parquet_ob_raw -->|"hourly anchors"| fill_queue_tracker
     parquet_ob_raw -->|"per-tick raw size"| fill_amm_consumption
     parquet_ob_comb -->|"per-tick combined size"| fill_amm_consumption
+
+    %% Phase 3: Loss + Reward-Share + Sizer (Plans 03-01/02/03/04)
+    subgraph phase3["Phase 3: EV inputs + Sizer (Plans 03-01/02/03/04)"]
+        loss_replay["loss_model/replay.py<br/>replay_historical_fills (LOSS-01)"]
+        loss_fit["loss_model/fit.py<br/>fit_loss_grid +<br/>build_loss_grid_artifact_from_fills"]
+        loss_expected["loss_model/expected_loss.py<br/>expected_loss SYNC sub-10ms (LOSS-02)<br/>3-tier fallback exact|nn|coarse_bound"]
+        loss_artifact["loss_model/artifact.py<br/>write_loss_grid_artifact dual-write"]
+        loss_refit["loss_model/refit_loop.py<br/>refit_once + run_loss_model_refit_loop"]
+        loss_ou["loss_model/ou_parametric.py<br/>OUBasisLossModel Protocol +<br/>fit_ou_basis (NotImplementedError v0.5)"]
+        loss_cli["loss_model/cli.py + __main__.py<br/>fit / expected-loss / force-degrade"]
+        loss_writer["state/writers/loss_grid_artifacts.py<br/>insert_loss_grid_artifact +<br/>get_latest_loss_grid"]
+        state_loss_grid[("state.loss_grid_artifacts<br/>SQLite — PK market/side/end_ts<br/>Alembic 0004")]
+        parquet_loss_grid[("parquet/loss_grid_artifacts<br/>market_id / side / window_end_ts")]
+
+        rcap["reward_model/r_capped.py<br/>r_capped_curve (REWARD-01)<br/>regime: sub_cap | cap_binding | market_saturated"]
+        qcap["reward_model/q_cap.py<br/>compute_q_cap (REWARD-04)"]
+        comp_tracker["reward_model/competition_tracker.py<br/>CompetitionTracker +<br/>run_competition_tracker_loop (REWARD-02)<br/>5s REST + parquet (T-03-06 AMM exclude)"]
+        comp_writer["state/writers/competition_history.py<br/>insert_competition_row +<br/>get_latest_competition"]
+        state_comp[("state.competition_history<br/>SQLite — Alembic 0005")]
+        cal_writer["state/writers/market_reward_calibration.py<br/>insert_market_reward_calibration +<br/>get_latest_market_reward_calibration"]
+        calibrate["reward_model/calibrate.py<br/>insert_operator_calibration (LOCKED D-01)"]
+        state_cal[("state.market_reward_calibration<br/>SQLite — Alembic 0006<br/>data_source='operator' CHECK")]
+        reward_cli["reward_model/cli.py + __main__.py<br/>curve / competition-snapshot / calibrate"]
+
+        pricing_cfg["pricing/config.py<br/>PricingConfig — pendle_price_usd +<br/>price_source + staleness bands"]
+
+        sizer_opt["sizer/optimizer.py<br/>q_me_target SYNC sub-10ms (REWARD-03)<br/>grid + scipy polish + NaN guard"]
+        sizer_cli["sizer/cli.py + __main__.py<br/>target subcommand"]
+
+        loss_replay -->|calls| loss_fit
+        loss_fit -->|calls| loss_artifact
+        loss_artifact -->|single-writer| loss_writer
+        loss_artifact -->|writes parquet-FIRST| parquet_loss_grid
+        loss_writer -->|writes| state_loss_grid
+        loss_expected -->|reads latest grid| loss_writer
+        loss_refit -->|calls| loss_fit
+        loss_cli -->|calls| loss_refit
+        loss_cli -->|calls| loss_expected
+
+        comp_tracker -->|single-writer| comp_writer
+        comp_writer -->|writes| state_comp
+        calibrate -->|single-writer| cal_writer
+        cal_writer -->|writes| state_cal
+        reward_cli -->|calls| rcap
+        reward_cli -->|calls| comp_tracker
+        reward_cli -->|calls| calibrate
+
+        sizer_opt -->|calls| loss_expected
+        sizer_opt -->|calls| rcap
+        sizer_opt -->|calls| qcap
+        sizer_cli -->|calls| sizer_opt
+    end
+
+    %% Phase 3 cross-subgraph wiring
+    parquet_mt -->|"DuckDB no-look-ahead replay"| loss_replay
+    state_clo -->|"latest CLO bounds"| comp_tracker
+    parquet_ob_raw -->|"Σ_others — RAW not COMBINED (T-03-06)"| comp_tracker
+    state_open_orders -->|"fallback Q_me when REST degraded"| comp_tracker
+    PredictMod -->|"Phase-2 LOCKED predict()"| sizer_opt
+    loss_replay -->|"PENDLE-unit discipline boundary"| pricing_cfg
+    sizer_opt -->|"USD-boundary single point of conversion"| pricing_cfg
+    rcap -.->|"PENDLE-unit cap_budget formula"| pricing_cfg
+    qcap -.->|"REWARD-04 algebra"| pricing_cfg
+    brain_main -->|"Plan 03-04: spawn refit + tracker tasks"| loss_refit
+    brain_main -->|"Plan 03-04: spawn comp_task"| comp_tracker
+    brain_cfg_schema -->|"BotConfig.{loss_model,pricing,reward_share_model,sizer} attach-points"| pricing_cfg
+
+    %% Phase 4 placeholder — DecisionEngine consumes Sizer output
+    sizer_opt -.->|"Phase 4: DecisionEngine.evaluate consumes SizerOutput at 1 Hz"| brain_main
+```
+
+### Phase 3 EV inputs + Sizer (Plans 03-01 / 03-02 / 03-03 / 03-04)
+
+Phase 3 lands the three EV-equation inputs (`E[loss|fill]`, `R_capped`,
+`P(fill) × Q_me`) plus the Sizer that composes them. **All three terms share a
+PENDLE-unit basis**; USD enters at exactly one boundary —
+`config.pricing.pendle_price_usd`. See [[unit-consistency-pendle-units-v05]] for
+the full discipline.
+
+**Plan 03-01 (Wave 1):** `LossModel` — empirical `(depth, tau)` grid with
+sparse-cell k-NN + coarse_bound fallback (LOSS-01/02), plus the
+`OUBasisLossModel` Protocol scaffold (LOSS-03 v1.0 drop-in point). DuckDB
+no-look-ahead SQL on `parquet.market_trades` enforces T-03-05; A6 fee absorption
+inside `expected_loss` per [[fee-cost-term-in-expected-loss]]. Dual-write
+parquet-FIRST / SQLite-SECOND keeps the artifact orphan-tolerant.
+
+**Plan 03-02 (Wave 1):** `RewardShareModel` — closed-form capped pro-rata
+`r_capped_curve` with regime classification (REWARD-01) + `compute_q_cap`
+algebra (REWARD-04). `CompetitionTracker` polls REST + parquet at 5s cadence —
+reads `parquet.order_book_raw` (NOT combined) per T-03-06 AMM exclusion. The
+LOCKED D-01 operator-manual calibration writes to `state.market_reward_calibration`
+with `data_source='operator'` CHECK (Plan 03-02 closed the Phase-1 ELiqPoller
+carried concern). Plan 03-02 also attaches `BotConfig.{loss_model, pricing,
+reward_share_model}` from the Phase-3 schema delta.
+
+**Plan 03-03 (Wave 2):** `Sizer` — sync sub-10ms `q_me_target` composing
+`fill_model.predict` × `loss_model.expected_loss` × `reward_model.r_capped_curve`
+× `compute_q_cap` (REWARD-03). Three-regime shortcut + 50-pt log-spaced grid +
+optional scipy polish; T-03-09 propagates upstream errors uniformly; T-03-10
+NaN guards + divergence-revert. Plan 03-03 attaches `BotConfig.sizer`.
+
+**Plan 03-04 (Wave 3):** Atomic Phase-3 wire-up — `brain.main.run()` spawns
+`run_loss_model_refit_loop` + `run_competition_tracker_loop` alongside the
+existing fill_model refit loop; all three join the shutdown-cancel tuple.
+`loss_model.replay.replay_historical_fills` sources `pendle_price_usd` from
+`config.pricing` (replaces Plan 03-01 placeholder). `scripts/no_time_time_lint.py`
+extends to `loss_model/`, `reward_model/`, `sizer/`. This file's Mermaid plus
+`docs/architecture.yml` carry the full Phase-3 node + edge delta atomically.
+
+See [[empirical-loss-grid-v05]], [[ou-on-basis-loss-scaffold]],
+[[reward-cap-geometry-v05]], [[competition-tracker-data-sources-v05]],
+[[market-reward-calibration-operator-workflow]], [[e-liq-per-epoch-source-decision]],
+[[sizing-optimizer-sub-cap-regime-v05]], [[economics-kill-switch-usd-variant-v10]],
+[[unit-consistency-pendle-units-v05]], and [[fee-cost-term-in-expected-loss]].
 ```
 
 ### Phase 2 Fill Model (Plans 02-01 + 02-02 + 02-03 + 02-04)
