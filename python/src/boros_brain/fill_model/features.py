@@ -177,17 +177,19 @@ def build_features_table(
     bin_s_int = int(bin_s)
 
     conn = open_analytical_conn(config.infra.sqlite_path, "data/parquet/")
-
-    df = conn.execute(
-        _FEATURE_SQL,
-        {
-            "market_id": market_id,
-            "window_start": window_start_ts,
-            "window_end": window_end_ts,
-            "bin_duration_s": bin_s,
-            "bin_duration_s_int": bin_s_int,
-        },
-    ).pl()
+    try:
+        df = conn.execute(
+            _FEATURE_SQL,
+            {
+                "market_id": market_id,
+                "window_start": window_start_ts,
+                "window_end": window_end_ts,
+                "bin_duration_s": bin_s,
+                "bin_duration_s_int": bin_s_int,
+            },
+        ).pl()
+    finally:
+        conn.close()
 
     # Drop zero-duration bins (safety guard — should not arise with correct SQL)
     df = df.filter(pl.col("bin_duration_s") > 0)
