@@ -26,7 +26,8 @@ Requirements for the v0.5 release. Every requirement is testable (either automat
 **: Project repo initializes a monorepo layout with `python/` (bot brain, models, backtest) and `ts/` (hands: SDK, execution, WS listener) + a shared `configs/` and `docs/`.
 - [x] **INFRA-02
 **: A single **Pydantic v2 config schema** is the source of truth for every "knob" (strategy params, thresholds, market targets, API URLs, wallet addresses). Config loads once per run; hot-reload not supported for v0.5.
-- [ ] **INFRA-03**: A **SQLite database with WAL mode** holds shared cross-process state: in-flight orders, queue-position estimates, reward accrual tracker, recent fills/PnL. Single-writer-per-table discipline is documented and linted.
+- [x] **INFRA-03
+**: A **SQLite database with WAL mode** holds shared cross-process state: in-flight orders, queue-position estimates, reward accrual tracker, recent fills/PnL. Single-writer-per-table discipline is documented and linted.
 - [ ] **INFRA-04**: **DuckDB read-only** layer sits over the NDJSON parquet + SQLite for backtest / analysis queries — no writes, pure analytical reads.
 - [ ] **INFRA-05**: **ZMQ IPC** between Python `brain` and TypeScript `hands` over two sockets: `ipc:///tmp/boros.cmd` (PUSH/PULL, priority lanes so KILL preempts placements) and `ipc:///tmp/boros.events` (PUB/SUB).
 - [ ] **INFRA-06**: A **RUN_MANIFEST writer** emits the manifest as (a) first log record, (b) `<run_id>.manifest.json` sidecar. Fields: `run_id` (ULID), `started_at`, `mode` (backtest/paper/live), `git_sha`, `git_dirty`, `strategy_version`, `market_id`, `side`, `wallet_address_hash`, full config tree. Mid-run knob change triggers a new `run_id` with `parent_run_id` pointer.

@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-01-PLAN.md — BotConfig + monorepo scaffold landed
-last_updated: "2026-04-23T22:25:10.309Z"
-last_activity: 2026-04-23
+stopped_at: Completed 01-02-PLAN.md — SQLite WAL state spine (INFRA-03)
+last_updated: "2026-04-24T00:10:17.014Z"
+last_activity: 2026-04-24
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 12
-  completed_plans: 1
-  percent: 8
+  completed_plans: 2
+  percent: 17
 ---
 
 # Project State
@@ -28,9 +28,9 @@ See: .planning/PROJECT.md (updated 2026-04-23)
 Phase: 01 (foundation-infrastructure-spine-data-pipeline-economics-gate) — EXECUTING
 Plan: 2 of 12
 Status: Ready to execute
-Last activity: 2026-04-23
+Last activity: 2026-04-24
 
-Progress: [█░░░░░░░░░] 8%
+Progress: [██░░░░░░░░] 17%
 
 ## Performance Metrics
 
@@ -53,6 +53,7 @@ Progress: [█░░░░░░░░░] 8%
 
 *Updated after each plan completion*
 | Phase 01 P01-01 | 41 | 2 tasks | 28 files |
+| Phase 01 P01-02 | 16 | 2 tasks | 23 files |
 
 ## Accumulated Context
 
@@ -78,6 +79,10 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [2026-04-23 01-01] Pydantic v2 BotConfig locked as PROTO-04 SSoT: extra='forbid' + frozen=True on every StrictBase sub-model, markets list capped max_length=1 (v0.5), voluntary_cancel_forfeits_accumulated=False default (D-01 / P0-01), zero submission_path occurrences anywhere (P0-04 regression guard via test_submission_path_not_in_schema).
 - [2026-04-23 01-01] Monorepo tree committed: python/ + ts/ + configs/ + strategy/ + docs/ + scripts/ + state/ + logs/ + data/parquet/; uv sync --locked + pnpm --frozen-lockfile both clean; socket.io-client@^4 replaces raw ws (P0-03 stack change).
 - [2026-04-23 01-01] pnpm 10.33.2 installed via 'corepack enable pnpm' — documented as declarative dependency in ts/package.json packageManager field; plan's 'pnpm install --frozen-lockfile --dry-run' command adjusted to drop --dry-run (flag removed in pnpm 10); same semantic via --frozen-lockfile alone.
+- [2026-04-24 01-02] PROTO-02 mechanized: scripts/sqlite_writer_lint.py grep-enforces single-writer-per-table across python/src + ts/src with TEST_ONLY=True literal exception for Python-side hands writers (open_orders.py, tx_receipts.py); injected-drift behavioral test proves it catches INSERT INTO <table> outside the owner module.
+- [2026-04-24 01-02] SQLite WAL spine invariants: open_connection() clamps journal_mode=WAL + synchronous=NORMAL + foreign_keys=ON + chmod 600 on every open (covering .sqlite + -wal + -shm siblings); not one-time-at-creation. T-02-02/03 mitigations baked in.
+- [2026-04-24 01-02] B6 pitfall guard lands as schema CHECK + Python ValueError: reward_budget_history.data_source accepts only 'polled' | 'synthetic_current'; Phase-5 backtest MUST filter by data_source='polled' to avoid current-budget-synthetic leakage.
+- [2026-04-24 01-02] scripts/apply_alembic_migration.py replaces alembic CLI for TS tests (alembic -x does NOT override sqlalchemy.url — documented limitation). Helper uses cfg.set_main_option() programmatically and accepts arbitrary sqlite:/// URLs.
 
 ### Pending Todos
 
@@ -92,8 +97,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-23T22:25:10.306Z
-Stopped at: Completed 01-01-PLAN.md — BotConfig + monorepo scaffold landed
+Last session: 2026-04-24T00:10:17.011Z
+Stopped at: Completed 01-02-PLAN.md — SQLite WAL state spine (INFRA-03)
 Resume file: None
 
 **Planned Phase:** 01 (Foundation (Infrastructure Spine + Data Pipeline + Economics Gate)) — 12 plans — 2026-04-23T20:08:16.743Z
