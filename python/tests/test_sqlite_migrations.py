@@ -45,8 +45,10 @@ def test_wal_mode_enabled(tmp_sqlite_path: Path) -> None:
 
 
 def test_all_8_tables_exist_after_migration(tmp_path: Path) -> None:
-    """`alembic upgrade head` must produce exactly the 8 canonical tables
-    (plus alembic_version meta)."""
+    """`alembic upgrade head` must produce all canonical tables (plus alembic_version meta).
+
+    Originally 8 tables; Plan 02-03 adds fill_model_fits as table 9.
+    """
     db_path = tmp_path / "mig.sqlite"
     # Pre-create file with WAL + FKs (mirrors production open_connection contract).
     with open_connection(db_path):
@@ -67,6 +69,7 @@ def test_all_8_tables_exist_after_migration(tmp_path: Path) -> None:
         "epoch_rewards",
         "clo_history",
         "reward_budget_history",
+        "fill_model_fits",
         "alembic_version",
     }
     # sqlite_sequence is an internal SQLite table created automatically when any
@@ -157,3 +160,61 @@ def test_idempotent_reopen(tmp_path: Path) -> None:
 
     second_mode = stat.S_IMODE(os.stat(db_path).st_mode)
     assert first_mode == second_mode == 0o600
+
+
+def test_migration_0003_upgrades_and_downgrades(tmp_path: Path) -> None:
+    """Plan 02-03: fill_model_fits migration creates/drops table + index symmetrically."""
+    db_path = tmp_path / "mig0003.sqlite"
+    with open_connection(db_path):
+        pass
+    cfg = _alembic_config_for(db_path)
+
+    # Upgrade to head (includes 0003_fill_model_fits)
+    command.upgrade(cfg, "head")
+    with sqlite3.connect(str(db_path)) as c:
+        cols = {r[1] for r in c.execute("PRAGMA table_info('fill_model_fits')").fetchall()}
+        assert {
+            "run_id",
+            "fit_window_end_ts",
+            "market_id",
+            "side",
+            "beta",
+            "event_index_coverage",
+            "fit_status",
+        }.issubset(cols), f"missing columns: {cols}"
+        idx = {
+            r[1]
+            for r in c.execute(
+                "SELECT * FROM sqlite_master WHERE type='index'"
+            ).fetchall()
+        }
+        assert "ix_fill_model_fits_market_side_end" in idx, f"index missing: {idx}"
+
+    # Downgrade to 0002 (reward_budget_history) — fill_model_fits table must drop
+    command.downgrade(cfg, "0002")
+    with sqlite3.connect(str(db_path)) as c:
+        tables = {
+            r[0]
+            for r in c.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            ).fetchall()
+        }
+        assert "fill_model_fits" not in tables, f"fill_model_fits still present: {tables}"
+
+
+def test_migration_head_includes_fill_model_fits(tmp_path: Path) -> None:
+    """After alembic upgrade head, fill_model_fits table exists alongside the 8 prior tables."""
+    db_path = tmp_path / "head_check.sqlite"
+    with open_connection(db_path):
+        pass
+    command.upgrade(_alembic_config_for(db_path), "head")
+
+    with sqlite3.connect(str(db_path)) as conn:
+        rows = conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
+        ).fetchall()
+    names = {r[0] for r in rows}
+    names.discard("sqlite_sequence")
+    names.discard("alembic_version")
+
+    assert "fill_model_fits" in names, f"fill_model_fits missing from tables: {names}"

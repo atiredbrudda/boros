@@ -7,7 +7,7 @@
 -- Ownership map (enforced by scripts/sqlite_writer_lint.py):
 --   hands (TS sqlite_writer.ts):  open_orders, tx_receipts
 --   brain (Python state/writers/<table>.py): decisions, queue_positions,
---     run_manifests, epoch_rewards, clo_history, reward_budget_history
+--     run_manifests, epoch_rewards, clo_history, reward_budget_history, fill_model_fits
 --
 -- FKs are only enforced when `PRAGMA foreign_keys = ON` (applied per-connection
 -- by boros_brain.state.db.open_connection).
@@ -154,3 +154,51 @@ CREATE TABLE IF NOT EXISTS reward_budget_history (
 );
 CREATE INDEX IF NOT EXISTS ix_reward_budget_market_polled
     ON reward_budget_history(market_id, polled_at_utc DESC);
+
+-- ---------------------------------------------------------------------------
+-- fill_model_fits  (brain-owned) — FILL-01 + FILL-05 + FILL-06 NHPP fit artifact
+-- ---------------------------------------------------------------------------
+-- One row per successful refit per (market, side). Primary key ordered so the
+-- common "get latest fit" query is an index seek: (market_id, side, fit_window_end_ts DESC).
+--
+-- `covariate_whitelist`, `beta`, `beta_stderr` are JSON TEXT columns — matches
+-- run_manifests.config_json pattern. `beta` has length 1 + len(covariate_whitelist)
+-- because sm.add_constant prepends the intercept column; loader in Python validates.
+--
+-- fit_status:
+--   ok       — IRLS converged, enough events per param, stderr bounded
+--   degraded — fit-health gate failed (see fill_model.fit.py::_passes_health_gate)
+--   stale    — emitted by calibration.py when fit is older than fit_warn_staleness_s
+--              and still the most-recent; the row is updated via insert_fit_artifact
+--              re-insert, not UPDATE, because single-writer discipline forbids UPDATE
+--              from any other writer.
+--
+-- event_index_coverage: 'full' when market-trades has no null eventIndex in the
+-- fit window; 'degraded' when the queue tracker ran in null-eventIndex graceful-
+-- degrade mode (RESEARCH §Assumption A3).
+
+CREATE TABLE IF NOT EXISTS fill_model_fits (
+    run_id              TEXT NOT NULL,
+    fit_window_start_ts INTEGER NOT NULL,
+    fit_window_end_ts   INTEGER NOT NULL,
+    market_id           TEXT NOT NULL,
+    side                TEXT NOT NULL CHECK(side IN ('long','short')),
+    covariate_whitelist TEXT NOT NULL,
+    beta                TEXT NOT NULL,
+    beta_stderr         TEXT NOT NULL,
+    log_likelihood      REAL NOT NULL,
+    deviance            REAL NOT NULL,
+    aic                 REAL NOT NULL,
+    n_observations      INTEGER NOT NULL,
+    converged           INTEGER NOT NULL CHECK(converged IN (0,1)),
+    fit_status          TEXT NOT NULL CHECK(fit_status IN ('ok','degraded','stale')),
+    gof_ks_pval         REAL,
+    gof_lr_vs_null      REAL,
+    event_index_coverage TEXT NOT NULL DEFAULT 'full'
+        CHECK(event_index_coverage IN ('full','degraded')),
+    created_at          INTEGER NOT NULL,
+    PRIMARY KEY(market_id, side, fit_window_end_ts)
+);
+
+CREATE INDEX IF NOT EXISTS ix_fill_model_fits_market_side_end
+    ON fill_model_fits(market_id, side, fit_window_end_ts DESC);
