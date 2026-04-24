@@ -200,3 +200,39 @@ def test_hands_owned_python_writers_are_test_only(tmp_path: Path) -> None:
         )
         row = conn.execute("SELECT status FROM open_orders WHERE order_id='ord-1'").fetchone()
     assert row == ("filling",)
+
+
+def test_phase3_tables_have_single_writer() -> None:
+    """PROTO-02 (Plan 03-04): Phase-3 tables each have exactly one writer module
+    with the expected writer + reader function names.
+
+    Complements the existing subprocess-based ``scripts/sqlite_writer_lint.py``
+    invocation by asserting the OWNER modules exist on disk and define the
+    expected writer functions. If a refactor accidentally splits / moves a
+    writer this test surfaces the drift before a runtime ``no such table``.
+    """
+    repo = Path(__file__).resolve().parents[2]
+    spec = {
+        "loss_grid_artifacts": (
+            repo / "python/src/boros_brain/state/writers/loss_grid_artifacts.py",
+            ("insert_loss_grid_artifact", "get_latest_loss_grid"),
+        ),
+        "competition_history": (
+            repo / "python/src/boros_brain/state/writers/competition_history.py",
+            ("insert_competition_row", "get_latest_competition"),
+        ),
+        "market_reward_calibration": (
+            repo / "python/src/boros_brain/state/writers/market_reward_calibration.py",
+            (
+                "insert_market_reward_calibration",
+                "get_latest_market_reward_calibration",
+            ),
+        ),
+    }
+    for table, (path, fns) in spec.items():
+        assert path.exists(), f"writer module missing for {table}: {path}"
+        text = path.read_text()
+        for fn in fns:
+            assert f"def {fn}(" in text, (
+                f"expected `def {fn}(` in {path} (single-writer for {table})"
+            )
