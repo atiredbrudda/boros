@@ -82,12 +82,25 @@ class FIndexDecodeError(RuntimeError):
 def decode_findex_bytes(raw: bytes) -> dict[str, int]:
     """Decode the bytes32 payload returned by getLatestFIndex().
 
-    Per boros_bot_guide.md L202-213 (verified 2026-04-23 via grep in RESEARCH.md §Pattern 8).
+    Per boros_bot_guide.md L202-213. The live oracle confirmed this layout
+    2026-04-24 against BINANCE-ETHUSDT-29MAY2026.
 
-    Layout (bottom 26 bytes = 208 bits of the bytes32):
-        bits [176..208): fTime        — uint32, unix timestamp
-        bits [ 64..176): floatingIndex — int112, 1e18 precision, SIGN-EXTENDED
-        bits [  0..64 ): feeIndex     — uint64
+    The bytes32 ABI-return packs the FIndex struct in the UPPER 26 bytes
+    (big-endian), leaving the bottom 6 bytes as zero padding:
+
+        bytes32 layout (MSB → LSB):
+          bytes [0..4):   fTime         — uint32, unix timestamp
+          bytes [4..18):  floatingIndex — int112, 1e18 precision, SIGN-EXTENDED
+          bytes [18..26): feeIndex      — uint64
+          bytes [26..32): zero padding
+
+    Decode via `val256 >> 48` (discard 6-byte zero pad) → val208, then
+    extract fields from top bits of val208.
+
+    NOTE: RESEARCH.md §Pattern 8 used `raw[-26:]` (bottom 26 bytes) which is
+    INCORRECT — it reads the zero padding as data. The boros_bot_guide.md L206
+    `val >> 48` is authoritative and confirmed live. See docs/samples/
+    markets-schema-notes.md for the A5 reconciliation.
 
     Args:
         raw: 32-byte payload from getLatestFIndex(). Must be exactly 32 bytes.
@@ -102,8 +115,10 @@ def decode_findex_bytes(raw: bytes) -> dict[str, int]:
     if len(raw) != 32:
         raise ValueError(f"fIndex payload must be 32 bytes, got {len(raw)}")
 
-    # Extract the bottom 26 bytes (208 bits) as a single integer.
-    val208 = int.from_bytes(raw[-26:], "big")
+    # Discard the 6-byte zero-padding at the bottom; retain the upper 208 bits.
+    # boros_bot_guide.md L206: `val208 = val >> 48`
+    val256 = int.from_bytes(raw, "big")
+    val208 = val256 >> 48
 
     # Unpack fields per the bit layout.
     fTime = (val208 >> 176) & ((1 << 32) - 1)
