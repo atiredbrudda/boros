@@ -61,8 +61,15 @@ def calibrate_scale(p1: CalibrationPoint, p2: CalibrationPoint) -> ScaleResult:
     T-01-11-02: if the two estimates diverge by > 1%, flag scale_unstable=True
     so the operator can inspect before relying on the APR conversion.
     """
-    s1 = p1.f_index_raw / (p1.clo_lower_thresh - 10000.0)
-    s2 = p2.f_index_raw / (p2.clo_lower_thresh - 10000.0)
+    denom1 = p1.clo_lower_thresh - 10000.0
+    denom2 = p2.clo_lower_thresh - 10000.0
+    if denom1 == 0.0 or denom2 == 0.0:
+        raise InsufficientCalibrationData(
+            f"{p1.market_id}: clo_lower_thresh == 10000.0 — cannot invert SCALE formula "
+            f"(denominator is zero). Market boundary sits exactly at fIndex center. (WR-01 fix)"
+        )
+    s1 = p1.f_index_raw / denom1
+    s2 = p2.f_index_raw / denom2
     scale_avg = (s1 + s2) / 2.0
     divergence = abs(s1 - s2) / scale_avg if scale_avg != 0 else float("inf")
     unstable = divergence > 0.01
