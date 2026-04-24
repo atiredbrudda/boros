@@ -90,7 +90,7 @@ nodes:
     type: module
     process: brain
     path: python/src/boros_brain/state/writers/reward_budget_history.py
-    public_functions: [insert_reward_budget]
+    public_functions: [insert_reward_budget_row]
 
   - id: brain.manifest.schema
     type: module
@@ -527,7 +527,13 @@ nodes:
     type: module
     process: brain
     path: python/src/boros_brain/data/ingester/order_book.py
-    public_functions: [ingest_order_book_raw, ingest_order_book_combined]
+    public_functions: [ingest_order_book_raw, ingest_order_book_combined, assert_amm_conservation]
+
+  - id: brain.data.ingester.exceptions
+    type: module
+    process: brain
+    path: python/src/boros_brain/data/ingester/exceptions.py
+    public_functions: []   # AMMConservationError is a class (not a fn)
 
   - id: brain.data.ingester.underlying_apr
     type: module
@@ -1089,3 +1095,14 @@ edges:
     to: ext.boros_historical_data
     type: reads
     notes: "NDJSON files downloaded from historical-data.boros.finance then passed as --src"
+
+  # ── DATA-05 AMM conservation assertion (01-10) ───────────────────────────
+  - from: brain.data.ingester.order_book
+    to: brain.data.ingester.exceptions
+    type: calls
+    notes: "raise AMMConservationError on combined_size(delta) < raw_book_size(delta) — PITFALLS §B3"
+
+  - from: brain.data.ingester.order_book
+    to: parquet.order_book_raw
+    type: reads
+    notes: "assert_amm_conservation reads raw df for comparison before combined parquet write"

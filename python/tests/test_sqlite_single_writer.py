@@ -142,13 +142,14 @@ def test_reward_budget_history_round_trip_polled(tmp_path: Path) -> None:
     db = tmp_path / "s.sqlite"
     _upgrade(db)
     with open_connection(db) as conn:
-        writers.reward_budget_history.insert_reward_budget(
+        writers.reward_budget_history.insert_reward_budget_row(
             conn,
-            snapshot_ts=1_714_000_000,
             market_id="ETHUSDT-29MAY2026",
             e_liq_per_epoch=45.7,
             long_budget=6.663,
             short_budget=39.05,
+            chain_ts=1_714_000_000,
+            run_id="run-abc",
             data_source="polled",
         )
         row = conn.execute("SELECT data_source, long_budget FROM reward_budget_history").fetchone()
@@ -161,13 +162,14 @@ def test_reward_budget_history_rejects_invalid_data_source(tmp_path: Path) -> No
     _upgrade(db)
     with open_connection(db) as conn:
         try:
-            writers.reward_budget_history.insert_reward_budget(
+            writers.reward_budget_history.insert_reward_budget_row(
                 conn,
-                snapshot_ts=1,
                 market_id="X",
                 e_liq_per_epoch=1.0,
                 long_budget=0.5,
                 short_budget=0.5,
+                chain_ts=1,
+                run_id="run-x",
                 data_source="invalid",  # type: ignore[arg-type]
             )
         except (ValueError, sqlite3.IntegrityError):

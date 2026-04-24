@@ -69,6 +69,9 @@ def test_all_8_tables_exist_after_migration(tmp_path: Path) -> None:
         "reward_budget_history",
         "alembic_version",
     }
+    # sqlite_sequence is an internal SQLite table created automatically when any
+    # table uses AUTOINCREMENT (reward_budget_history.id). It is not a user table.
+    names.discard("sqlite_sequence")
     assert names == expected, f"table set drift: got {names}, expected {expected}"
 
 
@@ -86,9 +89,9 @@ def test_reward_budget_history_data_source_check(tmp_path: Path) -> None:
     with open_connection(db_path) as conn, pytest.raises(sqlite3.IntegrityError):
         conn.execute(
             "INSERT INTO reward_budget_history "
-            "(snapshot_ts, market_id, e_liq_per_epoch, long_budget, short_budget, data_source) "
-            "VALUES (?, ?, ?, ?, ?, ?)",
-            (1, "ETHUSDT-29MAY2026", 10.0, 5.0, 5.0, "invalid"),
+            "(polled_at_utc, chain_ts, market_id, e_liq_per_epoch, long_budget, short_budget, run_id, data_source) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            ("2026-04-24T00:00:00+00:00", 1, "ETHUSDT-29MAY2026", 10.0, 5.0, 5.0, "run-x", "invalid"),
         )
 
 

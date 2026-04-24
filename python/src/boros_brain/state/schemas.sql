@@ -129,14 +129,28 @@ CREATE TABLE IF NOT EXISTS clo_history (
 -- reward_budget_history  (brain-owned) — DATA-11 polled E_liq + B6 flag
 -- ---------------------------------------------------------------------------
 -- B6 pitfall flag: forward-only vs historically-reconstructed-from-current.
--- Phase-5 backtest MUST filter by this column to avoid current-budget-synthetic
--- data leaking into historical P&L.
+-- Phase-5 backtest MUST filter by data_source='polled' to avoid current-budget-
+-- synthetic data leaking into historical P&L.
+--
+-- Anti-pattern 4 (ARCHITECTURE.md §9 / PITFALLS §A2): E_liq_per_epoch rebalances
+-- dynamically per epoch. Downstream readers MUST read the most recent row ordered
+-- by polled_at_utc DESC LIMIT 1. NEVER cache across polls.
+--
+-- Columns added by migration 0002 (vs original schema):
+--   id AUTOINCREMENT (replaces snapshot_ts+market_id composite PK)
+--   polled_at_utc  — wall-clock UTC ISO8601 (replaces snapshot_ts INTEGER)
+--   chain_ts       — on-chain block timestamp from chain_time cache
+--   run_id         — run_manifests.run_id (traceability)
 CREATE TABLE IF NOT EXISTS reward_budget_history (
-    snapshot_ts       INTEGER NOT NULL,
-    market_id         TEXT NOT NULL,
-    e_liq_per_epoch   REAL NOT NULL,
-    long_budget       REAL NOT NULL,
-    short_budget      REAL NOT NULL,
-    data_source       TEXT NOT NULL CHECK(data_source IN ('polled','synthetic_current')),
-    PRIMARY KEY(snapshot_ts, market_id)
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    polled_at_utc   TEXT NOT NULL,             -- ISO8601 UTC wall-clock
+    chain_ts        INTEGER,                   -- on-chain block ts from cache
+    market_id       TEXT NOT NULL,
+    e_liq_per_epoch REAL NOT NULL,             -- PENDLE / epoch (live polled)
+    long_budget     REAL NOT NULL,
+    short_budget    REAL NOT NULL,
+    run_id          TEXT NOT NULL,
+    data_source     TEXT NOT NULL CHECK(data_source IN ('polled','synthetic_current'))
 );
+CREATE INDEX IF NOT EXISTS ix_reward_budget_market_polled
+    ON reward_budget_history(market_id, polled_at_utc DESC);

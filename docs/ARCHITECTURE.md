@@ -132,7 +132,8 @@ flowchart TB
     ingester_base["data/ingester/base.py<br/>write_partitioned_parquet, IngestResult"]
     ingester_schemas["data/ingester/schemas.py<br/>MARKET_TRADES_SCHEMA etc."]
     ingester_mt["data/ingester/market_trades.py<br/>ingest_market_trades (DATA-01)"]
-    ingester_ob["data/ingester/order_book.py<br/>ingest_order_book_raw/combined (DATA-02)"]
+    ingester_ob["data/ingester/order_book.py<br/>ingest_order_book_raw/combined (DATA-02)<br/>assert_amm_conservation (DATA-05, 01-10)"]
+    ingester_exc["data/ingester/exceptions.py<br/>AMMConservationError (DATA-05, 01-10)"]
     ingester_apr["data/ingester/underlying_apr.py<br/>ingest_underlying_apr (DATA-03)"]
     ingester_smd["data/ingester/settlement_md.py<br/>ingest_settlement_md (DATA-04)"]
 
@@ -156,6 +157,7 @@ flowchart TB
     ingester_ob -- reads --> ingester_schemas
     ingester_apr -- reads --> ingester_schemas
     ingester_smd -- reads --> ingester_schemas
+    ingester_ob -- "raise AMMConservationError (DATA-05 / PITFALLS §B3)" --> ingester_exc
     ingester_mt -- writes --> parquet_mt
     ingester_ob -- writes --> parquet_ob_raw
     ingester_ob -- writes --> parquet_ob_comb
