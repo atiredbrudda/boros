@@ -16,8 +16,10 @@ NOT a failure — emit log events, let operator investigate.
 
 [[queue-tracker-algorithm-v05]]
 """
+
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Literal
 
 import numpy as np
@@ -85,12 +87,25 @@ class QueueTracker:
 
     def _load_trades(self, window_start_ts: int, window_end_ts: int) -> tuple[pl.DataFrame, str]:
         """Load + sort tape. Returns (sorted_df, event_index_coverage)."""
-        trades = pl.scan_parquet("data/parquet/market_trades/**/*.parquet").filter(
-            (pl.col("blockTimestamp") >= window_start_ts)
-            & (pl.col("blockTimestamp") < window_end_ts)
-            & (pl.col("market_id") == self.market_id)
-            & (pl.col("side") == self.side)
-        ).collect()
+        _trades_root = Path("data/parquet/market_trades")
+        if not _trades_root.exists():
+            log.error(
+                "fill_model.queue_tracker_parquet_missing",
+                path=str(_trades_root),
+                market_id=self.market_id,
+                side=self.side,
+            )
+            return pl.DataFrame(), "degraded"
+        trades = (
+            pl.scan_parquet("data/parquet/market_trades/**/*.parquet")
+            .filter(
+                (pl.col("blockTimestamp") >= window_start_ts)
+                & (pl.col("blockTimestamp") < window_end_ts)
+                & (pl.col("market_id") == self.market_id)
+                & (pl.col("side") == self.side)
+            )
+            .collect()
+        )
 
         coverage: str = "full"
         if trades.is_empty():
@@ -111,12 +126,25 @@ class QueueTracker:
         return trades, coverage
 
     def _load_raw_snapshots(self, window_start_ts: int, window_end_ts: int) -> pl.DataFrame:
-        return pl.scan_parquet("data/parquet/order_book_raw/**/*.parquet").filter(
-            (pl.col("snapshot_ts") >= window_start_ts)
-            & (pl.col("snapshot_ts") < window_end_ts)
-            & (pl.col("market_id") == self.market_id)
-            & (pl.col("side") == self.side)
-        ).collect()
+        _snapshots_root = Path("data/parquet/order_book_raw")
+        if not _snapshots_root.exists():
+            log.error(
+                "fill_model.queue_tracker_parquet_missing",
+                path=str(_snapshots_root),
+                market_id=self.market_id,
+                side=self.side,
+            )
+            return pl.DataFrame()
+        return (
+            pl.scan_parquet("data/parquet/order_book_raw/**/*.parquet")
+            .filter(
+                (pl.col("snapshot_ts") >= window_start_ts)
+                & (pl.col("snapshot_ts") < window_end_ts)
+                & (pl.col("market_id") == self.market_id)
+                & (pl.col("side") == self.side)
+            )
+            .collect()
+        )
 
     def _snapshot_queue_at(self, raw: pl.DataFrame, anchor_ts: int) -> dict[int, float]:
         """Tick -> queue size at a given snapshot_ts."""
@@ -199,9 +227,7 @@ class QueueTracker:
             next_ts = anchors[i + 1]
             snap_now = self._snapshot_queue_at(raw, anchor_ts)
             snap_next = self._snapshot_queue_at(raw, next_ts)
-            trades_iv = trades.filter(
-                (pl.col("blockTimestamp") >= anchor_ts) & (pl.col("blockTimestamp") < next_ts)
-            )
+            trades_iv = trades.filter((pl.col("blockTimestamp") >= anchor_ts) & (pl.col("blockTimestamp") < next_ts))
 
             real[next_ts] = self._replay_realized(snap_now, trades_iv)
             pess[next_ts] = self._replay_pessimistic(snap_now, trades_iv, snap_next)
