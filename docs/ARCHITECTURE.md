@@ -179,6 +179,12 @@ flowchart TB
     brain_duckdb_setup -- "market_data VIEW" --> parquet_md
     ingester_cli -- "NDJSON --src from" --> ext_hist
 
+    %% A6 historical budget spike (01-10 — one-shot script, not a long-lived task)
+    spike_a6["scripts/probe_historical_budget.py<br/>A6 spike — distributor event probe<br/>(one-shot operator command)"]
+    verdict_a6[("var/reports/a6_historical_budget_verdict.json<br/>feasible/infeasible verdict")]
+    spike_a6 -- "eth_getLogs distributor events (live only)" --> ext_rpc
+    spike_a6 -- writes --> verdict_a6
+
     %% brain wiring
     brain_main --> brain_cfg_loader --> brain_cfg_schema
     brain_main --> brain_manifest_writer --> brain_manifest_schema

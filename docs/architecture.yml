@@ -1128,6 +1128,29 @@ edges:
     type: depends-on-config
     notes: "BorosRestClient uses boros_rest_base for GET /markets"
 
+  # ── A6 historical budget spike (01-10) ─────────────────────────────────────
+  - id: scripts.probe_historical_budget
+    type: external
+    notes: "One-shot A6 spike — attempts E_liq history reconstruction from distributor events"
+    path: scripts/probe_historical_budget.py
+
+  # ── A6 spike storage (01-10) ────────────────────────────────────────────────
+  - id: var.reports.a6_historical_budget_verdict
+    type: storage
+    path: var/reports/a6_historical_budget_verdict.json
+    notes: "A6 spike output: feasible/infeasible verdict + events_found + sample rows"
+
+  # ── A6 spike edges (01-10) ──────────────────────────────────────────────────
+  - from: scripts.probe_historical_budget
+    to: ext.arbitrum_rpc
+    type: reads
+    notes: "eth_getLogs for distributor contract budget events (live run only)"
+
+  - from: scripts.probe_historical_budget
+    to: var.reports.a6_historical_budget_verdict
+    type: writes
+    notes: "feasible/infeasible verdict JSON — filed once as operator one-shot"
+
   # ── DATA-05 AMM conservation assertion (01-10) ───────────────────────────
   - from: brain.data.ingester.order_book
     to: brain.data.ingester.exceptions
