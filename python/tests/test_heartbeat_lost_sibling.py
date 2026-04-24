@@ -18,22 +18,21 @@ from boros_brain.bus.messages import LostSibling
 
 
 @pytest.mark.asyncio
-async def test_lost_sibling_after_three_misses(tmp_path: Path) -> None:
-    brain_endpoint = f"ipc://{tmp_path}/events.brain"
-    hands_endpoint = f"ipc://{tmp_path}/events.hands"
+async def test_lost_sibling_after_three_misses(ipc_dir: Path) -> None:
+    brain_endpoint = f"ipc://{ipc_dir}/events.brain"
+    hands_endpoint = f"ipc://{ipc_dir}/events.hands"
 
     brain_bus = EventBus(
         brain_endpoint=brain_endpoint, hands_endpoint=hands_endpoint, tier="brain"
     )
-    # Second subscriber on the brain side — subscribes to the brain's own PUB so
-    # we can observe the LostSibling event the monitor publishes.
+    # Natural hands-tier peer — binds its OWN endpoint, SUBs the brain's PUB.
+    # This mirrors the production topology exactly.
     observer_bus = EventBus(
-        brain_endpoint=hands_endpoint,  # unused — observer doesn't publish
-        hands_endpoint=brain_endpoint,  # "peer" = brain's PUB endpoint
-        tier="hands",
+        brain_endpoint=brain_endpoint, hands_endpoint=hands_endpoint, tier="hands"
     )
-    # Give ZMQ a moment to establish the PUB/SUB handshake.
-    await asyncio.sleep(0.05)
+    # PUB/SUB slow-joiner: the SUB must connect BEFORE the PUB emits, and ZMQ's
+    # in-process handshake can take ~100-200ms. Give it a comfortable margin.
+    await asyncio.sleep(0.3)
 
     monitor = HeartbeatMonitor(
         events=brain_bus,
@@ -72,14 +71,15 @@ async def test_lost_sibling_after_three_misses(tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
-async def test_heartbeat_send_cadence(tmp_path: Path) -> None:
+async def test_heartbeat_send_cadence(ipc_dir: Path) -> None:
     """Three heartbeats at 0.1s interval arrive in <0.5s with expected run_id."""
-    brain_endpoint = f"ipc://{tmp_path}/events.brain"
-    hands_endpoint = f"ipc://{tmp_path}/events.hands"
+    brain_endpoint = f"ipc://{ipc_dir}/events.brain"
+    hands_endpoint = f"ipc://{ipc_dir}/events.hands"
 
     brain_bus = EventBus(brain_endpoint=brain_endpoint, hands_endpoint=hands_endpoint, tier="brain")
-    observer_bus = EventBus(brain_endpoint=hands_endpoint, hands_endpoint=brain_endpoint, tier="hands")
-    await asyncio.sleep(0.05)
+    observer_bus = EventBus(brain_endpoint=brain_endpoint, hands_endpoint=hands_endpoint, tier="hands")
+    # PUB/SUB slow-joiner: give the handshake enough time to settle.
+    await asyncio.sleep(0.3)
 
     monitor = HeartbeatMonitor(
         events=brain_bus, tier="brain", run_id="hb_run", interval_s=0.1, timeout_misses=100

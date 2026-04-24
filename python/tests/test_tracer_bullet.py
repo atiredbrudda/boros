@@ -3,7 +3,7 @@
 Each stub flips from skip → green as its dependent plan lands:
   - test_sqlite_open_orders_roundtrip     → wired by plan 01-02 (INFRA-03)  ✓
   - test_manifest_writer_emits_first_line → wired by plan 01-03 (INFRA-06)  ✓
-  - test_zmq_echo_roundtrip_under_10ms    → wired by plan 01-03 (INFRA-05)
+  - test_zmq_echo_roundtrip_under_10ms    → wired by plan 01-03 (INFRA-05)  ✓
 """
 
 from __future__ import annotations
@@ -87,9 +87,53 @@ def test_manifest_writer_emits_first_line(tmp_path: Path) -> None:
 
 
 @pytest.mark.wave0_scaffold
-@pytest.mark.skip(reason="ZMQ bus wired by plan 01-03 (INFRA-05)")
-def test_zmq_echo_roundtrip_under_10ms() -> None:
-    pass
+@pytest.mark.asyncio
+async def test_zmq_echo_roundtrip_under_10ms(ipc_dir: Path) -> None:
+    """INFRA-05 un-skip: brain CmdBus → PULL round-trip, median < 10ms.
+
+    Minimal duplicate of tests/test_zmq_echo.py so the tracer-bullet marker
+    alone flips green without pytest plugin re-resolution. Full fidelity
+    performance test lives in test_zmq_echo.py (100 iterations, p95 checked).
+    """
+    import asyncio
+    import statistics
+    import time
+
+    import zmq
+    import zmq.asyncio
+
+    from boros_brain.bus.cmd import CmdBus
+    from boros_brain.bus.messages import PlaceCmd
+
+    cmd_endpoint = f"ipc://{ipc_dir}/cmd"
+    kill_endpoint = f"ipc://{ipc_dir}/cmd.kill"
+    bus = CmdBus(cmd_endpoint=cmd_endpoint, kill_endpoint=kill_endpoint)
+    ctx = zmq.asyncio.Context.instance()
+    pull = ctx.socket(zmq.PULL)
+    pull.connect(cmd_endpoint)
+    await asyncio.sleep(0.05)
+
+    latencies: list[float] = []
+    for i in range(30):  # tracer-bullet = smoke test; 30 iters is enough
+        msg = PlaceCmd(
+            order_id=f"t-{i}",
+            market_id="ETHUSDT-29MAY2026",
+            side="long",
+            depth_ticks=50,
+            size_wei="1",
+            rate=9400,
+            run_id="tracer",
+        )
+        t0 = time.perf_counter()
+        await bus.send_cmd(msg)
+        _ = await pull.recv_json()
+        t1 = time.perf_counter()
+        latencies.append((t1 - t0) * 1000.0)
+
+    median_ms = statistics.median(latencies)
+    pull.close()
+    bus.close()
+    assert median_ms < 10.0, f"tracer-bullet ZMQ roundtrip median {median_ms:.2f}ms > 10ms budget"
 
 
 @pytest.mark.wave0_scaffold

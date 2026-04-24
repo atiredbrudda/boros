@@ -20,10 +20,10 @@ from boros_brain.bus.messages import PlaceCmd
 
 
 @pytest.mark.asyncio
-async def test_zmq_echo_roundtrip_under_10ms(tmp_path: Path) -> None:
+async def test_zmq_echo_roundtrip_under_10ms(ipc_dir: Path) -> None:
     """Median round-trip < 10ms over 100 iterations on ipc sockets."""
-    cmd_endpoint = f"ipc://{tmp_path}/cmd"
-    kill_endpoint = f"ipc://{tmp_path}/cmd.kill"
+    cmd_endpoint = f"ipc://{ipc_dir}/cmd"
+    kill_endpoint = f"ipc://{ipc_dir}/cmd.kill"
 
     bus = CmdBus(cmd_endpoint=cmd_endpoint, kill_endpoint=kill_endpoint)
 

@@ -19,9 +19,9 @@ from boros_brain.bus.messages import KillCmd, PlaceCmd
 
 
 @pytest.mark.asyncio
-async def test_kill_lane_preempts_cmd(tmp_path: Path) -> None:
-    cmd_endpoint = f"ipc://{tmp_path}/cmd"
-    kill_endpoint = f"ipc://{tmp_path}/cmd.kill"
+async def test_kill_lane_preempts_cmd(ipc_dir: Path) -> None:
+    cmd_endpoint = f"ipc://{ipc_dir}/cmd"
+    kill_endpoint = f"ipc://{ipc_dir}/cmd.kill"
 
     bus = CmdBus(cmd_endpoint=cmd_endpoint, kill_endpoint=kill_endpoint)
 
