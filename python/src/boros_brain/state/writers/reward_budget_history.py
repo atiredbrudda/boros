@@ -65,4 +65,7 @@ def insert_reward_budget_row(
             data_source,
         ),
     )
-    conn.commit()
+    # Do NOT call conn.commit() here — caller owns transaction lifecycle (db.py contract).
+    # On autocommit connections (isolation_level=None) this would raise ProgrammingError
+    # in Python 3.12+. On non-autocommit connections it would prematurely commit a
+    # batch the caller may still be building. (CR-03 fix)
