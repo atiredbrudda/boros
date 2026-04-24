@@ -43,8 +43,10 @@ Requirements for the v0.5 release. Every requirement is testable (either automat
 **: LLM Wiki boros workspace is seeded with the initial page set derived from existing planning docs (`boros_bot_guide.md`, `boros_consolidated_plan.md`, `plan_comparison.md`, the four research docs). Every seed page has `**Status:**` set. `index.md` thematic map + alphabetical listing are both populated.
 - [x] **INFRA-11
 **: A **wiki-cite pre-commit hook** fails any commit that introduces a new `research/`, `decisions/`, or `postmortem/` markdown file without at least one `[[wiki-link]]` cite — mechanical enforcement of Engineering Protocol #1 write-back.
-- [ ] **INFRA-12**: Secrets (agent wallet private key, RPC URLs, API keys) are loaded via **`dotenvx`** encrypted envs, never committed plaintext. `.env.vault` is committed; `.env.keys` is gitignored and stored in macOS Keychain.
-- [ ] **INFRA-13**: **Process supervision via `launchd`** plist (macOS native) — separate plists for `brain` and `hands`, each auto-restarts on crash, logs to `logs/supervisor/`.
+- [x] **INFRA-12
+**: Secrets (agent wallet private key, RPC URLs, API keys) are loaded via **`dotenvx`** encrypted envs, never committed plaintext. `.env.vault` is committed; `.env.keys` is gitignored and stored in macOS Keychain.
+- [x] **INFRA-13
+**: **Process supervision via `launchd`** plist (macOS native) — separate plists for `brain` and `hands`, each auto-restarts on crash, logs to `logs/supervisor/`.
 - [ ] **INFRA-14**: An **NTP / chain-time drift monitor** runs in `brain` and logs delta between `time.time()` and Arbitrum block time every minute; excessive drift (>5s) triggers a warning, >30s a halt.
 
 ### Phase 1b–d — Data Pipeline + Market Screener + Economics Gate

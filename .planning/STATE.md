@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-05-PLAN.md — LLM Wiki boros workspace seeding (27 pages, 100% link health)
-last_updated: "2026-04-24T01:20:48.205Z"
+stopped_at: Completed 01-06-PLAN.md — encrypted-secret + process-supervision spine (INFRA-12, INFRA-13)
+last_updated: "2026-04-24T01:33:37.922Z"
 last_activity: 2026-04-24
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 12
-  completed_plans: 5
-  percent: 42
+  completed_plans: 6
+  percent: 50
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-23)
 ## Current Position
 
 Phase: 01 (foundation-infrastructure-spine-data-pipeline-economics-gate) — EXECUTING
-Plan: 5 of 12
+Plan: 6 of 12
 Status: Ready to execute
 Last activity: 2026-04-24
 
-Progress: [████░░░░░░] 42%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
@@ -57,6 +57,7 @@ Progress: [████░░░░░░] 42%
 | Phase 01 P01-03 | 38 | 2 tasks | 17 files |
 | Phase 01 P01-04 | 22 | 3 tasks | 82 files |
 | Phase 01 P01-05 | 15 | 2 tasks | 27 files |
+| Phase 01 P01-06 | 9 | 3 tasks | 17 files |
 
 ## Accumulated Context
 
@@ -99,6 +100,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - Wiki page filenames for v0.5-regime pages use v05 suffix (not v0.5) to match the LLM Wiki lint normalizer which strips dots from filenames
 - Pipe alias syntax [[kebab-filename|Human Title]] used for all wiki links where filename differs from normalized human title
 - purge-reward-behavior.md stub created to resolve orphaned Purge reward behavior link; Status: Current — PARTIAL (low-confidence bot-guide claim)
+- Keychain -A flag mandatory for headless launchd spawn (A3 landmine); without it launchd-spawned processes trigger GUI prompt — documented in docs/runbook-secrets.md
+- no_plain_keys.py rewritten to pass_filenames:false (git diff --cached) — hook reads its own staged file list; .env.vault excluded by filename
+- launchd plist paths are absolute (launchd does not expand HOME); wrapper scripts use HOME variable (bash does expand it)
 
 ### Pending Todos
 
@@ -113,8 +117,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-24T01:20:48.201Z
-Stopped at: Completed 01-05-PLAN.md — LLM Wiki boros workspace seeding (27 pages, 100% link health)
+Last session: 2026-04-24T01:33:37.918Z
+Stopped at: Completed 01-06-PLAN.md — encrypted-secret + process-supervision spine (INFRA-12, INFRA-13)
 Resume file: None
 
 **Planned Phase:** 01 (Foundation (Infrastructure Spine + Data Pipeline + Economics Gate)) — 12 plans — 2026-04-23T20:08:16.743Z
