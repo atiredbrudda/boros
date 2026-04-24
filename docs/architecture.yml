@@ -412,6 +412,38 @@ nodes:
     type: external
     url: "https://historical-data.boros.finance"
 
+  # ── Process supervision (01-06) ─────────────────────────────────────────
+  - id: launchd.brain
+    type: external
+    notes: "macOS LaunchAgent com.boros.brain — KeepAlive + ThrottleInterval=30"
+    path: scripts/launchd/com.boros.brain.plist
+
+  - id: launchd.hands
+    type: external
+    notes: "macOS LaunchAgent com.boros.hands — KeepAlive + ThrottleInterval=30"
+    path: scripts/launchd/com.boros.hands.plist
+
+  - id: macos.keychain
+    type: external
+    notes: "macOS login Keychain — stores DOTENV_PRIVATE_KEY_PRODUCTION under 'boros-bot-dotenvx-key'"
+
+  - id: scripts.boros_brain_wrapper
+    type: external
+    notes: "bash wrapper: reads Keychain, execs dotenvx run -- boros_brain.main"
+    path: scripts/boros-brain-wrapper.sh
+
+  - id: scripts.boros_hands_wrapper
+    type: external
+    notes: "bash wrapper: reads Keychain, execs dotenvx run -- pnpm start:hands"
+    path: scripts/boros-hands-wrapper.sh
+
+  - id: scripts.no_plain_keys
+    type: external
+    notes: "pre-commit hook: greps staged files for plaintext private keys (INFRA-12 / T-01-06-01)"
+    path: scripts/no_plain_keys.py
+
+  # brain.logging.redaction added in 01-06 Task 2 commit (file created there)
+
 edges:
   # ── brain internal wiring ──────────────────────────────────────────────
   - from: brain
@@ -637,3 +669,36 @@ edges:
     to: config.data.boros_rest_base
     type: depends-on-config
     notes: "ext.boros_rest poller reads boros_rest_base"
+
+  # ── Process supervision edges (01-06) ────────────────────────────────────
+  - from: launchd.brain
+    to: scripts.boros_brain_wrapper
+    type: calls
+    notes: "ProgramArguments → /bin/bash → boros-brain-wrapper.sh"
+
+  - from: launchd.hands
+    to: scripts.boros_hands_wrapper
+    type: calls
+    notes: "ProgramArguments → /bin/bash → boros-hands-wrapper.sh"
+
+  - from: scripts.boros_brain_wrapper
+    to: macos.keychain
+    type: reads
+    notes: "security find-generic-password -s 'boros-bot-dotenvx-key' resolves DOTENV_PRIVATE_KEY_PRODUCTION"
+
+  - from: scripts.boros_hands_wrapper
+    to: macos.keychain
+    type: reads
+    notes: "security find-generic-password -s 'boros-bot-dotenvx-key' resolves DOTENV_PRIVATE_KEY_PRODUCTION"
+
+  - from: scripts.boros_brain_wrapper
+    to: brain.main
+    type: calls
+    notes: "exec dotenvx run -- uv run python -m boros_brain.main"
+
+  - from: scripts.boros_hands_wrapper
+    to: hands.main
+    type: calls
+    notes: "exec dotenvx run -- pnpm -C ts start:hands"
+
+  # brain.logging.redaction and scripts.no_plain_keys edges added in 01-06 Task 2 commit

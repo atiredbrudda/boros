@@ -31,6 +31,15 @@ flowchart TB
         ext_hist["ext.boros_historical_data<br/>historical-data.boros.finance"]
     end
 
+    subgraph supervision["Process supervision (launchd, 01-06)"]
+        launchd_brain["launchd.brain<br/>com.boros.brain.plist<br/>KeepAlive + ThrottleInterval=30"]
+        launchd_hands["launchd.hands<br/>com.boros.hands.plist<br/>KeepAlive + ThrottleInterval=30"]
+        keychain["macos.keychain<br/>login Keychain<br/>boros-bot-dotenvx-key"]
+        brain_wrapper["scripts.boros_brain_wrapper<br/>boros-brain-wrapper.sh"]
+        hands_wrapper["scripts.boros_hands_wrapper<br/>boros-hands-wrapper.sh"]
+        no_plain_keys["scripts.no_plain_keys<br/>no_plain_keys.py<br/>pre-commit hook"]
+    end
+
     subgraph brain["brain — Python process (asyncio, 1 Hz)"]
         brain_main["main.py<br/>entrypoint"]
         brain_cfg_loader["config/loader.py<br/>load_config"]
@@ -78,6 +87,18 @@ flowchart TB
         logs_hands["hands-*.log.jsonl"]
         logs_manifest["{run_id}.manifest.json (sidecar)"]
     end
+
+    %% supervision wiring (01-06)
+    launchd_brain --> brain_wrapper
+    launchd_hands --> hands_wrapper
+    brain_wrapper -- "security find-generic-password" --> keychain
+    hands_wrapper -- "security find-generic-password" --> keychain
+    brain_wrapper -- "exec dotenvx run -- uv run python -m boros_brain.main" --> brain_main
+    hands_wrapper -- "exec dotenvx run -- pnpm start:hands" --> hands_main
+
+    %% redaction processor (01-06)
+    brain_log_redaction["logging/redaction.py<br/>redact_sensitive"]
+    brain_log_redaction -- "extra_processor before JSONRenderer" --> brain_log_setup
 
     %% brain wiring
     brain_main --> brain_cfg_loader --> brain_cfg_schema
