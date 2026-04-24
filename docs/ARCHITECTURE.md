@@ -191,6 +191,11 @@ flowchart TB
     screener_metrics -- "reads order_book_combined (depth, wall ratio)" --> parquet_ob_comb
     screener_metrics -- "reads clo_lower_thresh/clo_upper_thresh" --> state_clo
 
+    %% DATA-08 SCALE calibration (01-11 Task 2)
+    screener_scale_cal["screener/scale_calibration.py<br/>calibrate_scale, get_calibration_pairs<br/>(A8 mitigation: per-market SCALE from 2 clo_history rows, 01-11)"]
+    screener_scale_cal -- "reads snapshot_ts/clo_lower_thresh/f_index_raw" --> state_clo
+    screener_scale_cal -- "fIndexOracle bytes decoded by poller, stored as f_index_raw" --> brain_data_rpc
+
     %% brain wiring
     brain_main --> brain_cfg_loader --> brain_cfg_schema
     brain_main --> brain_manifest_writer --> brain_manifest_schema

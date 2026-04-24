@@ -597,6 +597,13 @@ nodes:
     path: python/src/boros_brain/screener/metrics.py
     public_functions: [compute_inter_arrival_cv, compute_realized_vol, compute_reversal_count, compute_depth_at_clo_edge, compute_outside_range_wall_ratio, compute_days_to_maturity]
 
+  # ── DATA-08 SCALE calibration (01-11 Task 2) ───────────────────────────────
+  - id: brain.screener.scale_calibration
+    type: module
+    process: brain
+    path: python/src/boros_brain/screener/scale_calibration.py
+    public_functions: [calibrate_scale, get_calibration_pairs]
+
 edges:
   # ── brain internal wiring ──────────────────────────────────────────────
   - from: brain
@@ -1184,3 +1191,14 @@ edges:
     to: state.clo_history
     type: reads
     notes: "clo_lower_thresh / clo_upper_thresh read from clo_history via DuckDB sqlite_scanner"
+
+  # ── DATA-08 SCALE calibration edges (01-11 Task 2) ─────────────────────────
+  - from: brain.screener.scale_calibration
+    to: state.clo_history
+    type: reads
+    notes: "get_calibration_pairs queries snapshot_ts, clo_lower_thresh, clo_upper_thresh, f_index_raw (Wave-0 canonical columns)"
+
+  - from: brain.screener.scale_calibration
+    to: brain.data.rpc_client
+    type: reads
+    notes: "fIndexOracle raw bytes decoded by FIndexReader in poller; scale_calibration reads the stored f_index_raw from clo_history"
