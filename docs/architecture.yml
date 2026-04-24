@@ -478,6 +478,80 @@ nodes:
     type: storage
     path: python/src/boros_brain/duckdb_layer/views.sql
 
+  # ── DATA-01..04 NDJSON → parquet ingesters (01-08) ─────────────────────
+  - id: brain.data.ingester.base
+    type: module
+    process: brain
+    path: python/src/boros_brain/data/ingester/base.py
+    public_functions: [write_partitioned_parquet]   # IngesterSchemaViolation + IngestResult are classes
+
+  - id: brain.data.ingester.schemas
+    type: module
+    process: brain
+    path: python/src/boros_brain/data/ingester/schemas.py
+    public_functions: []   # Schema constants only — MARKET_TRADES_SCHEMA etc.
+
+  - id: brain.data.ingester.market_trades
+    type: module
+    process: brain
+    path: python/src/boros_brain/data/ingester/market_trades.py
+    public_functions: [ingest_market_trades]
+
+  - id: brain.data.ingester.order_book
+    type: module
+    process: brain
+    path: python/src/boros_brain/data/ingester/order_book.py
+    public_functions: [ingest_order_book_raw, ingest_order_book_combined]
+
+  - id: brain.data.ingester.underlying_apr
+    type: module
+    process: brain
+    path: python/src/boros_brain/data/ingester/underlying_apr.py
+    public_functions: [ingest_underlying_apr]
+
+  - id: brain.data.ingester.settlement_md
+    type: module
+    process: brain
+    path: python/src/boros_brain/data/ingester/settlement_md.py
+    public_functions: [ingest_settlement_md]
+
+  - id: brain.data.ingester.cli
+    type: module
+    process: brain
+    path: python/src/boros_brain/data/ingester/cli.py
+    public_functions: [main]
+
+  # ── Parquet storage nodes (written by 01-08 ingesters) ─────────────────
+  - id: parquet.market_trades
+    type: storage
+    path: data/parquet/market_trades/**/*.parquet
+    notes: "Hive-partitioned: market_id / year_month. Written by ingest_market_trades."
+
+  - id: parquet.order_book_raw
+    type: storage
+    path: data/parquet/order_book_raw/**/*.parquet
+    notes: "Hive-partitioned: market_id / snapshot_ts. Written by ingest_order_book_raw."
+
+  - id: parquet.order_book_combined
+    type: storage
+    path: data/parquet/order_book_combined/**/*.parquet
+    notes: "Hive-partitioned: market_id / tick_size / snapshot_ts. Written by ingest_order_book_combined."
+
+  - id: parquet.underlying_apr
+    type: storage
+    path: data/parquet/underlying_apr/**/*.parquet
+    notes: "Hive-partitioned: exchange / year_month. Written by ingest_underlying_apr."
+
+  - id: parquet.settlement
+    type: storage
+    path: data/parquet/settlement/**/*.parquet
+    notes: "Hive-partitioned: market_id / year_month. Written by ingest_settlement_md."
+
+  - id: parquet.market_data
+    type: storage
+    path: data/parquet/market_data/**/*.parquet
+    notes: "Hive-partitioned: market_id / year_month. Written by ingest_settlement_md."
+
 edges:
   # ── brain internal wiring ──────────────────────────────────────────────
   - from: brain
@@ -796,3 +870,134 @@ edges:
     to: brain.duckdb_layer.views_sql
     type: reads
     notes: "register_parquet_views() reads views.sql DDL at runtime"
+
+  # ── DATA-01..04 ingester edges (01-08) ──────────────────────────────────
+  - from: brain.data.ingester.cli
+    to: brain.data.ingester.market_trades
+    type: calls
+    notes: "--kind market_trades dispatches to ingest_market_trades"
+
+  - from: brain.data.ingester.cli
+    to: brain.data.ingester.order_book
+    type: calls
+    notes: "--kind order_book_raw / order_book_combined"
+
+  - from: brain.data.ingester.cli
+    to: brain.data.ingester.underlying_apr
+    type: calls
+    notes: "--kind underlying_apr"
+
+  - from: brain.data.ingester.cli
+    to: brain.data.ingester.settlement_md
+    type: calls
+    notes: "--kind settlement_md"
+
+  - from: brain.data.ingester.cli
+    to: brain.manifest.writer
+    type: calls
+    notes: "write_manifest at CLI entry — RUN_MANIFEST-first invariant"
+
+  - from: brain.data.ingester.market_trades
+    to: brain.data.ingester.base
+    type: calls
+    notes: "from .base import write_partitioned_parquet, IngestResult, IngesterSchemaViolation"
+
+  - from: brain.data.ingester.order_book
+    to: brain.data.ingester.base
+    type: calls
+    notes: "from .base import write_partitioned_parquet, IngestResult"
+
+  - from: brain.data.ingester.underlying_apr
+    to: brain.data.ingester.base
+    type: calls
+    notes: "from .base import write_partitioned_parquet, IngestResult"
+
+  - from: brain.data.ingester.settlement_md
+    to: brain.data.ingester.base
+    type: calls
+    notes: "from .base import write_partitioned_parquet, IngestResult"
+
+  - from: brain.data.ingester.market_trades
+    to: brain.data.ingester.schemas
+    type: reads
+    notes: "MARKET_TRADES_SCHEMA for pl.read_ndjson schema enforcement"
+
+  - from: brain.data.ingester.order_book
+    to: brain.data.ingester.schemas
+    type: reads
+    notes: "ORDER_BOOK_RAW_SCHEMA + ORDER_BOOK_COMBINED_SCHEMA"
+
+  - from: brain.data.ingester.underlying_apr
+    to: brain.data.ingester.schemas
+    type: reads
+    notes: "UNDERLYING_APR_SCHEMA"
+
+  - from: brain.data.ingester.settlement_md
+    to: brain.data.ingester.schemas
+    type: reads
+    notes: "SETTLEMENT_SCHEMA + MARKET_DATA_SCHEMA"
+
+  - from: brain.data.ingester.market_trades
+    to: parquet.market_trades
+    type: writes
+    notes: "Hive-partitioned: market_id / year_month — consumed by duckdb_layer market_trades view"
+
+  - from: brain.data.ingester.order_book
+    to: parquet.order_book_raw
+    type: writes
+    notes: "Hive-partitioned: market_id / snapshot_ts"
+
+  - from: brain.data.ingester.order_book
+    to: parquet.order_book_combined
+    type: writes
+    notes: "Hive-partitioned: market_id / tick_size / snapshot_ts"
+
+  - from: brain.data.ingester.underlying_apr
+    to: parquet.underlying_apr
+    type: writes
+    notes: "Hive-partitioned: exchange / year_month"
+
+  - from: brain.data.ingester.settlement_md
+    to: parquet.settlement
+    type: writes
+    notes: "Hive-partitioned: market_id / year_month"
+
+  - from: brain.data.ingester.settlement_md
+    to: parquet.market_data
+    type: writes
+    notes: "Hive-partitioned: market_id / year_month"
+
+  - from: brain.duckdb_layer.setup
+    to: parquet.market_trades
+    type: reads
+    notes: "market_trades VIEW via views.sql glob — downstream of ingest_market_trades"
+
+  - from: brain.duckdb_layer.setup
+    to: parquet.order_book_raw
+    type: reads
+    notes: "order_book_raw VIEW via views.sql glob"
+
+  - from: brain.duckdb_layer.setup
+    to: parquet.order_book_combined
+    type: reads
+    notes: "order_book_combined VIEW via views.sql glob"
+
+  - from: brain.duckdb_layer.setup
+    to: parquet.underlying_apr
+    type: reads
+    notes: "underlying_apr VIEW via views.sql glob"
+
+  - from: brain.duckdb_layer.setup
+    to: parquet.settlement
+    type: reads
+    notes: "settlement VIEW via views.sql glob"
+
+  - from: brain.duckdb_layer.setup
+    to: parquet.market_data
+    type: reads
+    notes: "market_data VIEW via views.sql glob"
+
+  - from: brain.data.ingester.cli
+    to: ext.boros_historical_data
+    type: reads
+    notes: "NDJSON files downloaded from historical-data.boros.finance then passed as --src"

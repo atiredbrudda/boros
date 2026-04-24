@@ -114,6 +114,49 @@ flowchart TB
     brain_duckdb_setup -- "sqlite_scanner read-only attach" --> state_clo
     brain_duckdb_setup -- "reads views.sql DDL at runtime" --> brain_duckdb_setup
 
+    %% DATA-01..04 NDJSON ingesters (01-08)
+    ingester_cli["data/ingester/cli.py<br/>main (--kind dispatch, RUN_MANIFEST)"]
+    ingester_base["data/ingester/base.py<br/>write_partitioned_parquet, IngestResult"]
+    ingester_schemas["data/ingester/schemas.py<br/>MARKET_TRADES_SCHEMA etc."]
+    ingester_mt["data/ingester/market_trades.py<br/>ingest_market_trades (DATA-01)"]
+    ingester_ob["data/ingester/order_book.py<br/>ingest_order_book_raw/combined (DATA-02)"]
+    ingester_apr["data/ingester/underlying_apr.py<br/>ingest_underlying_apr (DATA-03)"]
+    ingester_smd["data/ingester/settlement_md.py<br/>ingest_settlement_md (DATA-04)"]
+
+    parquet_mt[("parquet/market_trades<br/>market_id / year_month")]
+    parquet_ob_raw[("parquet/order_book_raw<br/>market_id / snapshot_ts")]
+    parquet_ob_comb[("parquet/order_book_combined<br/>market_id / tick_size / snapshot_ts")]
+    parquet_apr[("parquet/underlying_apr<br/>exchange / year_month")]
+    parquet_sett[("parquet/settlement<br/>market_id / year_month")]
+    parquet_md[("parquet/market_data<br/>market_id / year_month")]
+
+    ingester_cli --> ingester_mt
+    ingester_cli --> ingester_ob
+    ingester_cli --> ingester_apr
+    ingester_cli --> ingester_smd
+    ingester_cli -- "write_manifest RUN_MANIFEST" --> brain_manifest_writer
+    ingester_mt --> ingester_base
+    ingester_ob --> ingester_base
+    ingester_apr --> ingester_base
+    ingester_smd --> ingester_base
+    ingester_mt -- reads --> ingester_schemas
+    ingester_ob -- reads --> ingester_schemas
+    ingester_apr -- reads --> ingester_schemas
+    ingester_smd -- reads --> ingester_schemas
+    ingester_mt -- writes --> parquet_mt
+    ingester_ob -- writes --> parquet_ob_raw
+    ingester_ob -- writes --> parquet_ob_comb
+    ingester_apr -- writes --> parquet_apr
+    ingester_smd -- writes --> parquet_sett
+    ingester_smd -- writes --> parquet_md
+    brain_duckdb_setup -- "market_trades VIEW" --> parquet_mt
+    brain_duckdb_setup -- "order_book_raw VIEW" --> parquet_ob_raw
+    brain_duckdb_setup -- "order_book_combined VIEW" --> parquet_ob_comb
+    brain_duckdb_setup -- "underlying_apr VIEW" --> parquet_apr
+    brain_duckdb_setup -- "settlement VIEW" --> parquet_sett
+    brain_duckdb_setup -- "market_data VIEW" --> parquet_md
+    ingester_cli -- "NDJSON --src from" --> ext_hist
+
     %% brain wiring
     brain_main --> brain_cfg_loader --> brain_cfg_schema
     brain_main --> brain_manifest_writer --> brain_manifest_schema
