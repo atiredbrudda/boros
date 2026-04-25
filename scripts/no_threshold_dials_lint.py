@@ -50,11 +50,17 @@ PROTECTED_DIRS = (
 )
 
 # ALLOWED_FILES: files that legitimately contain breaker threshold definitions.
-# Plan 04-03 creates these files; add them here in the same commit so the lint
-# passes after 04-03 lands.
+# Each breaker file reads its threshold from decision.breakers.* BotConfig — the
+# comparison `if x > cfg.drop_threshold:` etc. is the legitimate use site.
+# Add each new breaker file here in the same commit it is created (Plans 04-03..06).
 ALLOWED_FILES: set[str] = {
     "python/src/boros_brain/decision/config.py",
     "python/src/boros_brain/decision/breakers/__init__.py",
+    # Plan 04-05 breakers (Wave 2-C)
+    "python/src/boros_brain/decision/breakers/competition.py",
+    "python/src/boros_brain/decision/breakers/maturity.py",
+    "python/src/boros_brain/decision/breakers/side_budget.py",
+    "python/src/boros_brain/decision/breakers/underlying_stale.py",
 }
 
 # Matches: `something_threshold:`, `something_threshold =`, `something_dial:`,
