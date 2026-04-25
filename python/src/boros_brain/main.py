@@ -38,6 +38,9 @@ from .bus.events import EventBus
 from .bus.heartbeat import HeartbeatMonitor
 from .bus.messages import Heartbeat
 from .config.loader import load_config
+from .data.chain_time import ChainTimeCache, ChainTimeDriftHalt
+from .data.chain_time import install as install_chain_time
+from .data.rpc_client import make_arbitrum_rpc
 from .logging.structlog_setup import configure_logging, get_logger
 from .manifest.writer import build_run_manifest, write_manifest
 
@@ -80,6 +83,17 @@ async def run(config_path: Path, dry_run: bool = False) -> int:
     )
     log = get_logger("boros_brain.main")
     log.info("brain_booted", mode=cfg.mode, run_id=manifest.run_id)
+
+    # INFRA-14: chain-time startup check — halts if |drift| > chain_drift_warn_s (5s default).
+    w3 = await make_arbitrum_rpc(cfg)
+    chain_cache = ChainTimeCache(w3=w3, config=cfg)
+    try:
+        drift_s = await chain_cache.startup_check()
+    except ChainTimeDriftHalt as exc:
+        log.error("chain_time.startup_halt", error=str(exc))
+        return 1
+    install_chain_time(chain_cache)
+    log.info("chain_time.installed", drift_s=round(drift_s, 3))
 
     # Bring up ZMQ bus + heartbeat.
     cmd_bus = CmdBus(
@@ -133,24 +147,26 @@ async def run(config_path: Path, dry_run: bool = False) -> int:
     # short-circuits).
     from .fill_model.refit_loop import (
         refit_once as fill_refit_once,
+    )
+    from .fill_model.refit_loop import (
         run_fill_model_refit_loop,
     )
+
     await fill_refit_once(cfg, manifest.run_id)
-    fill_refit_task = asyncio.create_task(
-        run_fill_model_refit_loop(cfg, manifest.run_id)
-    )
+    fill_refit_task = asyncio.create_task(run_fill_model_refit_loop(cfg, manifest.run_id))
 
     # Phase 3 Plan 03-04: synchronous initial loss-model fit + spawn async
     # loss-model refit loop. Mirrors the fill_model pattern exactly (same
     # signature: (cfg, run_id), no extra plumbing required).
     from .loss_model.refit_loop import (
         refit_once as loss_refit_once,
+    )
+    from .loss_model.refit_loop import (
         run_loss_model_refit_loop,
     )
+
     await loss_refit_once(cfg, manifest.run_id)
-    loss_refit_task = asyncio.create_task(
-        run_loss_model_refit_loop(cfg, manifest.run_id)
-    )
+    loss_refit_task = asyncio.create_task(run_loss_model_refit_loop(cfg, manifest.run_id))
 
     # Phase 3 Plan 03-04: spawn CompetitionTracker (5s REST + parquet cadence).
     # CompetitionTracker (Plan 03-02) needs (conn, rest, event_pub) — adapt
@@ -162,7 +178,10 @@ async def run(config_path: Path, dry_run: bool = False) -> int:
     from .reward_model.competition_tracker import run_competition_tracker_loop
     from .state.db import open_connection
 
-    comp_conn = open_connection(Path(cfg.infra.sqlite_path)).__enter__()
+    # WR-04: store the context manager separately so __exit__ is guaranteed to
+    # be called even if an exception propagates out before the finally block.
+    comp_conn_cm = open_connection(Path(cfg.infra.sqlite_path))
+    comp_conn = comp_conn_cm.__enter__()
     comp_http = make_boros_rest_client(cfg)
     comp_rest = _CompetitionRestAdapter(comp_http)
     comp_event_pub = _TopicEventPubAdapter(event_bus, run_id=manifest.run_id)
@@ -176,24 +195,28 @@ async def run(config_path: Path, dry_run: bool = False) -> int:
         )
     )
 
-    await stop.wait()
-    heartbeat.stop()
-    for t in (
-        send_task,
-        monitor_task,
-        ingest_task,
-        fill_refit_task,
-        loss_refit_task,
-        comp_task,
-    ):
-        t.cancel()
-        with contextlib.suppress(asyncio.CancelledError):
-            await t
-    # Phase 3 Plan 03-04: tear down CompetitionTracker side-resources.
-    with contextlib.suppress(Exception):
-        await comp_http.aclose()
-    with contextlib.suppress(Exception):
-        comp_conn.close()
+    try:
+        await stop.wait()
+        heartbeat.stop()
+        for t in (
+            send_task,
+            monitor_task,
+            ingest_task,
+            fill_refit_task,
+            loss_refit_task,
+            comp_task,
+        ):
+            t.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await t
+        # Phase 3 Plan 03-04: tear down CompetitionTracker side-resources.
+        with contextlib.suppress(Exception):
+            await comp_http.aclose()
+    finally:
+        # Ensure the context manager's __exit__ is always called, even on
+        # unhandled exceptions, so open_connection can do its cleanup.
+        with contextlib.suppress(Exception):
+            comp_conn_cm.__exit__(None, None, None)
     cmd_bus.close()
     event_bus.close()
     log.info("brain_shutdown")
@@ -215,9 +238,7 @@ class _CompetitionRestAdapter:
         self._http = http
         self._log = structlog.get_logger("boros_brain.main.competition_rest")
 
-    async def post_all_limit_orders(
-        self, user_address: str, account_id: int
-    ) -> list[dict[str, Any]]:
+    async def post_all_limit_orders(self, user_address: str, account_id: int) -> list[dict[str, Any]]:
         resp = await self._http.post(
             "/v2/accounts/all-limit-orders",
             json={"userAddress": user_address, "accountId": account_id},
