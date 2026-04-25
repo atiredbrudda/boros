@@ -1179,6 +1179,16 @@ edges:
     to: brain.bus.heartbeat
     type: calls
 
+  - from: brain.main
+    to: brain.data.chain_time
+    type: calls
+    notes: "startup_check() at boot (INFRA-14); install() registers global singleton"
+
+  - from: brain.main
+    to: brain.data.rpc_client
+    type: calls
+    notes: "make_arbitrum_rpc() constructs AsyncWeb3 for chain_time cache"
+
   - from: brain.bus.cmd
     to: brain.bus.messages
     type: reads

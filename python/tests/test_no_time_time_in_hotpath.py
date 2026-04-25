@@ -2,6 +2,7 @@
 
 import os
 import subprocess
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]  # boros/
@@ -9,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[2]  # boros/
 
 def _run_lint() -> int:
     r = subprocess.run(
-        ["python", str(ROOT / "scripts/no_time_time_lint.py")],
+        [sys.executable, str(ROOT / "scripts/no_time_time_lint.py")],
         cwd=str(ROOT),
         env={**os.environ, "CI": "true"},
     )
@@ -28,7 +29,7 @@ def test_lint_fails_on_injected_time_time_in_data() -> None:
         injected.write_text("import time\ndef f(): return time.time()\n")
         # Run lint with the full-tree scan (no staged files, so falls back to tree walk)
         result = subprocess.run(
-            ["python", str(ROOT / "scripts/no_time_time_lint.py")],
+            [sys.executable, str(ROOT / "scripts/no_time_time_lint.py")],
             cwd=str(ROOT),
             capture_output=True,
             text=True,

@@ -99,7 +99,7 @@ def _make_duck_conn(
             datetime VARCHAR,
             rate DOUBLE,
             side VARCHAR,
-            size VARCHAR,
+            size_float VARCHAR,
             txHash VARCHAR,
             market_id VARCHAR
         )
@@ -138,7 +138,7 @@ def _make_duck_conn(
             market_id VARCHAR,
             tick_size VARCHAR,
             tick INTEGER,
-            size DOUBLE
+            sz_combined_float DOUBLE
         )
     """)
 
