@@ -43,18 +43,21 @@ class PricingConfig(StrictBase):
     price_staleness_halt_s: float = Field(604800.0, ge=86400.0, le=2_592_000.0)
     """Halt when last update older than this (default 7 days)."""
 
-    eth_price_usd: float = Field(..., gt=0.0)
+    eth_price_usd: float = Field(3000.0, gt=0.0)
     """Operator-supplied ETH/USD price for cancel_cost wei→PENDLE conversion (DECIDE-03).
 
     LOCKED D-01 pattern: operator-calibrated, daily refresh. Mirrors pendle_price_usd.
+    Default 3000.0 is a placeholder — operator MUST override in YAML for live runs.
     Pitfall #5 (gas-history-ewma-cancel-cost): stale ETH price silently under- or
     over-estimates cancel cost. Refresh daily or after significant ETH price moves.
 
     [[gas-history-ewma-cancel-cost]]
     """
 
-    eth_price_usd_calibrated_at_utc: str = Field(...)
+    eth_price_usd_calibrated_at_utc: str = "1970-01-01T00:00:00Z"
     """ISO8601 timestamp of last ETH price calibration.
 
-    Mandatory — no silent omission. Used by staleness checks in Plan 04-03.
+    Default sentinel '1970-01-01T00:00:00Z' indicates an uncalibrated price.
+    Operator MUST override in YAML for live runs. Plan 04-03 staleness check
+    will warn/halt if this timestamp is older than price_staleness_warn_s.
     """
