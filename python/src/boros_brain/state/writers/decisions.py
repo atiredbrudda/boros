@@ -10,6 +10,35 @@ mode by default; batch callers wrap in explicit BEGIN/COMMIT.
 from __future__ import annotations
 
 import sqlite3
+from pathlib import Path
+
+
+def read_last_r_me_pendle(sqlite_path: Path, market_id: str, side: str) -> float | None:
+    """Return the most-recent r_share_per_epoch_pendle for market_id + side, or None.
+
+    Used by MaturityBreaker (SAFE-07) to estimate remaining reward earning.
+    The column r_share_per_epoch_pendle is populated by Plan 04-06's decision
+    engine loop. Until that loop writes its first row, this function returns None
+    and MaturityBreaker returns reason='no_decision_history_yet'.
+
+    Wraps OperationalError so callers get None if the column is absent (schema
+    migration not yet applied).
+
+    Read-only — not subject to PROTO-02 single-writer lint.
+    """
+    from boros_brain.state.db import open_connection
+
+    try:
+        with open_connection(sqlite_path) as conn:
+            row = conn.execute(
+                "SELECT r_share_per_epoch_pendle FROM decisions "
+                "WHERE market_id = ? AND side = ? "
+                "ORDER BY chain_ts DESC LIMIT 1",
+                (market_id, side),
+            ).fetchone()
+        return float(row[0]) if row else None
+    except Exception:  # noqa: BLE001 — column absent or table missing
+        return None
 
 
 def insert_decision(

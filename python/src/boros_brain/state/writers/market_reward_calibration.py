@@ -25,6 +25,7 @@ _ALLOWED_SOURCES: frozenset[str] = frozenset(
 __all__ = [
     "insert_market_reward_calibration",
     "get_latest_market_reward_calibration",
+    "read_market_reward_calibration_history",
 ]
 
 
@@ -123,3 +124,41 @@ def get_latest_market_reward_calibration(
         "source": row[6],
         "run_id": row[7],
     }
+
+
+def read_market_reward_calibration_history(
+    sqlite_path: Path, market_id: str, limit: int = 10
+) -> list[dict]:
+    """Return up to `limit` calibration rows for market_id ordered DESC by calibrated_at_utc.
+
+    rows[0] is the latest calibration; rows[-1] is the oldest within the window.
+    Used by SideBudgetBreaker (SAFE-08) to compare the latest split vs the
+    epoch-lag split.
+
+    Read-only — not subject to PROTO-02 single-writer lint.
+    """
+    from boros_brain.state.db import open_connection
+
+    with open_connection(sqlite_path) as conn:
+        rows = conn.execute(
+            "SELECT market_id, e_liq_per_epoch_pendle, long_side_split, short_side_split, "
+            "calibrated_at_utc, source FROM market_reward_calibration WHERE market_id = ? "
+            "ORDER BY calibrated_at_utc DESC LIMIT ?",
+            (market_id, limit),
+        ).fetchall()
+    return [
+        dict(
+            zip(
+                [
+                    "market_id",
+                    "e_liq_per_epoch_pendle",
+                    "long_side_split",
+                    "short_side_split",
+                    "calibrated_at_utc",
+                    "source",
+                ],
+                r,
+            )
+        )
+        for r in rows
+    ]
