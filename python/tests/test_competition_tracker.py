@@ -16,6 +16,7 @@ Tests:
    competition_tracker.rest_degraded event.
 5. test_degraded_event_published_only_once: 6th call doesn't re-emit unless recovery.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -88,18 +89,13 @@ def test_writes_one_row_per_cycle(tmp_path: Path) -> None:
             new_callable=AsyncMock,
             return_value=1_714_000_000,
         ):
-            tracker = CompetitionTracker(
-                config, conn, mock_rest, "run-test-01", event_pub, db
-            )
+            tracker = CompetitionTracker(config, conn, mock_rest, "run-test-01", event_pub, db)
             # Patch parquet read to return a known total raw book (e.g., 100)
-            with patch.object(
-                tracker, "_read_sigma_others_from_parquet", return_value=70.0
-            ):
+            with patch.object(tracker, "_read_sigma_others_from_parquet", return_value=70.0):
                 asyncio.run(tracker.run_one_cycle())
 
         rows = conn.execute(
-            "SELECT q_me_pendle, sigma_others_pendle, data_source, run_id "
-            "FROM competition_history"
+            "SELECT q_me_pendle, sigma_others_pendle, data_source, run_id " "FROM competition_history"
         ).fetchall()
     finally:
         conn.close()
@@ -133,9 +129,7 @@ def test_sigma_excludes_q_me(tmp_path: Path) -> None:
             new_callable=AsyncMock,
             return_value=1_714_000_000,
         ):
-            tracker = CompetitionTracker(
-                config, conn, mock_rest, "run-test-02", event_pub, db
-            )
+            tracker = CompetitionTracker(config, conn, mock_rest, "run-test-02", event_pub, db)
 
             # Use a stub directly that simulates total_raw=100 - q_me=30 = 70.
             # We patch out the parquet path entirely, then assert the post-conditions.
@@ -148,14 +142,10 @@ def test_sigma_excludes_q_me(tmp_path: Path) -> None:
                 total_raw = 100.0
                 return max(0.0, total_raw - q_me)
 
-            with patch.object(
-                tracker, "_read_sigma_others_from_parquet", side_effect=fake_read
-            ):
+            with patch.object(tracker, "_read_sigma_others_from_parquet", side_effect=fake_read):
                 asyncio.run(tracker.run_one_cycle())
 
-        rows = conn.execute(
-            "SELECT q_me_pendle, sigma_others_pendle FROM competition_history"
-        ).fetchall()
+        rows = conn.execute("SELECT q_me_pendle, sigma_others_pendle FROM competition_history").fetchall()
     finally:
         conn.close()
 
@@ -176,14 +166,11 @@ def test_uses_order_book_raw_not_combined() -> None:
 
     src = Path(ct_module.__file__).read_text()
     assert "order_book_raw" in src, (
-        "competition_tracker.py must reference parquet.order_book_raw "
-        "(T-03-06 AMM exclusion)"
+        "competition_tracker.py must reference parquet.order_book_raw " "(T-03-06 AMM exclusion)"
     )
     # NB: the file may legitimately mention 'order_book_combined' in a comment
     # explaining the exclusion rationale; we ensure the SQL query uses 'order_book_raw'.
-    assert "FROM order_book_raw" in src or "order_book_raw," in src, (
-        "SQL query must SELECT FROM order_book_raw"
-    )
+    assert "FROM order_book_raw" in src or "order_book_raw," in src, "SQL query must SELECT FROM order_book_raw"
 
 
 def test_fallback_on_rest_fail(tmp_path: Path) -> None:
@@ -204,38 +191,36 @@ def test_fallback_on_rest_fail(tmp_path: Path) -> None:
             response=MagicMock(status_code=503),
         )
 
-        with patch(
-            "boros_brain.reward_model.competition_tracker.get_chain_time_cached",
-            new_callable=AsyncMock,
-            return_value=1_714_000_000,
-        ), patch(
-            "boros_brain.reward_model.competition_tracker.asyncio.sleep",
-            new_callable=AsyncMock,
+        with (
+            patch(
+                "boros_brain.reward_model.competition_tracker.get_chain_time_cached",
+                new_callable=AsyncMock,
+                return_value=1_714_000_000,
+            ),
+            patch(
+                "boros_brain.reward_model.competition_tracker.asyncio.sleep",
+                new_callable=AsyncMock,
+            ),
         ):
-            tracker = CompetitionTracker(
-                config, conn, mock_rest, "run-test-04", event_pub, db
-            )
+            tracker = CompetitionTracker(config, conn, mock_rest, "run-test-04", event_pub, db)
             # Stub parquet read so the test isolates the REST failure path.
-            with patch.object(
-                tracker, "_read_sigma_others_from_parquet", return_value=0.0
-            ):
-                # First cycle: 5 retries all fail -> fall back, write degraded row,
-                # publish degraded event.
-                asyncio.run(tracker.run_one_cycle())
+            with patch.object(tracker, "_read_sigma_others_from_parquet", return_value=0.0):
+                # 5 consecutive failing cycles → fail_count reaches threshold (5)
+                # on the 5th cycle, triggering fallback + degraded event.
+                for _ in range(5):
+                    asyncio.run(tracker.run_one_cycle())
 
-        rows = conn.execute(
-            "SELECT q_me_pendle, sigma_others_pendle, data_source FROM competition_history"
-        ).fetchall()
+        rows = conn.execute("SELECT q_me_pendle, sigma_others_pendle, data_source FROM competition_history").fetchall()
     finally:
         conn.close()
 
-    assert len(rows) == 1
-    q_me, sigma, ds = rows[0]
-    assert ds == "fallback_parquet_only", f"expected fallback, got {ds}"
+    assert len(rows) == 5, f"expected 5 rows (one per cycle), got {len(rows)}"
+    # All rows must be fallback (REST was always failing).
+    for _q_me, _sigma, ds in rows:
+        assert ds == "fallback_parquet_only", f"expected fallback, got {ds}"
     # After 5 consecutive failures, degraded event must be published.
     assert any(
-        topic == "competition_tracker.rest_degraded"
-        for topic, _ in event_pub.published
+        topic == "competition_tracker.rest_degraded" for topic, _ in event_pub.published
     ), f"expected competition_tracker.rest_degraded event, got {event_pub.published}"
 
 
@@ -254,29 +239,24 @@ def test_degraded_event_published_only_once(tmp_path: Path) -> None:
             "503", request=MagicMock(), response=MagicMock(status_code=503)
         )
 
-        with patch(
-            "boros_brain.reward_model.competition_tracker.get_chain_time_cached",
-            new_callable=AsyncMock,
-            return_value=1_714_000_000,
-        ), patch(
-            "boros_brain.reward_model.competition_tracker.asyncio.sleep",
-            new_callable=AsyncMock,
+        with (
+            patch(
+                "boros_brain.reward_model.competition_tracker.get_chain_time_cached",
+                new_callable=AsyncMock,
+                return_value=1_714_000_000,
+            ),
+            patch(
+                "boros_brain.reward_model.competition_tracker.asyncio.sleep",
+                new_callable=AsyncMock,
+            ),
         ):
-            tracker = CompetitionTracker(
-                config, conn, mock_rest, "run-test-05", event_pub, db
-            )
-            with patch.object(
-                tracker, "_read_sigma_others_from_parquet", return_value=0.0
-            ):
-                asyncio.run(tracker.run_one_cycle())  # cycle 1: emits degraded
-                asyncio.run(tracker.run_one_cycle())  # cycle 2: must NOT re-emit
+            tracker = CompetitionTracker(config, conn, mock_rest, "run-test-05", event_pub, db)
+            with patch.object(tracker, "_read_sigma_others_from_parquet", return_value=0.0):
+                for _ in range(5):
+                    asyncio.run(tracker.run_one_cycle())  # cycles 1-5: 5th emits degraded
+                asyncio.run(tracker.run_one_cycle())  # cycle 6: must NOT re-emit
     finally:
         conn.close()
 
-    n_degraded = sum(
-        1 for topic, _ in event_pub.published
-        if topic == "competition_tracker.rest_degraded"
-    )
-    assert n_degraded == 1, (
-        f"expected exactly 1 degraded event, got {n_degraded}: {event_pub.published}"
-    )
+    n_degraded = sum(1 for topic, _ in event_pub.published if topic == "competition_tracker.rest_degraded")
+    assert n_degraded == 1, f"expected exactly 1 degraded event, got {n_degraded}: {event_pub.published}"

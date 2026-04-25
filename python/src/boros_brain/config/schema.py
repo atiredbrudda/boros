@@ -129,7 +129,7 @@ class MarketRewardCalibration(StrictBase):
 
     @field_validator("short_side_split")
     @classmethod
-    def _splits_sum_to_one(cls, v: float, info) -> float:
+    def _splits_sum_to_one(cls, v: float, info) -> float:  # type: ignore[no-untyped-def]
         """P3-4 operator-error guard. long + short MUST equal 1.0 (1e-9 tolerance)."""
         long = info.data.get("long_side_split")
         if long is not None and abs(long + v - 1.0) > 1e-9:

@@ -11,6 +11,7 @@ data_source enum:
 
 [[competition-tracker-data-sources-v05]] for Σ_others composition + AMM exclusion.
 """
+
 from __future__ import annotations
 
 import sqlite3
@@ -43,9 +44,7 @@ def insert_competition_row(
     Caller owns transaction lifecycle — NO conn.commit() here (db.py contract).
     """
     if data_source not in _ALLOWED:
-        raise ValueError(
-            f"data_source={data_source!r} not in {sorted(_ALLOWED)}"
-        )
+        raise ValueError(f"data_source={data_source!r} not in {sorted(_ALLOWED)}")
     conn.execute(
         "INSERT INTO competition_history "
         "(polled_at_utc, chain_ts, market_id, q_me_pendle, sigma_others_pendle, "
@@ -63,7 +62,7 @@ def insert_competition_row(
     )
 
 
-def get_latest_competition(sqlite_path: Path, market_id: str):
+def get_latest_competition(sqlite_path: Path, market_id: str) -> dict[str, object] | None:
     """Return most-recent competition_history row for market_id as a dict, or None."""
     from boros_brain.state.db import open_connection
 

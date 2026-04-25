@@ -16,6 +16,7 @@ Degraded-mode per RESEARCH §REWARD-02:
 
 [[competition-tracker-data-sources-v05]]
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -28,7 +29,7 @@ import structlog
 
 from ..config.schema import BotConfig
 from ..data.chain_time import now_cached as get_chain_time_cached
-from ..state.writers.competition_history import insert_competition_row
+from ..state.writers.competition_history import DataSource, insert_competition_row
 
 log = structlog.get_logger(__name__)
 
@@ -75,12 +76,10 @@ class CompetitionTracker:
         self.event_pub = event_pub
         self.sqlite_path = sqlite_path
         self.interval = config.reward_share_model.competition_poll_interval_s
-        self.fail_threshold = (
-            config.reward_share_model.fallback_to_parquet_after_rest_fails_n
-        )
+        self.fail_threshold = config.reward_share_model.fallback_to_parquet_after_rest_fails_n
         self.markets = [m.market_id for m in config.markets]
-        self._fail_count: int = 0
-        self._degraded_emitted: bool = False
+        self._fail_count: dict[str, int] = {}
+        self._degraded_emitted: dict[str, bool] = {}
 
     async def run_one_cycle(self) -> None:
         """One (REST + parquet) pass; writes one competition_history row per market."""
@@ -88,35 +87,37 @@ class CompetitionTracker:
         polled_at = datetime.now(UTC).isoformat()
 
         for market_id in self.markets:
+            data_source: DataSource
             try:
                 q_me = await self._get_q_me_with_backoff(market_id)
                 data_source = "live"
-                self._fail_count = 0
-                self._degraded_emitted = False
+                self._fail_count[market_id] = 0
+                self._degraded_emitted[market_id] = False
             except Exception as exc:  # noqa: BLE001
+                # Increment per-market fail count once per failed cycle (not once
+                # per retry attempt). Each market's failure state is tracked
+                # independently so a failure on market A does not affect market B.
+                self._fail_count[market_id] = self._fail_count.get(market_id, 0) + 1
                 log.error(
                     "competition_tracker.rest_fetch_failed",
                     error=str(exc),
-                    fail_count=self._fail_count,
+                    fail_count=self._fail_count[market_id],
                     market_id=market_id,
                 )
-                if (
-                    self._fail_count >= self.fail_threshold
-                    and not self._degraded_emitted
+                if self._fail_count[market_id] >= self.fail_threshold and not self._degraded_emitted.get(
+                    market_id, False
                 ):
                     await self.event_pub.publish(
                         "competition_tracker.rest_degraded",
-                        {"fail_count": self._fail_count, "market_id": market_id},
+                        {"fail_count": self._fail_count[market_id], "market_id": market_id},
                     )
-                    self._degraded_emitted = True
+                    self._degraded_emitted[market_id] = True
                 # Fallback: estimate Q_me from SQLite open_orders.
                 q_me = self._estimate_q_me_from_open_orders(market_id)
                 data_source = "fallback_parquet_only"
 
             # Read Σ_others from parquet.order_book_raw (AMM share excluded).
-            sigma_others = self._read_sigma_others_from_parquet(
-                market_id, chain_ts, q_me
-            )
+            sigma_others = self._read_sigma_others_from_parquet(market_id, chain_ts, q_me)
 
             insert_competition_row(
                 self.conn,
@@ -147,11 +148,10 @@ class CompetitionTracker:
                 return self._sum_q_me(results, market_id)
             except Exception as exc:  # noqa: BLE001
                 last_exc = exc
-                self._fail_count += 1
                 await asyncio.sleep(delay)
         raise last_exc  # type: ignore[misc]
 
-    def _sum_q_me(self, orders: list[dict], market_id: str) -> float:
+    def _sum_q_me(self, orders: list[dict[str, Any]], market_id: str) -> float:
         """Sum our own order sizes for the market in PENDLE-units (v0.5 proxy).
 
         v0.5: assumes REST returns sizes already in PENDLE-equivalent units via
@@ -173,9 +173,7 @@ class CompetitionTracker:
                 total += size_yu
         return total
 
-    def _read_sigma_others_from_parquet(
-        self, market_id: str, chain_ts: int, q_me: float
-    ) -> float:
+    def _read_sigma_others_from_parquet(self, market_id: str, chain_ts: int, q_me: float) -> float:
         """DuckDB query: sum raw_book size in [clo_lower, clo_upper] - q_me.
 
         T-03-06 AMM exclusion: reads `parquet.order_book_raw` (NOT
@@ -188,9 +186,7 @@ class CompetitionTracker:
         parquet_root = Path("data/parquet")
 
         try:
-            conn = open_analytical_conn(
-                str(self.sqlite_path), str(parquet_root)
-            )
+            conn = open_analytical_conn(str(self.sqlite_path), str(parquet_root))
         except Exception as exc:  # noqa: BLE001
             log.warning(
                 "competition_tracker.duckdb_open_failed",
@@ -274,9 +270,7 @@ async def run_competition_tracker_loop(
 ) -> None:
     """Spawned from brain.main via asyncio.create_task. Plan 03-04 wires this."""
     sqlite_path = Path(config.infra.sqlite_path)
-    tracker = CompetitionTracker(
-        config, conn, rest, run_id, event_pub, sqlite_path
-    )
+    tracker = CompetitionTracker(config, conn, rest, run_id, event_pub, sqlite_path)
     log.info(
         "competition_tracker.loop_started",
         run_id=run_id,
