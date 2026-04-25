@@ -1,4 +1,4 @@
-"""SAFE-10 — BreakerCoordinator exclusivity tests (RED until 04-06 lands).
+"""SAFE-10 — BreakerCoordinator exclusivity tests (GREEN after 04-06 lands).
 
 Covers:
   - test_kill_fires_once: coordinator sends kill message on first tripped tick;
@@ -9,6 +9,10 @@ Covers:
 
 Uses real ZMQ ipc:// sockets via the ipc_dir fixture (same pattern as
 test_zmq_kill_priority.py) — NOT mocks — to prove the IPC boundary is correct.
+
+ZMQ pattern (per test_zmq_kill_priority.py):
+  CmdBus PUSH sockets BIND the endpoints.
+  Test PULL sockets CONNECT (not bind) — this avoids double-bind hangs.
 """
 from __future__ import annotations
 
@@ -55,7 +59,6 @@ class _NeverTrippedBreaker:
         return BreakerSignal(
             tripped=False,
             reason="test_never_healthy",
-            kill_command_kind=None,
         )
 
 
@@ -68,18 +71,21 @@ async def test_kill_fires_once(
 ) -> None:
     """SAFE-10 Pitfall #6 hysteresis: tripped breaker sends kill ONCE; second tick is silent.
 
-    Bind PULL sockets BEFORE creating CmdBus to avoid slow-joiner.
-    Sleep 0.05s after bind so ZMQ can establish the socket.
+    CmdBus BINDS both endpoints. PULL sockets CONNECT after bind.
+    Sleep 0.05s after connect so ZMQ can establish the socket (slow-joiner protection).
     """
-    cmd_endpoint = f"ipc://{ipc_dir}/cmd"
-    kill_endpoint = f"ipc://{ipc_dir}/cmd.kill"
+    cmd_endpoint = f"ipc://{ipc_dir}/coord1_cmd"
+    kill_endpoint = f"ipc://{ipc_dir}/coord1_kill"
 
+    # CmdBus binds first (it owns the PUSH sockets).
+    bus = CmdBus(cmd_endpoint=cmd_endpoint, kill_endpoint=kill_endpoint)
+
+    # PULL sockets connect (not bind) to avoid double-bind hang.
     ctx = zmq.asyncio.Context.instance()
     kill_pull = ctx.socket(zmq.PULL)
-    kill_pull.bind(kill_endpoint)
-    await asyncio.sleep(0.05)
+    kill_pull.connect(kill_endpoint)
+    await asyncio.sleep(0.05)  # slow-joiner protection
 
-    bus = CmdBus(cmd_endpoint=cmd_endpoint, kill_endpoint=kill_endpoint)
     coord = BreakerCoordinator(
         cmd_bus=bus,
         config=default_config,
@@ -124,17 +130,18 @@ async def test_suppression(
     After a breaker fires, the coordinator.gate() method must filter out all PLACE
     EvaluateOutput decisions. No PlaceCmd should arrive on cmd_endpoint.
     """
-    cmd_endpoint = f"ipc://{ipc_dir}/cmd2"
-    kill_endpoint = f"ipc://{ipc_dir}/cmd2.kill"
+    cmd_endpoint = f"ipc://{ipc_dir}/coord2_cmd"
+    kill_endpoint = f"ipc://{ipc_dir}/coord2_kill"
+
+    bus = CmdBus(cmd_endpoint=cmd_endpoint, kill_endpoint=kill_endpoint)
 
     ctx = zmq.asyncio.Context.instance()
     cmd_pull = ctx.socket(zmq.PULL)
-    cmd_pull.bind(cmd_endpoint)
+    cmd_pull.connect(cmd_endpoint)
     kill_pull = ctx.socket(zmq.PULL)
-    kill_pull.bind(kill_endpoint)
+    kill_pull.connect(kill_endpoint)
     await asyncio.sleep(0.05)
 
-    bus = CmdBus(cmd_endpoint=cmd_endpoint, kill_endpoint=kill_endpoint)
     coord = BreakerCoordinator(
         cmd_bus=bus,
         config=default_config,
@@ -154,13 +161,13 @@ async def test_suppression(
     try:
         await asyncio.wait_for(kill_pull.recv_json(), timeout=0.5)
     except asyncio.TimeoutError:
-        pass  # Kill may not have been sent if ZMQ slow-joiner; that's OK for this test
+        pass  # Kill may not have arrived yet — OK for this test
 
-    # Build a fake PLACE decision and try to gate it through.
-    fake_place_decision = type("FakeDecision", (), {"decision_kind": "HOLD"})()
+    # Use PLACE (not HOLD) to properly test suppression of the normal cmd path.
+    fake_place_decision = type("FakeDecision", (), {"decision_kind": "PLACE"})()
     await coord.gate([fake_place_decision], current_chain_ts=BASE_TS + 1)
 
-    # No PlaceCmd should have arrived on cmd_pull.
+    # No PlaceCmd should have arrived on cmd_pull (suppressed by active breaker).
     with pytest.raises(asyncio.TimeoutError):
         await asyncio.wait_for(cmd_pull.recv_json(), timeout=0.1)
 
@@ -181,15 +188,16 @@ async def test_suppression_logged(
 
     apply_migrations(tmp_sqlite_path)
 
-    cmd_endpoint = f"ipc://{ipc_dir}/cmd3"
-    kill_endpoint = f"ipc://{ipc_dir}/cmd3.kill"
+    cmd_endpoint = f"ipc://{ipc_dir}/coord3_cmd"
+    kill_endpoint = f"ipc://{ipc_dir}/coord3_kill"
+
+    bus = CmdBus(cmd_endpoint=cmd_endpoint, kill_endpoint=kill_endpoint)
 
     ctx = zmq.asyncio.Context.instance()
     kill_pull = ctx.socket(zmq.PULL)
-    kill_pull.bind(kill_endpoint)
+    kill_pull.connect(kill_endpoint)
     await asyncio.sleep(0.05)
 
-    bus = CmdBus(cmd_endpoint=cmd_endpoint, kill_endpoint=kill_endpoint)
     coord = BreakerCoordinator(
         cmd_bus=bus,
         config=default_config,
@@ -209,7 +217,8 @@ async def test_suppression_logged(
     except asyncio.TimeoutError:
         pass
 
-    fake_place = type("FakeDecision", (), {"decision_kind": "HOLD"})()
+    # Use PLACE (not HOLD) so the coordinator writes a suppression row.
+    fake_place = type("FakeDecision", (), {"decision_kind": "PLACE"})()
     await coord.gate([fake_place], current_chain_ts=BASE_TS + 1)
 
     # Verify suppression row exists in breaker_events.

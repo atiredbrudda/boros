@@ -43,6 +43,7 @@ class KillCmd(StrictMsg):
     kind: Literal["kill"] = "kill"
     reason: str
     run_id: str
+    kill_command_kind: str | None = None  # SAFE-10: breaker-specific action kind for operator triage
 
 
 class Heartbeat(StrictMsg):
