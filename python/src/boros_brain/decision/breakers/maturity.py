@@ -27,13 +27,14 @@ semantics, operator workflow
 [[circuit-breakers-v05]]: breaker taxonomy + routing
 [[gas-history-ewma-cancel-cost]]: DECIDE-03 cancel-cost flow / GasHistoryCache contract
 """
+
 from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
 
-from .base import Breaker, BreakerSignal
 from ...state.writers.decisions import read_last_r_me_pendle
+from .base import Breaker, BreakerSignal
 
 __all__ = ["MaturityBreaker"]
 
@@ -56,6 +57,11 @@ class MaturityBreaker(Breaker):
     name = "maturity"
 
     def __init__(self, gas_cache: Any) -> None:
+        if gas_cache is None:
+            raise TypeError(
+                "MaturityBreaker: gas_cache is mandatory (DECIDE-03). "
+                "Pass a GasHistoryCache instance or a _FakeGasCache test stub."
+            )
         self._gas_cache = gas_cache
 
     async def check(
@@ -80,13 +86,12 @@ class MaturityBreaker(Breaker):
                 kill_command_kind="ROLL_POSITION",
             )
 
+        assert config.reward_share_model.epoch_days > 0, "epoch_days must be > 0 (enforced by Pydantic schema: ge=1.0)"
         epochs_remaining = time_to_mat_s / (config.reward_share_model.epoch_days * 86400)
 
         # Use injected value (tests) or read from SQLite (production).
         if last_r_me_pendle is None:
-            last_r_me_pendle = read_last_r_me_pendle(
-                sqlite_path, market.market_id, config.side
-            )
+            last_r_me_pendle = read_last_r_me_pendle(sqlite_path, market.market_id, config.side)
 
         if last_r_me_pendle is None:
             return BreakerSignal(
@@ -103,9 +108,7 @@ class MaturityBreaker(Breaker):
         # GasHistoryCache instance via BreakerCoordinator (see main.py:221).
         cancel_cost = await self._gas_cache.cancel_cost_pendle(w3=w3, config=config)
 
-        migration_cost = (
-            config.execution.entrance_fee_pendle + 2.0 * cancel_cost
-        ) * cfg.migration_cost_buffer_pct
+        migration_cost = (config.execution.entrance_fee_pendle + 2.0 * cancel_cost) * cfg.migration_cost_buffer_pct
 
         if expected_remaining_pendle < migration_cost:
             return BreakerSignal(

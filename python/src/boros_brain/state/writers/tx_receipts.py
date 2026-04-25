@@ -12,6 +12,7 @@ integration tests build realistic state without spinning up the TS process.
 from __future__ import annotations
 
 import sqlite3
+from pathlib import Path
 
 TEST_ONLY = True
 
@@ -61,7 +62,7 @@ def insert_tx_receipt(
 
 
 def read_tx_receipts_fill_count(
-    sqlite_path,
+    sqlite_path: Path | str,
     *,
     market_id: str | None = None,
     since_ts: int | None = None,
@@ -85,11 +86,11 @@ def read_tx_receipts_fill_count(
     int
         Count of fill events in the window. Returns 0 if no rows found.
     """
+
     from boros_brain.state.db import open_connection
-    from pathlib import Path
 
     sql = "SELECT COUNT(*) FROM tx_receipts WHERE event_type = 'fill'"
-    params: list = []
+    params: list[str | int] = []
     if market_id is not None:
         sql += " AND market_id = ?"
         params.append(market_id)

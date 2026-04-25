@@ -11,6 +11,7 @@ is a violation even with TEST_ONLY, and the lint catches it.
 from __future__ import annotations
 
 import sqlite3
+from pathlib import Path
 
 # Module-scope marker. The lint scans for this literal string at module top
 # before allowing INSERT INTO open_orders / UPDATE open_orders in this file.
@@ -54,7 +55,7 @@ def insert_open_order(
     )
 
 
-def read_open_orders_for_market(sqlite_path: "Path", *, market_id: str) -> list[dict]:
+def read_open_orders_for_market(sqlite_path: Path | str, *, market_id: str) -> list[dict[str, object]]:
     """Read ACTIVE open_orders for the configured market.
 
     v0.5: reads what hands writes (TS owns the writer). Used by the 1 Hz
@@ -64,6 +65,7 @@ def read_open_orders_for_market(sqlite_path: "Path", *, market_id: str) -> list[
     Self-managing connection (opens + closes within this call).
     """
     from pathlib import Path as _Path
+
     from boros_brain.state.db import open_connection
 
     with open_connection(_Path(sqlite_path)) as conn:
@@ -73,7 +75,7 @@ def read_open_orders_for_market(sqlite_path: "Path", *, market_id: str) -> list[
             (market_id,),
         ).fetchall()
     return [
-        dict(zip(["order_id", "market_id", "side", "depth_ticks", "size_wei", "rate", "status"], r))
+        dict(zip(["order_id", "market_id", "side", "depth_ticks", "size_wei", "rate", "status"], r, strict=False))
         for r in rows
     ]
 
