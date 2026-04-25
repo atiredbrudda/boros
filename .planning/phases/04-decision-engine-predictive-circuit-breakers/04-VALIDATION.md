@@ -21,14 +21,17 @@ created: 2026-04-25
 | **Framework** | pytest 7.x (Python brain) |
 | **Config file** | `python/pyproject.toml` (already configured by Phase 1) |
 | **Quick run command** | `cd python && uv run pytest tests/ -k decision -x` (or the explicit list under "Full suite command") |
-| **Full suite command** | `cd python && uv run pytest tests/test_decision_*.py tests/test_breaker_*.py tests/test_loss_fit_degraded_breaker.py tests/test_breaker_coordinator_exclusive.py tests/test_predeploy_gate.py` |
+| **Full suite command** | `cd python && uv run pytest tests/test_decision_*.py tests/test_breaker_*.py tests/test_gas_history_ewma.py tests/test_no_threshold_dials_lint.py tests/test_predeploy_gate_cli.py tests/test_main_decision_loop_spawn.py tests/test_phase4_manifest_leaves.py` |
 | **Estimated runtime** | ~30 seconds (target; deterministic fixtures, no live RPC) |
 
 > Authoritative path layout: flat `python/tests/` directory with the
-> `test_decision_*` / `test_breaker_*` / `test_loss_fit_degraded_breaker.py` /
-> `test_breaker_coordinator_exclusive.py` / `test_predeploy_gate.py` filenames
-> declared in plan 04-01's `files_modified` frontmatter. There is NO
-> `tests/decision/` subdirectory.
+> `test_decision_*` / `test_breaker_*` / `test_gas_history_ewma.py` /
+> `test_no_threshold_dials_lint.py` / `test_predeploy_gate_cli.py` /
+> `test_main_decision_loop_spawn.py` / `test_phase4_manifest_leaves.py`
+> filenames declared in plan 04-01's `files_modified` frontmatter
+> (the canonical `test_breaker_*.py` glob covers `test_breaker_coordinator_exclusive.py`,
+> `test_breaker_coordinator_publishes_kill_lane_per_safe.py`, and the per-SAFE breaker tests).
+> There is NO `tests/decision/` subdirectory.
 
 ---
 
