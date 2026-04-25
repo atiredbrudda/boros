@@ -55,9 +55,9 @@ class Breaker(ABC):
     `check()`. The coordinator calls `check()` every cycle with a 200ms timeout
     (Pitfall #1 — no breaker may block the 1 Hz loop).
 
-    All I/O is via explicit arguments — breakers NEVER call `time.time()`, NEVER
-    maintain open file handles, and NEVER write to SQLite directly (that is the
-    coordinator's job via the breaker_events writer).
+    All I/O is via explicit arguments — breakers NEVER call wall-clock time functions,
+    NEVER maintain open file handles, and NEVER write to SQLite directly (that is
+    the coordinator's job via the breaker_events writer).
     """
 
     name: str
@@ -86,7 +86,7 @@ class Breaker(ABC):
             Live BotConfig — frozen, read-only.
         current_chain_ts:
             Chain-time in seconds (from chain_time.now_cached). NEVER use
-            time.time() inside check() — no_time_time_lint.py enforces this.
+            wall-clock inside check() — no_time_time_lint.py enforces this.
         """
         ...
 
