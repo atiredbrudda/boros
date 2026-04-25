@@ -181,8 +181,15 @@ async def test_chain_cache_halt_callback_wired(
 
     cc = _FakeChainCache()
     cc.halt_callback = coord.halt_via_chain_time
-    assert cc.halt_callback is coord.halt_via_chain_time, (
-        "halt_via_chain_time must be assignable as a callback attribute"
+    # Python's descriptor protocol re-binds a new bound-method object on each
+    # attribute access, so `cc.halt_callback is coord.halt_via_chain_time`
+    # is ALWAYS False even when wired correctly.  Verify functional equivalence
+    # instead: same underlying function AND same receiver instance.
+    assert cc.halt_callback.__func__ is type(coord).halt_via_chain_time, (
+        "halt_callback must be BreakerCoordinator.halt_via_chain_time"
+    )
+    assert cc.halt_callback.__self__ is coord, (
+        "halt_callback must be bound to this exact coord instance"
     )
 
     cmd_bus.close()
