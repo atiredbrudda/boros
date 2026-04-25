@@ -151,13 +151,15 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Each of the ten circuit breakers (SAFE-01..10) fires under its documented trigger condition in a unit-test scenario and causes the ZMQ `CANCEL_ALL` or `EMERGENCY_CLOSE` message to be published on the priority KILL lane.
   3. When any breaker is tripped, any subsequent PLACE command from `DecisionEngine` is suppressed by the breaker coordinator and the suppression is logged with `run_id` — i.e., kill authority is verifiably exclusive.
   4. `cancel_cost` in the EV equation is measured from the most recent N on-chain gas observations (a stubbed-hardcoded value fails a linter check).
-**Plans**: 6 plans
+**Plans**: 8 plans (6 original + 2 gap-closure)
 - [ ] 04-01-PLAN.md — Wave 0: Test scaffolding (17 RED tests + conftest fixtures + 2 lint script skeletons)
 - [ ] 04-02-PLAN.md — Wave 1: Foundation (BotConfig + DecisionEngineConfig schema, alembic 0007 with 4 new tables, 3 state writers, MarginPoller, Breaker ABC, EvaluateInput/Output, OWNER_MAP extension)
 - [ ] 04-03-PLAN.md — Wave 2A: DecisionEngine + GasHistoryCache + 2 lint scripts hardened (DECIDE-01..04 GREEN)
 - [ ] 04-04-PLAN.md — Wave 2B: 6 breakers — margin_trajectory, oracle_stale, clo_removal, clo_shift, fill_rate, loss_fit_degraded (SAFE-01..05 + B5 absorbed GREEN)
 - [ ] 04-05-PLAN.md — Wave 2C: 4 breakers — competition, maturity, side_budget, underlying_stale + CompetitionTracker SQLite write (SAFE-06..09 GREEN)
 - [ ] 04-06-PLAN.md — Wave 3: BreakerCoordinator (SAFE-10) + predeploy_gate CLI (A5) + main.py 1 Hz decision loop + atomic Phase-4 architecture delta + manifest leaf-count test
+- [ ] 04-07-PLAN.md — Gap closure (post-VERIFICATION): MaturityBreaker gas_cache mandatory + DECIDE-03 lint GREEN + architecture.yml maturity→gas_history edge + wiki supersedence
+- [ ] 04-08-PLAN.md — Gap closure (post-VERIFICATION): bound-method identity test fix + full Phase 4 pytest greenrun captured to var/ (operator pivot point for Phase 5)
 **UI hint**: no
 
 ### Phase 5: Event-Driven Backtest (Ship-Gate)
