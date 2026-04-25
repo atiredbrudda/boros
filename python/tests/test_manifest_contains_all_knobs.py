@@ -81,6 +81,12 @@ def _walk_dict_paths(d: Any, prefix: tuple[str, ...] = ()) -> set[tuple[str, ...
     if isinstance(d, dict):
         for k, v in d.items():
             if isinstance(v, dict):
+                # Always record the dict-field path itself as a leaf so that
+                # dict[str, scalar] BotConfig knobs (e.g.
+                # underlying_stale.expected_cadence_s_per_exchange) are found
+                # by the missing-knob assertion even when _collect_leaf_paths
+                # treats them as a single leaf rather than per-key leaves.
+                paths.add(prefix + (k,))
                 paths |= _walk_dict_paths(v, prefix + (k,))
             else:
                 paths.add(prefix + (k,))
