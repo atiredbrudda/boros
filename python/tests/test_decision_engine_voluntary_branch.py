@@ -6,6 +6,8 @@ Covers:
 
 See: [[Voluntary cancel reward behavior]] — resolved 2026-04-23; flag = False (benign).
 EV cancel rule is purely forward-looking; punitive branch = dead-code fallback.
+
+See [[boros-rest-api-margin-endpoint]] and [[phase4-foundation-schema-and-tables]] for Wave-1 foundation.
 """
 from __future__ import annotations
 
