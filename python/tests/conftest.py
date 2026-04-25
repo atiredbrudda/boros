@@ -279,14 +279,23 @@ def seed_tx_receipts_fills(tmp_sqlite_path: Path) -> Callable:
             for i in range(n_fills):
                 conn.execute(
                     "INSERT INTO tx_receipts "
-                    "(chain_ts, market_id, event_type, order_id, tx_hash, run_id) "
-                    "VALUES (?, ?, 'fill', ?, ?, ?)",
+                    "(tx_hash, run_id, submitted_at_ts, confirmed_at_ts, status, "
+                    " gas_used, intent, related_order_id, "
+                    " event_type, chain_ts, market_id, order_id) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                     (
-                        since_chain_ts + i,
-                        market_id,
-                        f"ord-fill-{i}",
-                        f"0x{'a' * 64}",
+                        f"0x{'a' * 62}{i:02d}",   # unique tx_hash (PK)
                         "test-001",
+                        since_chain_ts + i,         # submitted_at_ts (required NOT NULL)
+                        since_chain_ts + i + 1,     # confirmed_at_ts
+                        "confirmed",                # status (required NOT NULL)
+                        None,                       # gas_used
+                        "close",                    # intent (required NOT NULL)
+                        None,                       # related_order_id
+                        "fill",                     # event_type
+                        since_chain_ts + i,         # chain_ts (SAFE-05 window filter)
+                        market_id,                  # market_id
+                        f"ord-fill-{i}",            # order_id
                     ),
                 )
             conn.commit()

@@ -159,7 +159,12 @@ def upgrade() -> None:
             ["market_id", sa.text("polled_at_utc DESC")],
         )
 
-    # ── tx_receipts.event_type (add column if absent) ─────────────────────────
+    # ── tx_receipts.event_type + chain_ts + market_id + order_id ─────────────
+    # These columns are added idempotently (guarded by _has_column).
+    # event_type: SAFE-05 FillRateBreaker filters by event_type='fill'.
+    # chain_ts: SAFE-05 window filter (rows within last 1 hour).
+    # market_id: SAFE-05 per-market fill count.
+    # order_id: test fixture seeding convenience (maps to related_order_id semantics).
     if _has_table("tx_receipts") and not _has_column("tx_receipts", "event_type"):
         op.add_column(
             "tx_receipts",
@@ -168,6 +173,33 @@ def upgrade() -> None:
                 sa.Text(),
                 nullable=False,
                 server_default="unknown",
+            ),
+        )
+    if _has_table("tx_receipts") and not _has_column("tx_receipts", "chain_ts"):
+        op.add_column(
+            "tx_receipts",
+            sa.Column(
+                "chain_ts",
+                sa.Integer(),
+                nullable=True,
+            ),
+        )
+    if _has_table("tx_receipts") and not _has_column("tx_receipts", "market_id"):
+        op.add_column(
+            "tx_receipts",
+            sa.Column(
+                "market_id",
+                sa.Text(),
+                nullable=True,
+            ),
+        )
+    if _has_table("tx_receipts") and not _has_column("tx_receipts", "order_id"):
+        op.add_column(
+            "tx_receipts",
+            sa.Column(
+                "order_id",
+                sa.Text(),
+                nullable=True,
             ),
         )
 
