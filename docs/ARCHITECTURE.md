@@ -644,6 +644,25 @@ flowchart LR
 
 See [[circuit-breakers-v05]] and [[breaker-margin-trajectory]] for specs.
 
+## Phase 4 Wave 2C — MaturityBreaker gas_cache mandatory (Plan 04-07)
+
+Plan 04-07 closes VERIFICATION.md Gap #1: the `brain.decision.breakers.maturity`
+module's dependency on `brain.decision.gas_history` is now mandatory (no
+`gas_cache=None` fallback). The DECIDE-03 invariant (cancel_cost sourced
+exclusively from GasHistoryCache) is enforced on the live code path.
+
+```mermaid
+flowchart LR
+  maturity[brain.decision.breakers.maturity<br/>SAFE-07 MaturityBreaker<br/>gas_cache mandatory]
+  gas_hist[brain.decision.gas_history<br/>GasHistoryCache EWMA]
+  maturity -->|"calls cancel_cost_pendle (DECIDE-03)"| gas_hist
+```
+
+The `architecture.yml` edge `brain.decision.breakers.maturity → brain.decision.gas_history`
+(type: calls) was added in Plan 04-07. Prior to this plan the edge was missing
+from the Wave 2C edge block. See [[gas-history-ewma-cancel-cost]] and
+[[breaker-maturity-migration]] for specs.
+
 ## Related protocols
 
 - Engineering Protocol #1 — LLM Wiki. Every research / decision / postmortem
