@@ -258,6 +258,53 @@ def seed_loss_grid_artifact(tmp_sqlite_path: Path) -> Callable:
 
 
 @pytest.fixture
+def seed_fill_model_fit(tmp_sqlite_path: Path) -> Callable:
+    """Fixture-factory for fill_model_fits rows.
+
+    Returns a callable: _seed(market_id, side, fit_window_end_ts) -> Path.
+    Inserts a minimal FitArtifact with a single covariate ('basis_spread') so
+    that engine tests can pass current_features={'basis_spread': 0.01} and have
+    predict() succeed without raising FillModelNoFreshFitError.
+
+    Added in Plan 04-03 as a Rule 2 auto-add: the decision engine tests require
+    both a loss grid and a fill model fit to be seeded for evaluate() to return
+    without propagating FillModel*Error.
+    """
+
+    def _seed(
+        market_id: str = "BINANCE-ETHUSDT-29MAY2026",
+        side: str = "long",
+        fit_window_end_ts: int = 1_700_000_000,
+    ) -> Path:
+        from boros_brain.fill_model.schemas import FitArtifact
+        from boros_brain.state.writers.fill_model_fits import insert_fit_artifact
+
+        apply_migrations(tmp_sqlite_path)
+        artifact = FitArtifact(
+            run_id="test-fill-fit-001",
+            fit_window_start_ts=fit_window_end_ts - 14 * 86400,
+            fit_window_end_ts=fit_window_end_ts,
+            market_id=market_id,
+            side=side,  # type: ignore[arg-type]
+            covariate_whitelist=["basis_spread"],
+            beta=[-2.0, 0.1],  # intercept + 1 feature → low lambda → low p_fill
+            beta_stderr=[0.1, 0.05],
+            log_likelihood=-200.0,
+            deviance=400.0,
+            aic=404.0,
+            n_observations=5000,
+            converged=True,
+            fit_status="ok",
+            event_index_coverage="full",
+            created_at=fit_window_end_ts,
+        )
+        insert_fit_artifact(tmp_sqlite_path, artifact)
+        return tmp_sqlite_path
+
+    return _seed
+
+
+@pytest.fixture
 def seed_tx_receipts_fills(tmp_sqlite_path: Path) -> Callable:
     """Fixture-factory for tx_receipts rows with event_type='fill'.
 
