@@ -151,7 +151,13 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Each of the ten circuit breakers (SAFE-01..10) fires under its documented trigger condition in a unit-test scenario and causes the ZMQ `CANCEL_ALL` or `EMERGENCY_CLOSE` message to be published on the priority KILL lane.
   3. When any breaker is tripped, any subsequent PLACE command from `DecisionEngine` is suppressed by the breaker coordinator and the suppression is logged with `run_id` — i.e., kill authority is verifiably exclusive.
   4. `cancel_cost` in the EV equation is measured from the most recent N on-chain gas observations (a stubbed-hardcoded value fails a linter check).
-**Plans**: TBD
+**Plans**: 6 plans
+- [ ] 04-01-PLAN.md — Wave 0: Test scaffolding (17 RED tests + conftest fixtures + 2 lint script skeletons)
+- [ ] 04-02-PLAN.md — Wave 1: Foundation (BotConfig + DecisionEngineConfig schema, alembic 0007 with 4 new tables, 3 state writers, MarginPoller, Breaker ABC, EvaluateInput/Output, OWNER_MAP extension)
+- [ ] 04-03-PLAN.md — Wave 2A: DecisionEngine + GasHistoryCache + 2 lint scripts hardened (DECIDE-01..04 GREEN)
+- [ ] 04-04-PLAN.md — Wave 2B: 6 breakers — margin_trajectory, oracle_stale, clo_removal, clo_shift, fill_rate, loss_fit_degraded (SAFE-01..05 + B5 absorbed GREEN)
+- [ ] 04-05-PLAN.md — Wave 2C: 4 breakers — competition, maturity, side_budget, underlying_stale + CompetitionTracker SQLite write (SAFE-06..09 GREEN)
+- [ ] 04-06-PLAN.md — Wave 3: BreakerCoordinator (SAFE-10) + predeploy_gate CLI (A5) + main.py 1 Hz decision loop + atomic Phase-4 architecture delta + manifest leaf-count test
 **UI hint**: no
 
 ### Phase 5: Event-Driven Backtest (Ship-Gate)
@@ -268,7 +274,7 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 →
 | 1. Foundation (Infra + Data + Economics Gate) | 10/12 | In progress | - |
 | 2. Fill Model (NHPP v0.5) | 0/TBD | Not started | - |
 | 3. Loss & Reward-Share Models + Sizing | 0/TBD | Not started | - |
-| 4. Decision Engine + Predictive Circuit Breakers | 0/TBD | Not started | - |
+| 4. Decision Engine + Predictive Circuit Breakers | 0/6 | Ready to execute | - |
 | 5. Event-Driven Backtest (Ship-Gate) | 0/TBD | Not started | - |
 | 6. Execution Layer (TypeScript hands) | 0/TBD | Not started | - |
 | 7. Paper Trading (2–4 Weeks) | 0/TBD | Not started | - |
