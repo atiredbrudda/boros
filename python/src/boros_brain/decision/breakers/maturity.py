@@ -6,8 +6,11 @@ should roll the position before forced settlement.
 
 migration_cost = (entrance_fee_pendle + 2 × cancel_cost_pendle) × buffer_pct
 
-Dependency injection pattern: gas_cache is injected by the BreakerCoordinator
-(Plan 04-06). Tests pass gas_cache=None and cancel_cost defaults to 0.0.
+Dependency injection pattern: gas_cache is dependency-injected (mandatory) by
+the BreakerCoordinator in production and by a fake stub in tests. The DECIDE-03
+invariant requires cancel_cost to flow exclusively from gas_history.GasHistoryCache.
+As of Plan 04-07 (2026-04-25), gas_cache is a mandatory argument — there is no
+gas_cache=None default. Tests inject a _FakeGasCache stub returning 0.0.
 
 last_r_me_pendle: populated by Plan 04-06's decision engine loop writing
 r_share_per_epoch_pendle to state.decisions. Until that loop writes its first
@@ -22,6 +25,7 @@ v0.5 has no auto-roll.
 semantics, operator workflow
 [[boros-fee-schedule]]: entrance_fee + cancel cost reference values
 [[circuit-breakers-v05]]: breaker taxonomy + routing
+[[gas-history-ewma-cancel-cost]]: DECIDE-03 cancel-cost flow / GasHistoryCache contract
 """
 from __future__ import annotations
 
@@ -37,8 +41,12 @@ __all__ = ["MaturityBreaker"]
 class MaturityBreaker(Breaker):
     """SAFE-07: fires when expected remaining reward < migration cost.
 
-    gas_cache is dependency-injected by the coordinator (Plan 04-06).
-    Pass gas_cache=None (default) in tests — cancel_cost is treated as 0.0.
+    gas_cache is dependency-injected (mandatory) by the BreakerCoordinator in
+    production (main.py:221: MaturityBreaker(gas_cache=gas_cache)) and by a
+    _FakeGasCache stub in tests. The DECIDE-03 invariant requires cancel_cost
+    to flow exclusively from gas_history.GasHistoryCache — no hardcoded
+    scalars in decision/. The lint script scripts/no_hardcoded_cancel_cost_lint.py
+    enforces this invariant mechanically.
 
     last_r_me_pendle kwarg in check(): test-only override so tests can inject
     a known reward rate without needing a populated decisions table. Production
@@ -47,7 +55,7 @@ class MaturityBreaker(Breaker):
 
     name = "maturity"
 
-    def __init__(self, gas_cache: Any = None) -> None:
+    def __init__(self, gas_cache: Any) -> None:
         self._gas_cache = gas_cache
 
     async def check(
@@ -89,10 +97,11 @@ class MaturityBreaker(Breaker):
         expected_remaining_pendle = epochs_remaining * last_r_me_pendle
 
         # migration_cost = entrance_fee + 2 × cancel_cost, times the buffer multiplier.
-        if self._gas_cache is not None and w3 is not None:
-            cancel_cost = await self._gas_cache.cancel_cost_pendle(w3=w3, config=config)
-        else:
-            cancel_cost = 0.0  # test path (gas_cache=None)
+        # cancel_cost is sourced unconditionally from the injected gas cache
+        # (DECIDE-03 invariant — gas_history.GasHistoryCache is the single source).
+        # Tests inject a _FakeGasCache returning 0.0; production injects the real
+        # GasHistoryCache instance via BreakerCoordinator (see main.py:221).
+        cancel_cost = await self._gas_cache.cancel_cost_pendle(w3=w3, config=config)
 
         migration_cost = (
             config.execution.entrance_fee_pendle + 2.0 * cancel_cost
