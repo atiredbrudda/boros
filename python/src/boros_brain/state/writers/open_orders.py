@@ -54,6 +54,30 @@ def insert_open_order(
     )
 
 
+def read_open_orders_for_market(sqlite_path: "Path", *, market_id: str) -> list[dict]:
+    """Read ACTIVE open_orders for the configured market.
+
+    v0.5: reads what hands writes (TS owns the writer). Used by the 1 Hz
+    _decision_loop in main.py (Plan 04-06) to feed per-order EV evaluation.
+
+    Read-only — not subject to PROTO-02 single-writer lint (no INSERT/UPDATE).
+    Self-managing connection (opens + closes within this call).
+    """
+    from pathlib import Path as _Path
+    from boros_brain.state.db import open_connection
+
+    with open_connection(_Path(sqlite_path)) as conn:
+        rows = conn.execute(
+            "SELECT order_id, market_id, side, depth_ticks, size_wei, rate, status "
+            "FROM open_orders WHERE market_id = ? AND status = 'active'",
+            (market_id,),
+        ).fetchall()
+    return [
+        dict(zip(["order_id", "market_id", "side", "depth_ticks", "size_wei", "rate", "status"], r))
+        for r in rows
+    ]
+
+
 def update_open_order_status(
     conn: sqlite3.Connection,
     *,

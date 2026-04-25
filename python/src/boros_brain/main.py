@@ -195,6 +195,116 @@ async def run(config_path: Path, dry_run: bool = False) -> int:
         )
     )
 
+    # Phase 4 Plan 04-06: BreakerCoordinator + 1 Hz _decision_loop.
+    from .decision.breaker_coordinator import BreakerCoordinator
+    from .decision.breakers.clo_removal import CloRemovalBreaker
+    from .decision.breakers.clo_shift import CloShiftBreaker
+    from .decision.breakers.competition import CompetitionBreaker
+    from .decision.breakers.fill_rate import FillRateBreaker
+    from .decision.breakers.loss_fit_degraded import LossFitDegradedBreaker
+    from .decision.breakers.margin_trajectory import MarginTrajectoryBreaker
+    from .decision.breakers.maturity import MaturityBreaker
+    from .decision.breakers.oracle_stale import OracleStaleBreaker
+    from .decision.breakers.side_budget import SideBudgetBreaker
+    from .decision.breakers.underlying_stale import UnderlyingStaleBreaker
+    from .decision.engine import evaluate as evaluate_decision
+    from .decision.gas_history import GasHistoryCache
+
+    gas_cache = GasHistoryCache()
+    breakers = [
+        MarginTrajectoryBreaker(),
+        OracleStaleBreaker(),
+        CloRemovalBreaker(),
+        CloShiftBreaker(),
+        FillRateBreaker(),
+        CompetitionBreaker(),
+        MaturityBreaker(gas_cache=gas_cache),
+        SideBudgetBreaker(),
+        UnderlyingStaleBreaker(),
+        LossFitDegradedBreaker(),
+    ]
+    coord = BreakerCoordinator(
+        cmd_bus=cmd_bus,
+        config=cfg,
+        run_id=manifest.run_id,
+        gas_cache=gas_cache,
+        breakers=breakers,
+    )
+    # Wire ChainTimeCache.halt_callback to coord.halt_via_chain_time.
+    # This replaces the log-only default, routing chain-drift halts through
+    # the ZMQ KILL priority lane so hands receives an orderly shutdown signal.
+    chain_cache.halt_callback = coord.halt_via_chain_time
+    log.info("decision.coordinator_wired", n_breakers=len(breakers))
+
+    async def _decision_loop() -> None:
+        """1 Hz decision loop: tick breakers → per-order EV evaluation → gate cmds.
+
+        Phase 4 wiring contract: this loop sweeps all 10 breakers (coord.tick)
+        and gates the engine's EV decisions (coord.gate) every second. In v0.5
+        there are no in-flight orders until Phase 6 hands places them, so the
+        orders list is always empty — but the breaker sweep still runs on every
+        tick, providing the early-warning circuit-breaker functionality.
+
+        The read_open_orders_for_market helper is imported lazily to avoid a
+        circular import with state.writers.open_orders (which has TEST_ONLY=True).
+        """
+        from .state.db import open_connection as _open_conn
+        from .state.writers.open_orders import read_open_orders_for_market
+
+        sqlite_path_obj = Path(cfg.infra.sqlite_path)
+        parquet_root = Path("data/parquet")
+
+        while not stop.is_set():
+            current_chain_ts = await chain_cache.now_cached()
+            try:
+                await coord.tick(
+                    sqlite_path=sqlite_path_obj,
+                    w3=w3,
+                    parquet_root=parquet_root,
+                    current_chain_ts=current_chain_ts,
+                )
+            except Exception as exc:  # noqa: BLE001
+                log.error("decision.tick_failed", err=str(exc))
+
+            # Per-in-flight-order EV evaluation.
+            # v0.5: open_orders is empty until Phase 6 hands places orders.
+            # The shape below is the wiring contract — Phase 6 populates it.
+            try:
+                orders = read_open_orders_for_market(
+                    sqlite_path_obj, market_id=cfg.market_id
+                )
+            except Exception:  # noqa: BLE001
+                orders = []
+
+            decisions = []
+            for order in orders:
+                req = _build_evaluate_input(order, cfg, current_chain_ts)
+                try:
+                    out = await evaluate_decision(
+                        req,
+                        sqlite_path=sqlite_path_obj,
+                        config=cfg,
+                        gas_cache=gas_cache,
+                        w3=w3,
+                    )
+                    decisions.append(out)
+                except Exception as exc:  # noqa: BLE001
+                    log.warning(
+                        "decision_engine.skipped",
+                        order_id=order.get("order_id"),
+                        err=str(exc),
+                    )
+                    continue
+
+            try:
+                await coord.gate(decisions, current_chain_ts=current_chain_ts)
+            except Exception as exc:  # noqa: BLE001
+                log.error("decision.gate_failed", err=str(exc))
+
+            await asyncio.sleep(cfg.decision.decision_loop_interval_s)
+
+    decision_task = asyncio.create_task(_decision_loop(), name="_decision_loop")
+
     try:
         await stop.wait()
         heartbeat.stop()
@@ -205,6 +315,7 @@ async def run(config_path: Path, dry_run: bool = False) -> int:
             fill_refit_task,
             loss_refit_task,
             comp_task,
+            decision_task,  # Phase 4 Plan 04-06
         ):
             t.cancel()
             with contextlib.suppress(asyncio.CancelledError):
@@ -279,6 +390,43 @@ class _TopicEventPubAdapter:
             run_id=self._run_id,
             **payload,
         )
+
+
+def _build_evaluate_input(order: dict[str, Any], cfg: Any, current_chain_ts: int) -> Any:
+    """Assemble EV inputs from open_orders + market config.
+
+    v0.5 minimal — Phase 6 hands populates open_orders with the full schema.
+    Fields not yet available (queue_ahead_wei, current_features, etc.) default
+    to safe zero-valued placeholders. This function is the wiring contract;
+    Phase 6 hands fills in the real values.
+
+    Phase 6 notes:
+      - queue_ahead_wei: from CLOB depth snapshot (hands-provided)
+      - current_features: from fill_model covariate extractor
+      - p_purge: from Boros protocol purge probability (Phase 6)
+      - r_me_per_epoch_pendle_accumulated_so_far: from open_orders (hands-written)
+    """
+    from .decision.schemas import EvaluateInput
+
+    market = cfg.markets[0] if cfg.markets else None
+    return EvaluateInput(
+        market_id=order.get("market_id", cfg.market_id),
+        side=order.get("side", "long"),
+        order_id=order.get("order_id", ""),
+        depth_from_mark_ticks=order.get("depth_ticks", 0),
+        queue_ahead_wei=0,  # Phase 6: filled by hands
+        current_features={},  # Phase 6: filled by fill_model covariate extractor
+        time_to_epoch_end_s=0.0,  # Phase 6: from chain_time epoch boundary
+        time_to_maturity_s=int(market.maturity_ts - current_chain_ts) if market else 0,
+        q_me_pendle=float(order.get("size_wei", 0)) * 1e-18 if order.get("size_wei") else 0.0,
+        sigma_others_pendle=float(market.sigma_others_pendle) if market else 0.0,
+        e_liq_per_epoch_pendle=0.0,  # Phase 6: from reward_budget_history
+        side_split=0.5,  # Phase 6: from market_reward_calibration
+        t_frac=float(market.t_frac) if market else 1.0,
+        p_purge=0.0,  # Phase 6: from protocol purge probability
+        r_me_per_epoch_pendle_accumulated_so_far=0.0,  # Phase 6: from open_orders
+        current_chain_ts=current_chain_ts,
+    )
 
 
 def main(argv: Sequence[str] | None = None) -> int:
