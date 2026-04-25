@@ -41,6 +41,14 @@ OWNER_MAP: dict[str, str] = {
     "epoch_rewards": "python/src/boros_brain/state/writers/epoch_rewards.py",
     "clo_history": "python/src/boros_brain/state/writers/clo_history.py",
     "reward_budget_history": "python/src/boros_brain/state/writers/reward_budget_history.py",
+    # Plan 04-02 — Phase 4 table owners
+    "margin_history": "python/src/boros_brain/state/writers/margin_history.py",
+    "breaker_events": "python/src/boros_brain/state/writers/breaker_events.py",
+    "predeploy_gate_records": "python/src/boros_brain/state/writers/predeploy_gate_records.py",
+    "competition_history": "python/src/boros_brain/state/writers/competition_history.py",
+    "market_reward_calibration": "python/src/boros_brain/state/writers/market_reward_calibration.py",
+    "loss_grid_artifacts": "python/src/boros_brain/state/writers/loss_grid_artifacts.py",
+    "fill_model_fits": "python/src/boros_brain/state/writers/fill_model_fits.py",
 }
 
 # Per-table TEST_ONLY-exception file (Python side only; TS has no TEST_ONLY concept).

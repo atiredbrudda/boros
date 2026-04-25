@@ -16,6 +16,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from ..decision.config import DecisionEngineConfig
 from ..fill_model.config import FillModelConfig
 from ..loss_model.config import LossModelConfig
 from ..pricing.config import PricingConfig
@@ -64,6 +65,18 @@ class ExecutionConfig(StrictBase):
     agent_wallet_gas_warn_multiples: int = 50
     agent_wallet_gas_halt_multiples: int = 20
     agent_wallet_gas_emergency_multiples: int = 5
+    cancel_gas_units_estimate: int = Field(200_000, ge=10_000, le=2_000_000)
+    """Gas units estimate for a cancel transaction (DECIDE-03 cancel_cost calculation).
+
+    Used in GasHistoryCache.cancel_cost_pendle: cost_wei = baseFeePerGas_ewma × gas_units.
+    Default 200k is conservative for Arbitrum cancel calldata size.
+    """
+    entrance_fee_pendle: float = Field(0.0, ge=0.0)
+    """Per-market entrance fee in PENDLE units (SAFE-07 migration cost estimate).
+
+    Set to the actual entrance fee at market open; used by MaturityBreaker to
+    estimate migration cost. Default 0.0 — override per market at re-screen.
+    """
 
 
 class DataConfig(StrictBase):
@@ -74,6 +87,13 @@ class DataConfig(StrictBase):
     chain_time_cache_ttl_s: float = 1.0
     rpc_url_arbitrum: str  # no default — operator MUST supply explicitly
     boros_rest_base: str = "https://api.boros.finance/open-api/v1"
+    margin_poll_interval_s: float = Field(1.0, ge=0.1, le=60.0)
+    """SAFE-01 — 1 Hz cadence matching the decision loop.
+
+    MarginPoller calls POST /accounts/get-net-margin at this interval.
+    """
+    boros_account_id: int = Field(0, ge=0)
+    """Boros account_id for /accounts/get-net-margin. Operator-supplied. 0 = unset."""
 
 
 class InfraConfig(StrictBase):
@@ -159,6 +179,22 @@ class MarketCalibration(StrictBase):
     fIndex_oracle_address: str
     maturity_ts: int
     reward_calibration: MarketRewardCalibration | None = None   # NEW Plan 03-02
+    max_update_delay_s: int = Field(600, ge=60, le=86400)
+    """SAFE-02: maxUpdateDelay for this market's oracle (seconds).
+
+    OracleStaleBreakerConfig.fraction_of_max × max_update_delay_s is the
+    trip threshold. Default 600s (10min) is a conservative placeholder —
+    override per market from on-chain contract reads.
+    """
+    underlying_exchange: Literal["binance", "okx", "hyperliquid"] = "binance"
+    """The exchange that provides the underlying rate feed for this market."""
+
+    underlying_symbol: str = Field("", max_length=64)
+    """The exchange-specific symbol for the underlying rate feed (e.g. ETHUSDT).
+
+    Empty string = unset. SAFE-09 underlying staleness breaker uses this to
+    look up the correct parquet partition in underlying_apr/.
+    """
 
 
 class BotConfig(StrictBase):
@@ -187,4 +223,6 @@ class BotConfig(StrictBase):
     # Plan 03-03 — SizerConfig attachment (deferred from 03-02 because sizer
     # imports from loss_model + reward_model which are 03-01/02 artifacts).
     sizer: SizerConfig = Field(default_factory=SizerConfig)  # type: ignore
+    # Plan 04-02 — DecisionEngineConfig attachment (~25 new knob leaves).
+    decision: DecisionEngineConfig = Field(default_factory=DecisionEngineConfig)  # type: ignore
     markets: list[MarketCalibration] = Field(default_factory=list, max_length=1)

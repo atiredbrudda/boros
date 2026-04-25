@@ -26,6 +26,9 @@ data:
   chain_time_cache_ttl_s: 1.0
   rpc_url_arbitrum: "https://arb1.arbitrum.io/rpc"
   boros_rest_base: "https://api.boros.finance/open-api/v1"
+  # Plan 04-02: boros_account_id for POST /accounts/get-net-margin (SAFE-01 MarginPoller)
+  # 0 = unset placeholder; operator supplies account_id for live deployment.
+  boros_account_id: 0
 
 infra:
   sqlite_path: "state/state.sqlite"
@@ -108,11 +111,16 @@ reward_share_model:
   fallback_to_parquet_after_rest_fails_n: 5
 
 # Phase 3: PENDLE/USD pricing — operator-manual in v0.5 (Plan 03-02)
+# Phase 4 Plan 04-02: adds eth_price_usd + eth_price_usd_calibrated_at_utc for
+#   cancel_cost wei→PENDLE conversion (DECIDE-03 / GasHistoryCache).
+#   Operator refreshes eth_price_usd daily or after significant ETH price moves.
 pricing:
   pendle_price_usd: 7.0
   price_source: manual
   price_staleness_warn_s: 86400.0
   price_staleness_halt_s: 604800.0
+  eth_price_usd: 3000.0
+  eth_price_usd_calibrated_at_utc: "2026-04-25T00:00:00Z"
 
 # Phase 3: Sizing optimizer (REWARD-03/04 — Plan 03-03)
 # notional_per_yu_usd=90000 is the ETHUSDT-29MAY2026 placeholder so that at

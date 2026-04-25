@@ -551,10 +551,36 @@ callers to `gas_history.GasHistoryCache`) and `scripts.no_threshold_dials_lint`
 (DECIDE-04 enforcement — rejects generic `_threshold` / `_dial` / `_cutoff`
 field names outside the `decision.breakers.*` BreakerConfig family). Both are
 skeleton-only in Plan 04-01; regex + `ALLOWED_FILES` are tightened in Plan
-04-03 once `decision/gas_history.py` and `decision/config.py` exist. The full
-Phase 4 module + storage + edge delta (decision engine, 10 breakers, coordinator,
-predeploy gate, margin_history / breaker_events / predeploy_gate_records writers)
-lands atomically in Plan 04-06 [[ev-cancel-rule]] [[circuit-breakers-v05]].
+04-03 once `decision/gas_history.py` and `decision/config.py` exist.
+
+## Phase 4 Wave 1 — Decision Engine + Breakers Foundation (Plan 04-02)
+
+Plan 04-02 lands the foundation that every Wave 2 plan depends on:
+BotConfig schema delta (~25 new knob leaves), alembic migration 0007 (4 tables),
+three new state writers, the MarginPoller (1 Hz REST), the Breaker ABC and
+BreakerSignal Pydantic shapes, and EvaluateInput/Output schemas.
+
+```mermaid
+flowchart LR
+  subgraph p4w1[Phase 4 Wave 1 foundation]
+    margin_poller[margin_poller<br/>1 Hz REST]
+    w_margin[margin_history writer]
+    w_break[breaker_events writer]
+    w_pre[predeploy_gate_records writer]
+    base[Breaker ABC + BreakerSignal]
+    s_margin[(state.margin_history)]
+    s_break[(state.breaker_events)]
+    s_pre[(state.predeploy_gate_records)]
+  end
+  ext_rest((external.boros.rest.get_net_margin))
+  margin_poller --> ext_rest
+  margin_poller --> w_margin --> s_margin
+  w_break --> s_break
+  w_pre --> s_pre
+```
+
+Phase 4 Wave 2 (engine + breakers) and Wave 3 (coordinator + main.py wiring)
+extend this in plans 04-03..04-06 [[ev-cancel-rule]] [[circuit-breakers-v05]].
 
 ## Related protocols
 
