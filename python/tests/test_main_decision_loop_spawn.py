@@ -18,12 +18,13 @@ because it boots ZMQ, RPC, etc. Instead we:
 
 The tests use importorskip on BreakerCoordinator so they skip until 04-06 lands.
 """
+
 from __future__ import annotations
 
 import asyncio
 import inspect
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -32,8 +33,8 @@ import pytest
 breaker_coordinator_mod = pytest.importorskip("boros_brain.decision.breaker_coordinator")
 BreakerCoordinator = breaker_coordinator_mod.BreakerCoordinator
 
-from boros_brain.config.schema import BotConfig  # noqa: E402
 from boros_brain import main as brain_main  # noqa: E402
+from boros_brain.config.schema import BotConfig  # noqa: E402
 
 MARKET_ID = "BINANCE-ETHUSDT-29MAY2026"
 
@@ -45,27 +46,20 @@ def test_decision_loop_function_defined() -> None:
     is created by run() and wrapped in asyncio.create_task. We confirm by
     inspecting the source of run() for the expected string patterns.
     """
-    import inspect
     source = inspect.getsource(brain_main.run)
-    assert "_decision_loop" in source, (
-        "run() must define _decision_loop per Plan 04-06 wiring contract"
-    )
-    assert "BreakerCoordinator" in source, (
-        "run() must instantiate BreakerCoordinator"
-    )
-    assert "chain_cache.halt_callback" in source, (
-        "run() must wire chain_cache.halt_callback = coord.halt_via_chain_time"
-    )
-    assert "decision_task" in source, (
-        "run() must create decision_task via asyncio.create_task"
-    )
+    assert "_decision_loop" in source, "run() must define _decision_loop per Plan 04-06 wiring contract"
+    assert "BreakerCoordinator" in source, "run() must instantiate BreakerCoordinator"
+    assert (
+        "chain_cache.halt_callback" in source
+    ), "run() must wire chain_cache.halt_callback = coord.halt_via_chain_time"
+    assert "decision_task" in source, "run() must create decision_task via asyncio.create_task"
 
 
 def test_build_evaluate_input_helper_exists() -> None:
     """_build_evaluate_input helper must exist as a module-level function in main.py."""
-    assert hasattr(brain_main, "_build_evaluate_input"), (
-        "_build_evaluate_input must be a module-level function in main.py (Plan 04-06)"
-    )
+    assert hasattr(
+        brain_main, "_build_evaluate_input"
+    ), "_build_evaluate_input must be a module-level function in main.py (Plan 04-06)"
 
 
 @pytest.mark.asyncio
@@ -80,9 +74,19 @@ async def test_decision_loop_task_created(
     Stubs out the heavy boot steps (RPC, ZMQ, manifest write, refit) so the
     test can assert purely on task-spawn behavior. We stop the event loop
     quickly by setting stop immediately after task creation.
+
+    STRUCTURAL PROXY NOTE: This test does NOT call brain_main.run() — it
+    executes its own local _fast_boot coroutine that reconstructs the
+    relevant task-spawn plumbing manually.  The intent is to validate that
+    asyncio.create_task / task naming / coordinator wiring work in
+    isolation, not that brain_main.run() itself spawns the task under all
+    boot conditions.  The primary contract guard for brain_main.run() is
+    test_decision_loop_function_defined() above, which source-inspects run()
+    directly for the required patterns (_decision_loop, BreakerCoordinator,
+    chain_cache.halt_callback, decision_task).  A future reader should not
+    mistake this test for a full integration test of run().
     """
     # Stub out all expensive boot steps.
-    import boros_brain.main as m
 
     # Patch the chain_time startup to return immediately without RPC.
     mock_chain_cache = MagicMock()
@@ -90,11 +94,10 @@ async def test_decision_loop_task_created(
     mock_chain_cache.now_cached = AsyncMock(return_value=1_700_000_000)
     mock_chain_cache.halt_callback = None
 
-    mock_w3 = MagicMock()
-
     async def _fast_boot(cfg_path, dry_run=False):
         """Minimal boot that creates a _decision_loop task then stops."""
         import asyncio as _asyncio
+
         from boros_brain.decision.breaker_coordinator import BreakerCoordinator
         from boros_brain.decision.gas_history import GasHistoryCache
 
@@ -103,6 +106,7 @@ async def test_decision_loop_task_created(
 
         # Build a minimal coordinator with no breakers.
         from boros_brain.bus.cmd import CmdBus
+
         cmd_endpoint = f"ipc://{ipc_dir}/main_test_cmd"
         kill_endpoint = f"ipc://{ipc_dir}/main_test_kill"
         cmd_bus = CmdBus(cmd_endpoint=cmd_endpoint, kill_endpoint=kill_endpoint)
@@ -137,9 +141,7 @@ async def test_decision_loop_task_created(
 
     task_names = [t.get_name() for t in tasks_snapshot]
     decision_tasks = [n for n in task_names if "decision" in n.lower() or "loop" in n.lower()]
-    assert decision_tasks, (
-        f"No decision loop task found. Task names: {task_names}"
-    )
+    assert decision_tasks, f"No decision loop task found. Task names: {task_names}"
 
 
 @pytest.mark.asyncio
@@ -171,8 +173,7 @@ async def test_chain_cache_halt_callback_wired(
 
     # halt_via_chain_time must be an async method (coroutine function).
     assert asyncio.iscoroutinefunction(coord.halt_via_chain_time), (
-        "BreakerCoordinator.halt_via_chain_time must be an async method "
-        "to be usable as ChainTimeCache.halt_callback"
+        "BreakerCoordinator.halt_via_chain_time must be an async method " "to be usable as ChainTimeCache.halt_callback"
     )
 
     # It must be assignable to a simple attribute (the wiring pattern).
@@ -185,11 +186,9 @@ async def test_chain_cache_halt_callback_wired(
     # attribute access, so `cc.halt_callback is coord.halt_via_chain_time`
     # is ALWAYS False even when wired correctly.  Verify functional equivalence
     # instead: same underlying function AND same receiver instance.
-    assert cc.halt_callback.__func__ is type(coord).halt_via_chain_time, (
-        "halt_callback must be BreakerCoordinator.halt_via_chain_time"
-    )
-    assert cc.halt_callback.__self__ is coord, (
-        "halt_callback must be bound to this exact coord instance"
-    )
+    assert (
+        cc.halt_callback.__func__ is type(coord).halt_via_chain_time
+    ), "halt_callback must be BreakerCoordinator.halt_via_chain_time"
+    assert cc.halt_callback.__self__ is coord, "halt_callback must be bound to this exact coord instance"
 
     cmd_bus.close()
