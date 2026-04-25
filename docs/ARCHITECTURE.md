@@ -582,6 +582,41 @@ flowchart LR
 Phase 4 Wave 2 (engine + breakers) and Wave 3 (coordinator + main.py wiring)
 extend this in plans 04-03..04-06 [[ev-cancel-rule]] [[circuit-breakers-v05]].
 
+## Phase 4 Wave 2A — DecisionEngine + GasHistoryCache (Plan 04-03)
+
+Plan 04-03 implements the core EV cancel rule and the gas cost oracle:
+
+- `brain.decision.engine` — async `evaluate()` composing predict() + expected_loss()
+  + r_capped_curve() + gas_cache.cancel_cost_pendle(); benign/punitive branch on
+  `voluntary_cancel_forfeits_accumulated`; errors propagate per Pitfall #7.
+- `brain.decision.gas_history` — `GasHistoryCache` TTL-cached EWMA of
+  `eth_feeHistory` (100-block window, alpha=0.1, 60s TTL) converted to
+  PENDLE-units cancel cost. The `no_hardcoded_cancel_cost_lint` pre-commit hook
+  enforces this as the only legitimate owner of cancel_cost assignments.
+- `external.arbitrum.fee_history` — AsyncWeb3.eth.fee_history JSON-RPC endpoint.
+
+```mermaid
+flowchart LR
+  subgraph p4w2a[Phase 4 Wave 2A]
+    engine[brain.decision.engine<br/>async evaluate]
+    gas_hist[brain.decision.gas_history<br/>GasHistoryCache EWMA]
+  end
+  subgraph p3[Phase 2/3 models]
+    predict[fill_model.predict]
+    eloss[loss_model.expected_loss]
+    rcap[reward_model.r_capped]
+  end
+  ext_fee((external.arbitrum.fee_history))
+  chain_t[brain.data.chain_time]
+  engine --> predict
+  engine --> eloss
+  engine --> rcap
+  engine --> gas_hist --> ext_fee
+  gas_hist --> chain_t
+```
+
+[[ev-cancel-rule-implementation-v05]] [[gas-history-ewma-cancel-cost]]
+
 ## Phase 4 Wave 2 Plan B — Six Predictive Circuit Breakers (Plan 04-04)
 
 Plan 04-04 lands SAFE-01..05 + B5 absorbed (six breaker modules) under

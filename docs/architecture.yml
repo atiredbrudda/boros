@@ -1323,6 +1323,25 @@ nodes:
     type: config_knob
     pydantic_path: BotConfig.markets.underlying_symbol
 
+  # ── Phase 4 Wave 2A engine+gas_history — Plan 04-03 ──────────────────────
+  - id: brain.decision.engine
+    type: module
+    process: brain
+    path: python/src/boros_brain/decision/engine.py
+    public_functions: [evaluate]
+
+  - id: brain.decision.gas_history
+    type: module
+    process: brain
+    path: python/src/boros_brain/decision/gas_history.py
+    public_functions: [GasHistoryCache]
+
+  - id: external.arbitrum.fee_history
+    type: external_api
+    process: external
+    path: AsyncWeb3.eth.fee_history (JSON-RPC eth_feeHistory)
+    public_functions: []
+
 edges:
   # ── brain internal wiring ──────────────────────────────────────────────
   - from: brain
@@ -2550,3 +2569,18 @@ edges:
   - {from: brain.data.poller.margin_poller, to: config.data.margin_poll_interval_s, type: depends-on-config}
   - {from: brain.data.poller.margin_poller, to: config.data.boros_account_id, type: depends-on-config}
   - {from: brain.config.schema, to: brain.decision.config, type: calls, notes: "BotConfig.decision: DecisionEngineConfig — Plan 04-02 attached"}
+
+  # ── Phase 4 Wave 2A engine+gas_history edges — Plan 04-03 ─────────────────
+  - {from: brain.decision.engine, to: brain.fill_model.predict, type: calls}
+  - {from: brain.decision.engine, to: brain.loss_model.expected_loss, type: calls}
+  - {from: brain.decision.engine, to: brain.reward_model.r_capped, type: calls}
+  - {from: brain.decision.engine, to: brain.decision.gas_history, type: calls}
+  - {from: brain.decision.gas_history, to: external.arbitrum.fee_history, type: calls}
+  - {from: brain.decision.gas_history, to: brain.data.chain_time, type: calls}
+  - {from: brain.decision.engine, to: config.strategy.voluntary_cancel_forfeits_accumulated, type: depends-on-config}
+  - {from: brain.decision.gas_history, to: config.decision.cancel_cost_ewma_alpha, type: depends-on-config}
+  - {from: brain.decision.gas_history, to: config.decision.cancel_cost_ttl_s, type: depends-on-config}
+  - {from: brain.decision.gas_history, to: config.decision.cancel_cost_block_window, type: depends-on-config}
+  - {from: brain.decision.gas_history, to: config.execution.cancel_gas_units_estimate, type: depends-on-config}
+  - {from: brain.decision.gas_history, to: config.pricing.eth_price_usd, type: depends-on-config}
+  - {from: brain.decision.gas_history, to: config.pricing.pendle_price_usd, type: depends-on-config}
