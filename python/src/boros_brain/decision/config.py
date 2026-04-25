@@ -31,8 +31,15 @@ class MarginBreakerConfig(StrictBase):
     min_samples: int = Field(10, ge=2, le=200)
     """Minimum number of margin_history rows required before the breaker can fire."""
 
-    time_to_mm_threshold_s: float = Field(30.0, ge=5.0, le=600.0)
-    """Trip if extrapolated time to maintenance margin < this value (seconds)."""
+    time_to_mm_threshold_s: float = Field(300.0, ge=5.0, le=3600.0)
+    """Trip if extrapolated time to maintenance margin < this value (seconds).
+
+    Default 300s (5 minutes): provides early-warning headroom on the 1 Hz
+    decision loop — at $100 collateral a -1 USD/s slope gives ~70-90s to
+    maintenance margin which should fire the breaker predictively rather than
+    reactively.  Raised upper bound to 3600s (1h) from 600s to allow operators
+    on slow-decaying markets to configure wider prediction horizons.
+    """
 
     min_re_arm_s: float = Field(60.0, ge=0.0, le=600.0)
     """Minimum seconds after first trip before the breaker can fire again."""
