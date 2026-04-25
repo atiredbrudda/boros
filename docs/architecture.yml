@@ -1093,6 +1093,17 @@ nodes:
     type: config_knob
     pydantic_path: BotConfig.sizer.notional_per_yu_usd
 
+  # ── Phase 4 Plan 04-01 — lint scripts (scaffolding) ────────────────────
+  - id: scripts.no_hardcoded_cancel_cost_lint
+    type: external
+    notes: "pre-commit hook: rejects hardcoded cancel_cost scalars in decision/ (DECIDE-03 enforcement)"
+    path: scripts/no_hardcoded_cancel_cost_lint.py
+
+  - id: scripts.no_threshold_dials_lint
+    type: external
+    notes: "pre-commit hook: rejects _threshold/_dial/_cutoff names outside decision.breakers.* (DECIDE-04 enforcement)"
+    path: scripts/no_threshold_dials_lint.py
+
 edges:
   # ── brain internal wiring ──────────────────────────────────────────────
   - from: brain
