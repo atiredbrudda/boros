@@ -14,6 +14,7 @@ migration_cost = entrance_fee_pendle + 2 × cancel_cost_pendle (cancel_cost=0 in
 As of Plan 04-07, tests inject a _FakeGasCache returning 0.0 cancel_cost.
 The gas_cache parameter is mandatory (no None default) after this plan.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -79,9 +80,7 @@ async def test_fires_when_remaining_below_migration_cost(
     epochs_remaining ≈ 0.0059 (1h / 7d), last_r_me=0.001 PENDLE/epoch →
     expected = 5.9e-6 PENDLE < entrance_fee_pendle=0.5 PENDLE → fires.
     """
-    config_dict = _config_with_market(default_config, CURRENT_TS + ONE_HOUR_S).model_dump(
-        mode="json"
-    )
+    config_dict = _config_with_market(default_config, CURRENT_TS + ONE_HOUR_S).model_dump(mode="json")
     config_dict["execution"]["entrance_fee_pendle"] = 0.5
     config = BotConfig.model_validate(config_dict)
 
@@ -94,12 +93,8 @@ async def test_fires_when_remaining_below_migration_cost(
         current_chain_ts=CURRENT_TS,
         last_r_me_pendle=0.001,  # inject directly — no decisions table populated yet
     )
-    assert sig.tripped is True, (
-        f"Expected tripped=True for maturity 1h away + tiny reward, got {sig.tripped}"
-    )
-    assert sig.kill_command_kind == "ROLL_POSITION", (
-        f"Expected ROLL_POSITION, got {sig.kill_command_kind!r}"
-    )
+    assert sig.tripped is True, f"Expected tripped=True for maturity 1h away + tiny reward, got {sig.tripped}"
+    assert sig.kill_command_kind == "ROLL_POSITION", f"Expected ROLL_POSITION, got {sig.kill_command_kind!r}"
 
 
 @pytest.mark.asyncio
@@ -113,9 +108,7 @@ async def test_silent_when_remaining_above_migration_cost(
     epochs_remaining ≈ 4.28 (30d / 7d), last_r_me=10 PENDLE/epoch →
     expected = 42.8 PENDLE >> entrance_fee_pendle=0.5 PENDLE → no fire.
     """
-    config_dict = _config_with_market(default_config, CURRENT_TS + THIRTY_DAYS_S).model_dump(
-        mode="json"
-    )
+    config_dict = _config_with_market(default_config, CURRENT_TS + THIRTY_DAYS_S).model_dump(mode="json")
     config_dict["execution"]["entrance_fee_pendle"] = 0.5
     config = BotConfig.model_validate(config_dict)
 
@@ -128,9 +121,7 @@ async def test_silent_when_remaining_above_migration_cost(
         current_chain_ts=CURRENT_TS,
         last_r_me_pendle=10.0,  # healthy reward
     )
-    assert sig.tripped is False, (
-        f"Expected tripped=False for maturity 30d away, got tripped={sig.tripped}"
-    )
+    assert sig.tripped is False, f"Expected tripped=False for maturity 30d away, got tripped={sig.tripped}"
 
 
 @pytest.mark.asyncio
@@ -155,9 +146,33 @@ async def test_no_decision_history_yet(
         config=config,
         current_chain_ts=CURRENT_TS,
     )
-    assert sig.tripped is False, (
-        f"Expected tripped=False with no decision history, got {sig.tripped}"
+    assert sig.tripped is False, f"Expected tripped=False with no decision history, got {sig.tripped}"
+    assert sig.reason == "no_decision_history_yet", f"Expected reason='no_decision_history_yet', got {sig.reason!r}"
+
+
+@pytest.mark.asyncio
+async def test_fires_when_market_already_matured(
+    tmp_path: Path,
+    default_config: BotConfig,
+    tmp_sqlite_path: Path,
+) -> None:
+    """SAFE-07: market_ts in the past → tripped=True, reason='market_matured'.
+
+    The early-return branch (time_to_mat_s <= 0) fires unconditionally — no
+    reward-history or gas-cache call is needed. This is the most urgent signal
+    the breaker can emit and must not regress.
+    """
+    config = _config_with_market(default_config, CURRENT_TS - 1)  # past maturity
+    breaker = MaturityBreaker(gas_cache=_FakeGasCache())
+    sig = await breaker.check(
+        sqlite_path=tmp_sqlite_path,
+        w3=None,
+        parquet_root=tmp_path,
+        config=config,
+        current_chain_ts=CURRENT_TS,
     )
-    assert sig.reason == "no_decision_history_yet", (
-        f"Expected reason='no_decision_history_yet', got {sig.reason!r}"
-    )
+    assert sig.tripped is True, f"Expected tripped=True for already-matured market, got {sig.tripped}"
+    assert sig.reason == "market_matured", f"Expected reason='market_matured', got {sig.reason!r}"
+    assert (
+        sig.kill_command_kind == "ROLL_POSITION"
+    ), f"Expected kill_command_kind='ROLL_POSITION', got {sig.kill_command_kind!r}"
