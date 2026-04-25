@@ -6,6 +6,7 @@ Test IDs:
 - T-03-R-03 (A6): fee terms absorbed into pnl_pendle.
 - T-03-R-04: skipped (Phase-5 backtest concern; placeholder).
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -164,17 +165,11 @@ def test_fees_term_included() -> None:
     assert r.fee_settlement_pendle > 0
     assert r.fee_entrance_amortized_pendle > 0
     assert r.fee_gas_pendle > 0
-    sum_fees = (
-        r.fee_taker_pendle
-        + r.fee_settlement_pendle
-        + r.fee_entrance_amortized_pendle
-        + r.fee_gas_pendle
-    )
+    sum_fees = r.fee_taker_pendle + r.fee_settlement_pendle + r.fee_entrance_amortized_pendle + r.fee_gas_pendle
 
     # gross - sum_fees == pnl_pendle (within float tolerance)
     assert abs((gross - sum_fees) - r.pnl_pendle) < 1e-12, (
-        f"fee absorption mismatch: gross={gross}, sum_fees={sum_fees}, "
-        f"pnl={r.pnl_pendle}"
+        f"fee absorption mismatch: gross={gross}, sum_fees={sum_fees}, " f"pnl={r.pnl_pendle}"
     )
 
     # Sanity: configured taker rate matches what was applied
@@ -182,9 +177,55 @@ def test_fees_term_included() -> None:
     assert r.fee_taker_pendle == pytest.approx(expected_taker, rel=1e-9)
 
 
-@pytest.mark.skip(
-    reason="integration test requires Phase-1 parquet fixture; lands in Phase 5 backtest"
-)
+def test_short_side_pnl_sign() -> None:
+    """T-03-R-05 / WR-03 — short-side P&L sign: close_rate < fill_rate is profitable.
+
+    For a short fill at fill_rate=0.12 closed at close_rate=0.10:
+      gross = fill_size × (close_rate - fill_rate) × tau/365  → negative
+      negated for short → positive (profit: APR moved in our favour)
+      pnl_pendle = gross - fees → must remain positive for reasonable fee levels.
+
+    This test guards the formula against accidental double-negation or sign flip.
+    """
+    config = _tiny_config()
+    block_ts = 1_700_000_000
+    # Short profitable: APR fell from 0.12 to 0.10 → close below fill = profit for short.
+    injected_short = pl.DataFrame(
+        {
+            "market_id": [MARKET_ID],
+            "side": ["short"],
+            "fill_event_index": [2],
+            "fill_block_ts": [block_ts],
+            "fill_rate": [0.12],
+            "fill_size_float": [1.0],
+            "close_rate": [0.10],
+            "close_block_ts": [block_ts + 30],
+            "close_event_index": [3],
+            "tau_days": [30.0],
+            "depth_from_mark_ticks": [0],
+        }
+    )
+    rows = build_per_fill_pnl_from_frame(injected_short, config=config, market_id=MARKET_ID)
+    assert len(rows) == 1
+    r = rows[0]
+
+    # Gross before fees: -(fill_size × (close - fill) × tau/365) = -(1×(0.10-0.12)×30/365)
+    gross = -(1.0 * (0.10 - 0.12) * (30.0 / 365.0))
+    assert gross > 0, "pre-fee gross must be positive for a profitable short close"
+
+    sum_fees = r.fee_taker_pendle + r.fee_settlement_pendle + r.fee_entrance_amortized_pendle + r.fee_gas_pendle
+    # Net of fees must still be positive (default fee knobs are small relative to gross).
+    assert r.pnl_pendle > 0, (
+        f"short profitable close must yield positive pnl_pendle "
+        f"(gross={gross:.6f}, fees={sum_fees:.6f}, pnl={r.pnl_pendle:.6f})"
+    )
+    # gross - sum_fees == pnl_pendle (within float tolerance)
+    assert (
+        abs((gross - sum_fees) - r.pnl_pendle) < 1e-12
+    ), f"fee absorption mismatch: gross={gross}, sum_fees={sum_fees}, pnl={r.pnl_pendle}"
+
+
+@pytest.mark.skip(reason="integration test requires Phase-1 parquet fixture; lands in Phase 5 backtest")
 def test_amm_conservation_preserved() -> None:
     """T-03-R-04 — replay does not raise AMMConsumptionIdentityError on real Phase-1 data.
 
