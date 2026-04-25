@@ -1632,32 +1632,46 @@ Per Engineering Protocol 1, the following wiki pages MUST be filed (or appended 
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED 2026-04-25)
 
 1. **Where does `r_me_per_epoch_pendle_accumulated_so_far` get incremented?**
    - What we know: only the punitive branch (DECIDE-02) needs it; default benign branch doesn't.
    - What's unclear: whether it needs to survive process restart (per-block accumulation tracker over a week-long epoch).
    - Recommendation: persist in a NEW table `state.epoch_accumulation_history (epoch_start_ts, market_id, side, accumulated_pendle, last_updated_ts)` — single-writer = `BreakerCoordinator`, low-cardinality (one row per epoch per side). Revisit at Plan stage if benign-branch-only is sufficient.
 
+   **RESOLUTION:** Plan 04-02 introduces a new `state.epoch_accumulation_history` SQLite table with single-writer discipline owned by the brain. The accumulator is rebuilt from on-chain reward distributor reads at startup; in-memory tracking during the epoch. Restart-resilience deferred to Phase 5 (backtest mode reads from parquet, not SQLite). For Phase 4, the `r_me_per_epoch_pendle_accumulated_so_far` value used in the punitive branch is computed live from the `decision.epoch_accumulation_history` reader; the cross-restart correctness test is out of scope for this phase.
+
 2. **Does Boros REST `get-net-margin` have a per-market endpoint or just a per-account aggregate?**
    - What we know: documentation references it but exact field shape unverified.
    - What's unclear: whether `maintenanceMargin` is per-market or account-wide.
    - Recommendation: First plan task probes the endpoint with a curl test (live, dotenvx-decrypted dev wallet); update wiki + REST schema test accordingly.
+
+   **RESOLUTION:** Resolved by ASSUMPTION A1 already documented in plan 04-02 Task 4 and wiki page `boros-rest-api-margin-endpoint.md`. The MarginPoller treats the response as per-account aggregate with fields `netMargin`, `maintenanceMargin`, `availableCollateral` (typed strings, parsed to Decimal). Live shape verification is deferred to Phase 6 dev-wallet smoke; if the live shape diverges, MarginPoller and SAFE-01 MarginTrajectoryBreaker have explicit shape-validation pydantic models that will raise on parse failure (loud failure, not silent corruption).
 
 3. **Is the OU-fit-degraded breaker's SHRINK_TO_Q_MIN action enough, or should it also pause new placement?**
    - What we know: pitfall B5 says "shrink to Q_min until clean fit restored" — sizing-only effect.
    - What's unclear: with Q_me at Q_min, does the EV equation still recommend PLACE? If R_share_at_Q_min < cancel_cost, new placement is -EV anyway and HOLD will be the natural decision.
    - Recommendation: Trust the EV equation. SHRINK_TO_Q_MIN is enough; don't double-suppress.
 
+   **RESOLUTION:** Phase 4 ships SHRINK_TO_Q_MIN per RESEARCH §B5. Sufficient for v0.5 because Phase 3 already pauses placement when fit-status is `degraded` for >2 consecutive grids; Phase 4's loss_fit_degraded breaker is the second line of defense (size shrink). If empirical results from Phase 5 backtest show shrinkage alone leaves residual exposure, a follow-up `loss_fit_degraded_pause` knob is added in Phase 5 — explicitly out of scope for Phase 4.
+
 4. **Should the predeploy_gate write to git (commit a wiki page) or just the wiki on disk?**
    - What we know: wiki lives in `/Users/macbookair/Documents/project/test/rerun7/LLM Wiki/workspaces/boros/wiki/` (external to repo).
    - What's unclear: how the Phase 6→7 transition checker reads the gate result (file mtime? a SQLite row?).
    - Recommendation: SQLite row in `state.predeploy_gate_records` is the machine-readable check; wiki page is the human-readable trail. Both atomic in the same plan.
 
+   **RESOLUTION:** Disk-only for v0.5. The predeploy_gate writes a hash-stamped record to `.planning/phases/04-.../predeploy-gate-history.jsonl` (append-only). Phase 6→7 transition reads the latest hash and compares to a freshly-recomputed hash; mismatch → exit 1. Wiki write-back is via the standard Engineering Protocol 1 path (the humans/agents file the wiki page; the gate enforces only that the hash matches a committed economics-gate run).
+
 5. **Does the breaker coordinator's `tick` need to be called BEFORE or AFTER decision evaluation each cycle?**
    - What we know: BEFORE (so a tripped breaker gates the cycle's decisions).
    - What's unclear: what happens if a breaker trips MID-cycle (between tick and gate)?
    - Recommendation: tick is fast (≤200ms p95). The race window is small. Phase 4 documents this as "best-effort within 1 cycle"; Phase 5 backtest sensitivity confirms the race doesn't cost meaningful P&L. If it does, reorder.
+
+   **RESOLUTION:** BEFORE. The 1Hz brain loop sequence is:
+     1. Coordinator.tick() — refresh kill-state from all breakers (collect signals)
+     2. If any breaker tripped: Coordinator publishes KILL message; suppress decision step
+     3. Otherwise: DecisionEngine.evaluate() runs and Coordinator.send_cmd() forwards PLACE/CANCEL decisions
+   This sequence is encoded in main.py `_decision_loop` (Plan 04-06 Task 3) and asserted by `test_breaker_coordinator_exclusive.py` (Plan 04-06 Task 1).
 
 ---
 

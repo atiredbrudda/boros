@@ -20,16 +20,22 @@ created: 2026-04-25
 |----------|-------|
 | **Framework** | pytest 7.x (Python brain) |
 | **Config file** | `python/pyproject.toml` (already configured by Phase 1) |
-| **Quick run command** | `cd python && uv run pytest tests/decision/ -x` |
-| **Full suite command** | `cd python && uv run pytest tests/decision/` |
+| **Quick run command** | `cd python && uv run pytest tests/ -k decision -x` (or the explicit list under "Full suite command") |
+| **Full suite command** | `cd python && uv run pytest tests/test_decision_*.py tests/test_breaker_*.py tests/test_loss_fit_degraded_breaker.py tests/test_breaker_coordinator_exclusive.py tests/test_predeploy_gate.py` |
 | **Estimated runtime** | ~30 seconds (target; deterministic fixtures, no live RPC) |
+
+> Authoritative path layout: flat `python/tests/` directory with the
+> `test_decision_*` / `test_breaker_*` / `test_loss_fit_degraded_breaker.py` /
+> `test_breaker_coordinator_exclusive.py` / `test_predeploy_gate.py` filenames
+> declared in plan 04-01's `files_modified` frontmatter. There is NO
+> `tests/decision/` subdirectory.
 
 ---
 
 ## Sampling Rate
 
-- **After every task commit:** Run `cd python && uv run pytest tests/decision/ -x` (fail-fast)
-- **After every plan wave:** Run `cd python && uv run pytest tests/decision/` (full)
+- **After every task commit:** Run `cd python && uv run pytest tests/ -k decision -x` (fail-fast)
+- **After every plan wave:** Run the full suite command above
 - **Before `/gsd-verify-work`:** Full suite must be green AND `scripts/no_hardcoded_cancel_cost_lint.py` AND `scripts/no_threshold_dials_lint.py` must pass
 - **Max feedback latency:** 30 seconds
 
@@ -37,7 +43,7 @@ created: 2026-04-25
 
 ## Per-Task Verification Map
 
-> Filled in during planning by `gsd-planner` from RESEARCH.md Validation Architecture section. Each of the 17 enumerated test files maps to one task; each task gets an `<automated>` verify command. Plan-checker validates the map is complete before approving plans.
+> Filled in during planning by `gsd-planner` from RESEARCH.md Validation Architecture section. Each of the enumerated test files maps to one task; each task gets an `<automated>` verify command. Plan-checker validates the map is complete before approving plans.
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
@@ -47,25 +53,28 @@ created: 2026-04-25
 
 ## Wave 0 Requirements
 
-> Test scaffolding that must land BEFORE engine/breaker code is written. Per RESEARCH.md, all 17 test files are net-new (no existing test stubs cover Phase 4).
+> Test scaffolding that must land BEFORE engine/breaker code is written. Per RESEARCH.md, all test files are net-new (no existing test stubs cover Phase 4). Paths below match plan 04-01's `files_modified` frontmatter EXACTLY (flat `python/tests/` layout — no subdirectory).
 
-- [ ] `python/tests/decision/conftest.py` — shared fixtures (deterministic clock, BotConfig builder, simulated book/feature stream, ZMQ mock socket pair)
-- [ ] `python/tests/decision/test_engine_ev.py` — DECIDE-01 EV-sign line-by-line stubs
-- [ ] `python/tests/decision/test_engine_voluntary_cancel.py` — DECIDE-02 dual-branch divergence stub
-- [ ] `python/tests/decision/test_gas_history.py` — DECIDE-03 EWMA + linter sentinel stubs
-- [ ] `python/tests/decision/test_no_threshold_dials.py` — DECIDE-04 audit stub
-- [ ] `python/tests/decision/test_safe_01_margin_trajectory.py`
-- [ ] `python/tests/decision/test_safe_02_oracle_stale.py`
-- [ ] `python/tests/decision/test_safe_03_clo_removal.py`
-- [ ] `python/tests/decision/test_safe_04_clo_shift.py`
-- [ ] `python/tests/decision/test_safe_05_fill_runaway.py`
-- [ ] `python/tests/decision/test_safe_06_competition_collapse.py`
-- [ ] `python/tests/decision/test_safe_07_maturity_migration.py`
-- [ ] `python/tests/decision/test_safe_08_side_budget.py`
-- [ ] `python/tests/decision/test_safe_09_underlying_stale.py`
-- [ ] `python/tests/decision/test_loss_fit_degraded_breaker.py` — B5 absorption
-- [ ] `python/tests/decision/test_breaker_coordinator_exclusive.py` — SAFE-10 kill-authority exclusivity
-- [ ] `python/tests/decision/test_predeploy_gate.py` — A5 absorption (Phase 6→7 gate)
+- [ ] `python/tests/conftest.py` — extended with shared fixtures (deterministic clock, BotConfig builder, simulated book/feature stream, ZMQ mock socket pair, 7 breaker-history seed-helper fixtures)
+- [ ] `python/tests/test_decision_engine_ev_equation.py` — DECIDE-01 EV-sign line-by-line stubs
+- [ ] `python/tests/test_decision_engine_voluntary_branch.py` — DECIDE-02 dual-branch divergence stub
+- [ ] `python/tests/test_gas_history_ewma.py` — DECIDE-03 EWMA + linter sentinel stubs
+- [ ] `python/tests/test_no_threshold_dials_lint.py` — DECIDE-04 audit stub
+- [ ] `python/tests/test_breaker_margin_trajectory.py` — SAFE-01
+- [ ] `python/tests/test_breaker_oracle_stale.py` — SAFE-02
+- [ ] `python/tests/test_breaker_clo_removal.py` — SAFE-03
+- [ ] `python/tests/test_breaker_clo_shift.py` — SAFE-04
+- [ ] `python/tests/test_breaker_fill_rate.py` — SAFE-05
+- [ ] `python/tests/test_breaker_competition.py` — SAFE-06
+- [ ] `python/tests/test_breaker_maturity.py` — SAFE-07
+- [ ] `python/tests/test_breaker_side_budget.py` — SAFE-08
+- [ ] `python/tests/test_breaker_underlying_stale.py` — SAFE-09
+- [ ] `python/tests/test_breaker_loss_fit_degraded.py` — B5 absorption (file path uses `test_breaker_loss_fit_degraded.py`; the alias `test_loss_fit_degraded_breaker.py` is referenced in some commands for backward-compat; plan 04-01 declares the canonical name in its frontmatter)
+- [ ] `python/tests/test_breaker_coordinator_exclusive.py` — SAFE-10 kill-authority exclusivity
+- [ ] `python/tests/test_breaker_coordinator_publishes_kill_lane_per_safe.py` — SAFE-01..09 + B5 end-to-end ZMQ KILL-lane composition test (parametrized; lands as a Wave-0 RED stub guarded by `pytest.importorskip` on coordinator import; turns GREEN in plan 04-06 Task 6)
+- [ ] `python/tests/test_predeploy_gate_cli.py` — A5 absorption (Phase 6→7 gate)
+- [ ] `python/tests/test_main_decision_loop_spawn.py` — main.py spawn-block integration RED test
+- [ ] `python/tests/test_phase4_manifest_leaves.py` — PROTO-04 leaf-count assertion (>=25 decision.* leaves)
 
 ---
 
@@ -100,13 +109,14 @@ created: 2026-04-25
 
 - [ ] All 14 phase requirements (DECIDE-01..04, SAFE-01..10) have at least one `<automated>` verification command
 - [ ] Sampling continuity: no 3 consecutive tasks without an automated verify in the per-task map
-- [ ] Wave 0 (17 test scaffolding files) lands before any engine/breaker source file
+- [ ] Wave 0 test scaffolding files land before any engine/breaker source file
 - [ ] No `pytest --watch` or other watch-mode flags in any task command
 - [ ] Feedback latency for the quick run < 30s on a clean checkout
 - [ ] EV-sign line-by-line test (DECIDE-01 success criterion #1) covers both `voluntary_cancel_forfeits_accumulated` branches with distinguishable traces
-- [ ] Each of SAFE-01..10 has at least one trigger-fixture test asserting the correct ZMQ KILL-lane message (`CANCEL_ALL` or `EMERGENCY_CLOSE`) is published
+- [ ] Each of SAFE-01..10 has at least one trigger-fixture test asserting the correct ZMQ KILL-lane message (`CANCEL_ALL` or `EMERGENCY_CLOSE`) is published (covered by `test_breaker_coordinator_publishes_kill_lane_per_safe.py` parametrized test in plan 04-06 Task 6)
 - [ ] `test_breaker_coordinator_exclusive.py` proves no other component can submit orders while any breaker is tripped (success criterion #3)
 - [ ] `scripts/no_hardcoded_cancel_cost_lint.py` AND `scripts/no_threshold_dials_lint.py` are wired into the test suite (DECIDE-03 success criterion #4 + DECIDE-04 enforcement)
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [ ] `nyquist_compliant: true` set in frontmatter (flipped by plan 04-06 Task 5 ship-gate)
+- [ ] `wave_0_complete: true` set in frontmatter (flipped by plan 04-06 Task 5 ship-gate)
 
 **Approval:** pending
