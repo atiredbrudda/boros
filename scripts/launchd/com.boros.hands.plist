@@ -9,11 +9,11 @@
     <key>ProgramArguments</key>
     <array>
         <string>/bin/bash</string>
-        <string>/Users/macbookair/Documents/project/test/rerun7/boros/scripts/boros-hands-wrapper.sh</string>
+        <string>/Users/macbookair/boros/scripts/boros-hands-wrapper.sh</string>
     </array>
 
     <key>WorkingDirectory</key>
-    <string>/Users/macbookair/Documents/project/test/rerun7/boros</string>
+    <string>/Users/macbookair/boros</string>
 
     <key>RunAtLoad</key>
     <true/>
@@ -31,10 +31,10 @@
 
     <!-- Capture stdout/stderr; anything escaping pino lands here -->
     <key>StandardOutPath</key>
-    <string>/Users/macbookair/Documents/project/test/rerun7/boros/var/logs/supervisor/hands.stdout.log</string>
+    <string>/Users/macbookair/boros/var/logs/supervisor/hands.stdout.log</string>
 
     <key>StandardErrorPath</key>
-    <string>/Users/macbookair/Documents/project/test/rerun7/boros/var/logs/supervisor/hands.stderr.log</string>
+    <string>/Users/macbookair/boros/var/logs/supervisor/hands.stderr.log</string>
 
     <!-- Environment: minimal; secrets resolved by wrapper via Keychain -->
     <key>EnvironmentVariables</key>

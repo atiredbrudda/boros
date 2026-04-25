@@ -10,7 +10,7 @@
     <array>
         <string>/opt/homebrew/bin/bash</string>
         <string>-c</string>
-        <string>cd /Users/macbookair/Documents/project/test/rerun7/boros &amp;&amp; /Users/macbookair/.local/bin/uv run python -m boros_brain.screener.rescreen</string>
+        <string>cd /Users/macbookair/boros &amp;&amp; /Users/macbookair/boros/python/.venv/bin/python -m boros_brain.screener.rescreen</string>
     </array>
 
     <!-- Run daily at 03:00 UTC (TZ=UTC via EnvironmentVariables) -->
@@ -37,9 +37,9 @@
     <false/>
 
     <key>StandardOutPath</key>
-    <string>/Users/macbookair/Documents/project/test/rerun7/boros/logs/supervisor/com.boros.rescreen.out</string>
+    <string>/Users/macbookair/boros/logs/supervisor/com.boros.rescreen.out</string>
 
     <key>StandardErrorPath</key>
-    <string>/Users/macbookair/Documents/project/test/rerun7/boros/logs/supervisor/com.boros.rescreen.err</string>
+    <string>/Users/macbookair/boros/logs/supervisor/com.boros.rescreen.err</string>
 </dict>
 </plist>
