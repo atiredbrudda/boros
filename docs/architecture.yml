@@ -48,13 +48,13 @@ nodes:
     type: module
     process: brain
     path: python/src/boros_brain/state/writers/open_orders.py
-    public_functions: [insert_open_order, update_open_order_status]
+    public_functions: [insert_open_order, update_open_order_status, read_open_orders_for_market]
 
   - id: brain.state.writers.decisions
     type: module
     process: brain
     path: python/src/boros_brain/state/writers/decisions.py
-    public_functions: [insert_decision]
+    public_functions: [insert_decision, read_last_r_me_pendle]
 
   - id: brain.state.writers.tx_receipts
     type: module
@@ -628,7 +628,7 @@ nodes:
     type: module
     process: brain
     path: python/src/boros_brain/screener/economics_gate.py
-    public_functions: [compute_r_apr_on_collateral_pendle, run_economics_gate]
+    public_functions: [compute_r_apr_on_collateral_pendle, run_economics_gate, run_screener]
 
   - id: brain.screener.kill_report
     type: module
@@ -957,12 +957,12 @@ nodes:
     type: module
     process: brain
     path: python/src/boros_brain/state/writers/competition_history.py
-    public_functions: [insert_competition_row, get_latest_competition]
+    public_functions: [insert_competition_row, get_latest_competition, read_competition_history_since]
   - id: brain.state.writers.market_reward_calibration
     type: module
     process: brain
     path: python/src/boros_brain/state/writers/market_reward_calibration.py
-    public_functions: [insert_market_reward_calibration, get_latest_market_reward_calibration]
+    public_functions: [insert_market_reward_calibration, get_latest_market_reward_calibration, read_market_reward_calibration_history]
 
   # ── Phase 3: SQLite + parquet storage nodes ────────────────────────────────
   - id: state.loss_grid_artifacts
@@ -1334,13 +1334,62 @@ nodes:
     type: module
     process: brain
     path: python/src/boros_brain/decision/gas_history.py
-    public_functions: [GasHistoryCache]
+    public_functions: []
 
   - id: external.arbitrum.fee_history
     type: external_api
     process: external
     path: AsyncWeb3.eth.fee_history (JSON-RPC eth_feeHistory)
     public_functions: []
+
+  # ── Phase 4 Wave 2C + Wave 3 nodes — Plans 04-05, 04-06 ─────────────────
+  - id: brain.data.underlying_apr_reader
+    type: module
+    process: brain
+    path: python/src/boros_brain/data/underlying_apr_reader.py
+    public_functions: [read_underlying_apr_max_ts]
+
+  - id: brain.decision.breakers.competition
+    type: module
+    process: brain
+    path: python/src/boros_brain/decision/breakers/competition.py
+    public_functions: []
+
+  - id: brain.decision.breakers.maturity
+    type: module
+    process: brain
+    path: python/src/boros_brain/decision/breakers/maturity.py
+    public_functions: []
+
+  - id: brain.decision.breakers.side_budget
+    type: module
+    process: brain
+    path: python/src/boros_brain/decision/breakers/side_budget.py
+    public_functions: []
+
+  - id: brain.decision.breakers.underlying_stale
+    type: module
+    process: brain
+    path: python/src/boros_brain/decision/breakers/underlying_stale.py
+    public_functions: []
+
+  - id: brain.decision.breaker_coordinator
+    type: module
+    process: brain
+    path: python/src/boros_brain/decision/breaker_coordinator.py
+    public_functions: []
+
+  - id: brain.decision.predeploy_gate
+    type: module
+    process: brain
+    path: python/src/boros_brain/decision/predeploy_gate.py
+    public_functions: [run_predeploy_gate]
+
+  - id: brain.decision.cli
+    type: module
+    process: brain
+    path: python/src/boros_brain/decision/cli.py
+    public_functions: [build_parser, main]
 
 edges:
   # ── brain internal wiring ──────────────────────────────────────────────
