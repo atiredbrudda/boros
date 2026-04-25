@@ -582,6 +582,33 @@ flowchart LR
 Phase 4 Wave 2 (engine + breakers) and Wave 3 (coordinator + main.py wiring)
 extend this in plans 04-03..04-06 [[ev-cancel-rule]] [[circuit-breakers-v05]].
 
+## Phase 4 Wave 2 Plan B — Six Predictive Circuit Breakers (Plan 04-04)
+
+Plan 04-04 lands SAFE-01..05 + B5 absorbed (six breaker modules) under
+`decision/breakers/`. Each subclasses the Breaker ABC from Plan 04-02 and
+returns `BreakerSignal`. Architecture edges for all 10 breakers are registered
+atomically in the plan 04-06 delta task to avoid Wave-2 merge conflicts.
+
+```mermaid
+flowchart LR
+  subgraph p4w2b[Plan 04-04 breakers]
+    mt[MarginTrajectoryBreaker<br/>SAFE-01 EMERGENCY_CLOSE]
+    os[OracleStaleBreaker<br/>SAFE-02 CANCEL_ALL]
+    cr[CloRemovalBreaker<br/>SAFE-03 CANCEL_ALL_AND_ALERT]
+    cs[CloShiftBreaker<br/>SAFE-04 CANCEL_ALL_AND_RECALIBRATE]
+    fr[FillRateBreaker<br/>SAFE-05 PAUSE_AND_ALERT]
+    lf[LossFitDegradedBreaker<br/>B5 SHRINK_TO_Q_MIN]
+  end
+  s_margin[(state.margin_history)] --> mt
+  findex((fIndexOracle RPC)) --> os
+  s_clo[(state.clo_history)] --> cr
+  s_clo --> cs
+  s_tx[(state.tx_receipts)] --> fr
+  s_loss[(state.loss_grid_artifacts)] --> lf
+```
+
+See [[circuit-breakers-v05]] and [[breaker-margin-trajectory]] for specs.
+
 ## Related protocols
 
 - Engineering Protocol #1 — LLM Wiki. Every research / decision / postmortem

@@ -60,7 +60,7 @@ nodes:
     type: module
     process: brain
     path: python/src/boros_brain/state/writers/tx_receipts.py
-    public_functions: [insert_tx_receipt]
+    public_functions: [insert_tx_receipt, read_tx_receipts_fill_count]
 
   - id: brain.state.writers.queue_positions
     type: module
@@ -84,7 +84,7 @@ nodes:
     type: module
     process: brain
     path: python/src/boros_brain/state/writers/clo_history.py
-    public_functions: [insert_clo_snapshot, insert_clo_history]
+    public_functions: [insert_clo_snapshot, insert_clo_history, read_latest_clo_history, read_clo_history_latest_n]
 
   - id: brain.state.writers.reward_budget_history
     type: module
@@ -1134,6 +1134,45 @@ nodes:
     type: module
     process: brain
     path: python/src/boros_brain/decision/breakers/base.py
+    public_functions: []
+
+  # ── Breaker modules — Plan 04-04 (Wave 2, Plan B) ─────────────────────────
+  # public_functions: [] because each module exports a class (ClassDef), not a
+  # top-level function. The architecture_lint only tracks FunctionDef/AsyncFunctionDef.
+  - id: brain.decision.breakers.margin_trajectory
+    type: module
+    process: brain
+    path: python/src/boros_brain/decision/breakers/margin_trajectory.py
+    public_functions: []
+
+  - id: brain.decision.breakers.oracle_stale
+    type: module
+    process: brain
+    path: python/src/boros_brain/decision/breakers/oracle_stale.py
+    public_functions: []
+
+  - id: brain.decision.breakers.clo_removal
+    type: module
+    process: brain
+    path: python/src/boros_brain/decision/breakers/clo_removal.py
+    public_functions: []
+
+  - id: brain.decision.breakers.clo_shift
+    type: module
+    process: brain
+    path: python/src/boros_brain/decision/breakers/clo_shift.py
+    public_functions: []
+
+  - id: brain.decision.breakers.fill_rate
+    type: module
+    process: brain
+    path: python/src/boros_brain/decision/breakers/fill_rate.py
+    public_functions: []
+
+  - id: brain.decision.breakers.loss_fit_degraded
+    type: module
+    process: brain
+    path: python/src/boros_brain/decision/breakers/loss_fit_degraded.py
     public_functions: []
 
   - id: brain.state.writers.margin_history
