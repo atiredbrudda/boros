@@ -212,3 +212,17 @@ def run_economics_gate(
         markets_evaluated=len(rows),
     )
     return shortlist
+
+
+def run_screener(config: Any) -> list[str]:
+    """Config-first wrapper around run_economics_gate for Plan 04-06 predeploy_gate.
+
+    Accepts a live BotConfig and runs the economics gate using the config's
+    screener_metrics_path. Returns the shortlist of market IDs that pass.
+
+    This wrapper is the seam that the predeploy_gate CLI and tests patch so
+    unit tests can control the shortlist without touching the filesystem.
+    """
+    config_path = str(config.infra.config_path) if hasattr(config.infra, "config_path") else "strategy/v0.5-default.yaml"
+    screener_metrics_path = getattr(config.infra, "screener_metrics_path", "var/reports/screener_metrics.json")
+    return run_economics_gate(config_path, screener_metrics_path)

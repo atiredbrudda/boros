@@ -1,4 +1,4 @@
-"""A5 absorbed — predeploy_gate CLI tests (RED until 04-06 lands).
+"""A5 absorbed — predeploy_gate CLI tests (GREEN after 04-06 lands).
 
 Covers:
   - test_gate_passes_on_clean_run: shortlist contains market → exit 0, row with gate_passed=True
@@ -9,6 +9,10 @@ Covers:
 A5 = Pre-deploy gate: before going live, the screener must confirm the target market
 is still in the shortlist. If it has been screened out since last calibration,
 the bot must not place any orders.
+
+Each test injects a market into the config (default_config has markets=[]) using
+model_dump / model_validate — same _config_with_market pattern from 04-05 breaker tests.
+Tests use a tmp wiki_dir to avoid polluting the real LLM Wiki.
 """
 from __future__ import annotations
 
@@ -26,6 +30,32 @@ run_predeploy_gate = predeploy_mod.run_predeploy_gate
 MARKET_ID = "BINANCE-ETHUSDT-29MAY2026"
 
 
+_MARKET_DICT = {
+    "market_id": MARKET_ID,
+    "scale": 1.0,
+    "s": 0.01,
+    "clo_lower_thresh": 9300.0,
+    "clo_upper_thresh": 9500.0,
+    "fIndex_oracle_address": "0x0000000000000000000000000000000000000001",
+    "maturity_ts": 1_700_000_000 + 30 * 86400,
+    "underlying_exchange": "binance",
+    "underlying_symbol": "ETHUSDT",
+}
+
+
+def _config_with_market(base: BotConfig, market_id: str = MARKET_ID) -> BotConfig:
+    """Inject a MarketCalibration entry into a BotConfig copy.
+
+    Mirrors the _config_with_market helper from test_breaker_competition.py (Plan 04-05).
+    Uses model_dump(mode='json') + model_validate to satisfy extra='forbid' schema.
+    """
+    market_dict = dict(_MARKET_DICT)
+    market_dict["market_id"] = market_id
+    raw = base.model_dump(mode="json")
+    raw["markets"] = [market_dict]
+    return BotConfig.model_validate(raw)
+
+
 @pytest.mark.asyncio
 async def test_gate_passes_on_clean_run(
     tmp_path: Path,
@@ -39,13 +69,17 @@ async def test_gate_passes_on_clean_run(
     from tests.conftest import apply_migrations
 
     apply_migrations(tmp_sqlite_path)
+    config = _config_with_market(default_config)
 
     with patch(
         "boros_brain.screener.economics_gate.run_screener",
         return_value=[MARKET_ID],  # shortlist includes our market
     ):
         exit_code = run_predeploy_gate(
-            default_config, sqlite_path=tmp_sqlite_path, run_id="test-gate-001"
+            config,
+            sqlite_path=tmp_sqlite_path,
+            run_id="test-gate-001",
+            wiki_dir=tmp_path / "wiki",
         )
 
     assert exit_code == 0, f"Expected exit code 0 (gate passes), got {exit_code}"
@@ -74,13 +108,17 @@ async def test_gate_fails_when_market_dropped(
     from tests.conftest import apply_migrations
 
     apply_migrations(tmp_sqlite_path)
+    config = _config_with_market(default_config)
 
     with patch(
         "boros_brain.screener.economics_gate.run_screener",
         return_value=["BINANCE-BTCUSDT-26DEC2025"],  # different market — ours not included
     ):
         exit_code = run_predeploy_gate(
-            default_config, sqlite_path=tmp_sqlite_path, run_id="test-gate-002"
+            config,
+            sqlite_path=tmp_sqlite_path,
+            run_id="test-gate-002",
+            wiki_dir=tmp_path / "wiki",
         )
 
     assert exit_code == 1, f"Expected exit code 1 (gate fails), got {exit_code}"
@@ -109,13 +147,17 @@ async def test_gate_records_git_sha_and_config_hash(
     from tests.conftest import apply_migrations
 
     apply_migrations(tmp_sqlite_path)
+    config = _config_with_market(default_config)
 
     with patch(
         "boros_brain.screener.economics_gate.run_screener",
         return_value=[MARKET_ID],
     ):
         run_predeploy_gate(
-            default_config, sqlite_path=tmp_sqlite_path, run_id="test-gate-003"
+            config,
+            sqlite_path=tmp_sqlite_path,
+            run_id="test-gate-003",
+            wiki_dir=tmp_path / "wiki",
         )
 
     from boros_brain.state.db import open_connection
