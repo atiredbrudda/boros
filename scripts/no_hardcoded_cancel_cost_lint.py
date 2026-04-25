@@ -45,15 +45,20 @@ PROTECTED_DIRS = (
     "python/src/boros_brain/decision/",
 )
 
-# ALLOWED_FILES: initially empty.
-# Plan 04-03 adds decision/gas_history.py to this set if needed — the
-# single legit assignment is `self.last_value_pendle = float(pendle)` which
-# does NOT match the PATTERN, so the allowlist may remain empty after 04-03.
-ALLOWED_FILES: set[str] = set()
+# ALLOWED_FILES: gas_history.py is the only legitimate owner of cancel_cost.
+# It uses `self.last_value_pendle = float(pendle)` (not a literal scalar) and
+# `cancel_cost = await gas_cache.cancel_cost_pendle(...)` (await, not literal)
+# so it does NOT match the PATTERN. The allowlist is an extra safety net for
+# future refactors. Added in Plan 04-03.
+ALLOWED_FILES: set[str] = {
+    "python/src/boros_brain/decision/gas_history.py",
+}
 
-# Matches: `cancel_cost = 0.5`, `cancel_cost_pendle = 0.005`, etc.
+# Matches: `cancel_cost = 0.5`, `cancel_cost_pendle = 0.005`,
+#           `cancel_cost = 1` (integer form), etc.
 # The word boundary \b prevents matching `_cancel_cost` sub-expressions.
-PATTERN = re.compile(r"\bcancel_cost(?:_pendle)?\s*=\s*\d+\.\d+")
+# \d+\.?\d* covers both `0.5` (float) and `1` (int) literal forms.
+PATTERN = re.compile(r"\bcancel_cost(?:_pendle)?\s*=\s*\d+\.?\d*")
 
 
 def _all_protected_files() -> list[Path]:
