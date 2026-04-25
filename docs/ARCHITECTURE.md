@@ -542,6 +542,20 @@ that adds the source file:
 The sole documented exception to this rule is the bootstrap commit that first
 creates `docs/architecture.yml` itself. See `docs/override-log.md`.
 
+## Phase 4 additions (Plan 04-01 — scaffolding)
+
+Phase 4 Plan 04-01 registers two new lint scripts:
+`scripts.no_hardcoded_cancel_cost_lint` (DECIDE-03 enforcement — rejects
+literal `cancel_cost = <scalar>` assignments in `decision/`, directing all
+callers to `gas_history.GasHistoryCache`) and `scripts.no_threshold_dials_lint`
+(DECIDE-04 enforcement — rejects generic `_threshold` / `_dial` / `_cutoff`
+field names outside the `decision.breakers.*` BreakerConfig family). Both are
+skeleton-only in Plan 04-01; regex + `ALLOWED_FILES` are tightened in Plan
+04-03 once `decision/gas_history.py` and `decision/config.py` exist. The full
+Phase 4 module + storage + edge delta (decision engine, 10 breakers, coordinator,
+predeploy gate, margin_history / breaker_events / predeploy_gate_records writers)
+lands atomically in Plan 04-06 [[ev-cancel-rule]] [[circuit-breakers-v05]].
+
 ## Related protocols
 
 - Engineering Protocol #1 — LLM Wiki. Every research / decision / postmortem
