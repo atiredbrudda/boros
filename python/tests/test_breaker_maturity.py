@@ -10,6 +10,9 @@ time is less than the migration cost amortization buffer. The operator should
 roll the position to the next market before maturity causes forced settlement.
 
 migration_cost = entrance_fee_pendle + 2 × cancel_cost_pendle (cancel_cost=0 in tests)
+
+As of Plan 04-07, tests inject a _FakeGasCache returning 0.0 cancel_cost.
+The gas_cache parameter is mandatory (no None default) after this plan.
 """
 from __future__ import annotations
 
@@ -27,6 +30,19 @@ MARKET_ID = "BINANCE-ETHUSDT-29MAY2026"
 CURRENT_TS = 1_700_000_000
 ONE_HOUR_S = 3600
 THIRTY_DAYS_S = 30 * 86400
+
+
+class _FakeGasCache:
+    """Test stub for MaturityBreaker.gas_cache.
+
+    Returns 0.0 from cancel_cost_pendle unconditionally — equivalent to the
+    old `gas_cache=None` test path that was removed by Plan 04-07 to satisfy
+    the DECIDE-03 lint (no hardcoded cancel_cost literals in decision/).
+    """
+
+    async def cancel_cost_pendle(self, *, w3, config) -> float:
+        return 0.0
+
 
 # Minimal market dict for maturity breaker tests.
 _MARKET_DICT = {
@@ -69,7 +85,7 @@ async def test_fires_when_remaining_below_migration_cost(
     config_dict["execution"]["entrance_fee_pendle"] = 0.5
     config = BotConfig.model_validate(config_dict)
 
-    breaker = MaturityBreaker()
+    breaker = MaturityBreaker(gas_cache=_FakeGasCache())
     sig = await breaker.check(
         sqlite_path=tmp_sqlite_path,
         w3=None,
@@ -103,7 +119,7 @@ async def test_silent_when_remaining_above_migration_cost(
     config_dict["execution"]["entrance_fee_pendle"] = 0.5
     config = BotConfig.model_validate(config_dict)
 
-    breaker = MaturityBreaker()
+    breaker = MaturityBreaker(gas_cache=_FakeGasCache())
     sig = await breaker.check(
         sqlite_path=tmp_sqlite_path,
         w3=None,
@@ -131,7 +147,7 @@ async def test_no_decision_history_yet(
     config = _config_with_market(default_config, CURRENT_TS + THIRTY_DAYS_S)
 
     # No last_r_me_pendle injected; SQLite has no decisions rows → returns None.
-    breaker = MaturityBreaker()
+    breaker = MaturityBreaker(gas_cache=_FakeGasCache())
     sig = await breaker.check(
         sqlite_path=tmp_sqlite_path,
         w3=None,

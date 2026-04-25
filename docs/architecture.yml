@@ -2633,3 +2633,9 @@ edges:
   - {from: brain.decision.gas_history, to: config.execution.cancel_gas_units_estimate, type: depends-on-config}
   - {from: brain.decision.gas_history, to: config.pricing.eth_price_usd, type: depends-on-config}
   - {from: brain.decision.gas_history, to: config.pricing.pendle_price_usd, type: depends-on-config}
+
+  # ── Phase 4 Wave 2C breakers.maturity edge — Plan 04-07 (gap closure) ─────
+  # MaturityBreaker now requires the injected GasHistoryCache (no None default).
+  # The DECIDE-03 invariant — cancel_cost flows exclusively through GasHistoryCache —
+  # is now enforced by the production code path (no test-only fallback branch).
+  - {from: brain.decision.breakers.maturity, to: brain.decision.gas_history, type: calls, notes: "SAFE-07 migration_cost = entrance_fee_pendle + 2 × cancel_cost_pendle; cancel_cost_pendle returned by injected GasHistoryCache (Plan 04-07 made gas_cache mandatory)"}
