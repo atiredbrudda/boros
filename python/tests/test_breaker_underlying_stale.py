@@ -1,10 +1,10 @@
-"""SAFE-09 — UnderlyingStaleBreaker tests (RED until 04-05 lands).
+"""SAFE-09 — UnderlyingStaleBreaker tests.
 
 Parametrized over exchange/age/expected_cadence tuples to verify the 2× cadence
 staleness rule fires at the right boundary.
 
 Covers:
-  ("binance", 17_280, 28_800, False)  — 0.6× expected cadence → silent
+  ("binance", 17_280, 28_800, False)  — 0.60× expected cadence → silent
   ("binance", 60_000, 28_800, True)   — 2.08× expected cadence → fires
   ("hyperliquid", 121, 60, True)      — 2.02× → fires
   ("hyperliquid", 119, 60, False)     — 1.98× → silent
@@ -20,11 +20,41 @@ import pytest
 
 from boros_brain.config.schema import BotConfig
 
-# RED state guard: module lands in Plan 04-05.
+# Module lands in Plan 04-05.
 breakers_pkg = pytest.importorskip("boros_brain.decision.breakers.underlying_stale")
 UnderlyingStaleBreaker = breakers_pkg.UnderlyingStaleBreaker
 
 CURRENT_TS = 1_700_000_000
+MARKET_ID = "BINANCE-ETHUSDT-29MAY2026"
+
+# Minimal market dict — underlying_exchange and underlying_symbol are overridden per test.
+_MARKET_DICT_BASE = {
+    "market_id": MARKET_ID,
+    "scale": 1.0,
+    "s": 0.01,
+    "clo_lower_thresh": 9300.0,
+    "clo_upper_thresh": 9500.0,
+    "fIndex_oracle_address": "0x0000000000000000000000000000000000000001",
+    "maturity_ts": CURRENT_TS + 30 * 86400,
+}
+
+
+def _config_with_exchange(
+    base: BotConfig,
+    exchange: str,
+    symbol: str,
+    expected_cadence_s: int,
+) -> BotConfig:
+    """Return a patched config with the given exchange, symbol, and cadence dict."""
+    d = base.model_dump(mode="json")
+    market = dict(_MARKET_DICT_BASE)
+    market["underlying_exchange"] = exchange
+    market["underlying_symbol"] = symbol
+    d["markets"] = [market]
+    d.setdefault("decision", {}).setdefault("breakers", {}).setdefault(
+        "underlying_stale", {}
+    )["expected_cadence_s_per_exchange"] = {exchange: float(expected_cadence_s)}
+    return BotConfig.model_validate(d)
 
 
 @pytest.mark.parametrize(
@@ -57,12 +87,10 @@ async def test_underlying_stale_parametrized(
         parquet_root=tmp_path / "parquet",
     )
 
-    # Build config with expected_cadence_s_per_exchange mapped.
-    config_dict = default_config.model_dump(mode="json")
-    config_dict.setdefault("decision", {}).setdefault("breakers", {}).setdefault(
-        "underlying_stale", {}
-    )["expected_cadence_s_per_exchange"] = {exchange: expected_cadence_s}
-    patched_config = BotConfig.model_validate(config_dict)
+    patched_config = _config_with_exchange(
+        default_config, exchange=exchange, symbol="ETHUSDT",
+        expected_cadence_s=expected_cadence_s,
+    )
 
     breaker = UnderlyingStaleBreaker()
     sig = await breaker.check(
