@@ -1,4 +1,4 @@
-"""SAFE-01 — MarginTrajectoryBreaker tests (RED until 04-04 lands).
+"""SAFE-01 — MarginTrajectoryBreaker tests (turned GREEN in 04-04).
 
 Covers:
   - test_predicts_breach: downward slope → tripped=True
@@ -7,6 +7,8 @@ Covers:
 
 Pitfall #4: sign confusion — negative slope means margin is shrinking (bad),
 positive slope means margin is growing (good). Breaker must NOT fire when growing.
+
+See [[breaker-margin-trajectory]] and [[circuit-breakers-v05]] for spec.
 """
 from __future__ import annotations
 
