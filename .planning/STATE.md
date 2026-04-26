@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: milestone
-status: ready_to_plan
+status: planning
 stopped_at: Completed 05-09-PLAN.md — CLI + RUN_MANIFEST + architecture diagram — Phase 5 COMPLETE (00cac33)
-last_updated: "2026-04-26T17:32:59.221Z"
-last_activity: 2026-04-26 -- Phase --phase execution started
+last_updated: "2026-04-26T22:49:30.165Z"
+last_activity: 2026-04-26
 progress:
-  total_phases: 9
-  completed_phases: 6
-  total_plans: 37
+  total_phases: 10
+  completed_phases: 5
+  total_plans: 42
   completed_plans: 37
-  percent: 67
+  percent: 88
 ---
 
 # Project State
@@ -143,6 +143,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - BotConfig + RunManifest imported at module top of cli.py — enables mypy type-checking without type:ignore on attribute accesses
 - config.backtest.* knobs appear as depends-on-config edge targets in architecture.yml but not as explicit config_knob node declarations — architecture tests check edges, not nodes
 - Path traversal guard in emit_backtest_manifest uses CWD-relative Path(var/backtest).resolve() — tests must use same root pattern
+- [2026-04-27 05.1-W0 probe] **Boros historical-data archive layout LOCKED** ([[boros-historical-data-archive-layout]]): `https://historical-data.boros.finance/files.json` is the master manifest (JSON array of `{path, size}`, 2466 entries / ~217 KB / ~169 MB total compressed). Files served as static `${origin}/${URI-encoded-path}` GET. Folder-as-ZIP is client-side JSZip glue, NOT a server endpoint — fetcher iterates manifest + per-file GET. Order-book has BOTH `raw/` (1 file/market-month, ~400 KB compressed) and `combined_{0.0001,0.001,0.01,0.1}/` per-tick aggregations. `underlying-apr/` is FLAT (no per-month split) — one file per `Exchange-Asset` pair. ETag + Last-Modified support idempotent re-fetch. Cloudflare-fronted, HTTP/2, no auth, no observed rate-limit. Last archive update 2026-04-26 15:44 UTC.
+- [2026-04-27 05.1-W0 probe] **Market-ID format DIVERGENCE flagged**: archive uses `{N}-{EXCHANGE}-{ASSET}-{MATURITY}` (numeric on-chain ID prefix); local `clo_history.market_id` uses just `{EXCHANGE}-{ASSET}-{MATURITY}`. Same human name maps to multiple numeric IDs (re-deployments, e.g. `108-` and `109-HYPERLIQUID-BTC-29MAY2026` are distinct on-chain markets). Phase 5.1 Wave 1 must resolve via `Boros GET /markets` cross-reference and persist a `{symbol→marketId}` mapping (`var/fetcher/market_id_mapping.json`) before bulk fetch. Recommendation: backtest the highest-numeric-ID variant (most recent deployment) per human name; emit a wiki note when multiple variants exist.
+- [2026-04-27 05.1-W0 probe] **Estimated Wave 1 fetch budget**: ~70 MB compressed for 25 pre-filtered markets × 60d × 6 kinds. Trivial; fetch completes in minutes at modest bandwidth. Whole-archive fetch is bounded at ~169 MB.
 
 ### Roadmap Evolution
 
@@ -182,4 +185,4 @@ Resume file: None
 **Next action:**
 /clear then `/gsd-plan-phase 2` — Phase 02: Fill Model (NHPP v0.5)
 
-**Planned Phase:** 5 (Event-Driven Backtest (Ship-Gate)) — 9 plans — 2026-04-26T06:19:05.885Z
+**Planned Phase:** 05.1 (Ship-Gate Execution: Historical Data Fetch + Ingest + Screener + Economics Gate + Backtest Run) — 5 plans — 2026-04-26T22:49:30.154Z
