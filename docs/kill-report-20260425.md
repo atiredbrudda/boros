@@ -1,0 +1,219 @@
+# Project Halt: Economics Kill-Switch Empty Shortlist
+
+**Timestamp (UTC):** 2026-04-25T23:17:25.697045+00:00
+**Git SHA:** 829525c9222fa29abfa61e031d83f9be7ef853db
+**Run ID:** <current_run_id>
+**Decision:** HALT -- no market passes DATA-09 economics gate.
+
+## Per-Market Evaluation
+
+| market_id | R_apr_on_collateral | alt_yield_used | fill_loss_used | threshold | delta | halt_reason |
+|-----------|---------------------|----------------|----------------|-----------|-------|-------------|
+| MARKET-PASSING-DATA08 | 0.0600 | 0.0500 | 0.0200 | 0.0700 | -0.0100 | R_apr 0.0600 < threshold 0.0700 |
+
+## Knobs Snapshot (RUN_MANIFEST config tree)
+
+```json
+{
+  "mode": "paper",
+  "strategy_version": "v0.5.0",
+  "market_id": "TBD",
+  "side": "long",
+  "root_wallet_address": "0xaF3128a55fb3a1023369998B0f86490fF685e27B",
+  "agent_wallet_address": "0xcaeC51f15AD46466C95e463C89c4782bEEC7c8A4",
+  "strategy": {
+    "voluntary_cancel_forfeits_accumulated": false,
+    "target_share": 0.05
+  },
+  "execution": {
+    "cancel_latency_budget_s": 5.0,
+    "require_success_default": true,
+    "agent_wallet_gas_warn_multiples": 50,
+    "agent_wallet_gas_halt_multiples": 20,
+    "agent_wallet_gas_emergency_multiples": 5,
+    "cancel_gas_units_estimate": 200000,
+    "entrance_fee_pendle": 0.0
+  },
+  "data": {
+    "markets_poll_interval_s": 30.0,
+    "e_liq_poll_interval_s": 5.0,
+    "chain_time_cache_ttl_s": 1.0,
+    "rpc_url_arbitrum": "https://arb1.arbitrum.io/rpc",
+    "boros_rest_base": "https://api.boros.finance/open-api/v1",
+    "margin_poll_interval_s": 1.0,
+    "boros_account_id": 0
+  },
+  "infra": {
+    "sqlite_path": "state/state.sqlite",
+    "logs_dir": "logs",
+    "zmq_cmd_endpoint": "ipc:///tmp/boros.cmd",
+    "zmq_events_brain_endpoint": "ipc:///tmp/boros.events.brain",
+    "zmq_events_hands_endpoint": "ipc:///tmp/boros.events.hands",
+    "zmq_kill_endpoint": "ipc:///tmp/boros.cmd.kill",
+    "heartbeat_interval_s": 5.0,
+    "heartbeat_timeout_misses": 3,
+    "chain_drift_warn_s": 5.0,
+    "chain_drift_halt_s": 30.0
+  },
+  "screener": {
+    "min_time_to_maturity_days": 30,
+    "trades_window_days": 60,
+    "realized_vol_window_days": 14,
+    "reversal_count_window_days": 3,
+    "alt_yield": 0.05,
+    "fill_loss_coarse_bound": 0.02
+  },
+  "fill_model": {
+    "window_days": 14,
+    "bin_duration_s": 60.0,
+    "refit_cadence_s": 900.0,
+    "covariate_whitelist": [
+      "basis_spread",
+      "imbalance",
+      "sin_settlement",
+      "cos_settlement",
+      "ewma_vol"
+    ],
+    "queue_tracker_bias_mode": "pessimistic",
+    "gof_ks_pval_threshold": 0.0,
+    "gof_lr_ratio_threshold": null,
+    "fit_warn_staleness_s": 1800.0,
+    "fit_max_staleness_s": 3600.0,
+    "bracket_width_warn_multiplier": 0.5,
+    "min_events_per_param_ratio": 10
+  },
+  "loss_model": {
+    "depth_bucket_edges": [
+      0.0,
+      1.0,
+      2.0,
+      4.0,
+      8.0,
+      16.0,
+      32.0,
+      10000.0
+    ],
+    "tau_bucket_edges_days": [
+      0.0,
+      7.0,
+      14.0,
+      30.0,
+      60.0,
+      90.0,
+      180.0,
+      10000.0
+    ],
+    "min_samples_per_cell": 5,
+    "knn_k": 3,
+    "knn_max_distance": 4.0,
+    "aggregation_metric": "mean",
+    "window_days": 90,
+    "refit_cadence_s": 900.0,
+    "fit_warn_staleness_s": 1800.0,
+    "fit_max_staleness_s": 86400.0,
+    "close_latency_budget_s": 60.0,
+    "fees": {
+      "taker_fee_rate": 0.0005,
+      "settlement_fee_rate": 0.001,
+      "settlement_period_s": 28800,
+      "market_entrance_fee_usd": 1.0,
+      "gas_place_gwei": 200000,
+      "gas_cancel_gwei": 100000,
+      "gas_close_gwei": 300000,
+      "gas_price_gwei": 0.1
+    }
+  },
+  "reward_share_model": {
+    "competition_poll_interval_s": 5.0,
+    "sigma_others_min_pendle": 1e-06,
+    "epoch_days": 7.0,
+    "cap_apr_multiple": 10.0,
+    "fallback_to_parquet_after_rest_fails_n": 5
+  },
+  "pricing": {
+    "pendle_price_usd": 7.0,
+    "price_source": "manual",
+    "price_staleness_warn_s": 86400.0,
+    "price_staleness_halt_s": 604800.0,
+    "eth_price_usd": 3000.0,
+    "eth_price_usd_calibrated_at_utc": "2026-04-25T00:00:00Z"
+  },
+  "sizer": {
+    "collateral_usd": 100.0,
+    "q_min_pendle": 0.001,
+    "q_max_safety_margin": 0.9,
+    "optimizer_grid_points": 50,
+    "optimizer_method": "grid_plus_scipy",
+    "notional_per_yu_usd": 90000.0
+  },
+  "decision": {
+    "cancel_cost_ewma_alpha": 0.1,
+    "cancel_cost_ttl_s": 60.0,
+    "cancel_cost_block_window": 100,
+    "p_purge_default": 0.0,
+    "decision_loop_interval_s": 1.0,
+    "breakers": {
+      "margin": {
+        "window_s": 30.0,
+        "min_samples": 10,
+        "time_to_mm_threshold_s": 300.0,
+        "min_re_arm_s": 60.0
+      },
+      "oracle_stale": {
+        "fraction_of_max": 0.7,
+        "min_re_arm_s": 60.0
+      },
+      "clo_removal": {
+        "min_re_arm_s": 60.0
+      },
+      "clo_shift": {
+        "n_ticks": 5,
+        "min_re_arm_s": 60.0
+      },
+      "fill_rate": {
+        "k_fills_per_hour": 3,
+        "min_re_arm_s": 600.0
+      },
+      "competition": {
+        "drop_threshold": 0.5,
+        "min_re_arm_s": 60.0
+      },
+      "maturity": {
+        "migration_cost_buffer_pct": 1.0,
+        "min_re_arm_s": 60.0
+      },
+      "side_budget": {
+        "drift_threshold": 0.3,
+        "min_re_arm_s": 60.0
+      },
+      "underlying_stale": {
+        "expected_cadence_s_per_exchange": {
+          "binance": 28800.0,
+          "okx": 3600.0,
+          "hyperliquid": 60.0
+        },
+        "min_re_arm_s": 60.0
+      },
+      "loss_fit_degraded": {
+        "min_re_arm_s": 60.0
+      }
+    }
+  },
+  "markets": []
+}
+```
+
+## Halt Semantics
+
+- `drop(market) iff R_apr_on_collateral < alt_yield + fill_loss_coarse_bound` -> threshold = 0.0700
+- delta < 0 for EVERY shortlist candidate -> shortlist empty -> project halts.
+- No downstream phase (2+) work is started until a market passes.
+
+## Possible Remediations
+
+1. Wait for new markets (DATA-10 daily re-screen will detect new-entrants; this report reruns).
+2. Re-verify `alt_yield` against current Arbitrum stablecoin market (may have shifted).
+3. Re-verify `fill_loss_coarse_bound` against current CLO-edge fill rates (A1 -- Phase 3 refines).
+4. Escalate to PROJECT.md review: is the thesis still viable?
+
+Filed to wiki: [[Economics kill-switch v0.5]]

@@ -20,6 +20,19 @@ logs/
 data/raw/
 data/parquet/*.parquet
 data/parquet/**/*.parquet
+# Per-tier runtime dirs (var/ for reports, python/{state,data,var,docs} for brain runtime)
+# python/docs/ holds runtime-generated kill-reports — canonical reports live at docs/.
+var/
+python/state/
+python/data/
+python/var/
+python/docs/
+
+# Stale wiki skeleton (canonical wiki lives at /Users/macbookair/Documents/project/test/rerun7/LLM Wiki/workspaces/boros/)
+LLM Wiki/
+
+# Local Claude Code state (worktrees, agent caches)
+.claude/
 
 # Secrets
 .env
