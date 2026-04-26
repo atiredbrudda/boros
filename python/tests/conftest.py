@@ -377,3 +377,111 @@ def seed_underlying_apr_parquet(tmp_path: Path) -> Callable:
         return root
 
     return _seed
+
+
+@pytest.fixture
+def seed_market_trades_parquet(tmp_path: Path) -> Callable:
+    """Fixture-factory for market_trades parquet snapshots (BACK-01 testbench).
+
+    Schema matches what fill_model/queue_tracker.py:100-125 expects.
+    """
+
+    def _seed(
+        market_id: str = "BINANCE-ETHUSDT-29MAY2026",
+        with_ties: bool = False,
+        parquet_root: Path | None = None,
+    ) -> Path:
+        import polars as pl
+
+        root = parquet_root if parquet_root is not None else tmp_path / "parquet"
+        out_dir = root / "market_trades" / f"market_id={market_id}"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        out_file = out_dir / "snapshot.parquet"
+
+        if with_ties:
+            ts = [1_700_000_000, 1_700_000_000, 1_700_000_001, 1_700_000_001, 1_700_000_002]
+            ei = [0, 1, 0, 1, 0]
+        else:
+            ts = [1_700_000_000 + i for i in range(5)]
+            ei = [0] * 5
+        pl.DataFrame({
+            "market_id": [market_id] * 5,
+            "blockTimestamp": ts,
+            "eventIndex": ei,
+            "rate": [0.05] * 5,
+            "size_wei": [10**18] * 5,
+            "side": ["buy"] * 5,
+        }).write_parquet(out_file)
+        return root
+
+    return _seed
+
+
+@pytest.fixture
+def seed_order_book_raw_parquet(tmp_path: Path) -> Callable:
+    """Fixture-factory for order_book_raw parquet snapshots (BACK-01 testbench)."""
+
+    def _seed(
+        market_id: str = "BINANCE-ETHUSDT-29MAY2026",
+        snapshot_ts: int = 1_700_000_000,
+        ticks_with_sizes: dict[int, int] | None = None,
+        parquet_root: Path | None = None,
+    ) -> Path:
+        import polars as pl
+
+        root = parquet_root if parquet_root is not None else tmp_path / "parquet"
+        out_dir = root / "order_book_raw" / f"market_id={market_id}"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        out_file = out_dir / f"snapshot_{snapshot_ts}.parquet"
+
+        if ticks_with_sizes is None:
+            ticks_with_sizes = {0: 10**18, 1: 2 * 10**18, 2: 3 * 10**18}
+        ticks = sorted(ticks_with_sizes.keys())
+        sizes = [ticks_with_sizes[t] for t in ticks]
+        n = len(ticks)
+        pl.DataFrame({
+            "market_id": [market_id] * n,
+            "snapshot_ts": [snapshot_ts] * n,
+            "t": ticks,
+            "sz": sizes,
+        }).write_parquet(out_file)
+        return root
+
+    return _seed
+
+
+@pytest.fixture
+def seed_order_book_combined_parquet(tmp_path: Path) -> Callable:
+    """Fixture-factory for order_book_combined parquet snapshots (BACK-01 testbench).
+
+    Combined sizes per tick MUST be >= raw sizes per tick (AMM share non-negative invariant).
+    Test authors are responsible for seeding raw + combined consistently.
+    """
+
+    def _seed(
+        market_id: str = "BINANCE-ETHUSDT-29MAY2026",
+        snapshot_ts: int = 1_700_000_000,
+        combined_sizes: dict[int, int] | None = None,
+        parquet_root: Path | None = None,
+    ) -> Path:
+        import polars as pl
+
+        root = parquet_root if parquet_root is not None else tmp_path / "parquet"
+        out_dir = root / "order_book_combined" / f"market_id={market_id}"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        out_file = out_dir / f"snapshot_{snapshot_ts}.parquet"
+
+        if combined_sizes is None:
+            combined_sizes = {0: 15 * 10**17, 1: 25 * 10**17, 2: 35 * 10**17}
+        ticks = sorted(combined_sizes.keys())
+        sizes = [combined_sizes[t] for t in ticks]
+        n = len(ticks)
+        pl.DataFrame({
+            "market_id": [market_id] * n,
+            "snapshot_ts": [snapshot_ts] * n,
+            "t": ticks,
+            "sz": sizes,
+        }).write_parquet(out_file)
+        return root
+
+    return _seed
