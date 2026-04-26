@@ -184,6 +184,7 @@ def _dispatch_plot(args: argparse.Namespace, config: BotConfig, manifest: RunMan
     import polars as pl
 
     from .report import plot_calibration
+    from .schemas import BacktestRunOutput
 
     log = structlog.get_logger("backtest.cli")
     parquet_root = Path(config.backtest.output_parquet_root)
@@ -197,7 +198,7 @@ def _dispatch_plot(args: argparse.Namespace, config: BotConfig, manifest: RunMan
     rows_glob = parquet_root / f"run_id={args.run_id}" / "**" / "*.parquet"
     log.info("backtest.plot.load_rows", glob=str(rows_glob))
     df = pl.read_parquet(str(rows_glob))
-    rows = df.to_dicts()
+    rows: list[BacktestRunOutput] = [BacktestRunOutput.model_validate(r) for r in df.to_dicts()]
     plots_dir = Path("var/backtest") / args.run_id / "plots"
     plot_calibration(rows, out_path=plots_dir / "calibration.png")
     # dP&L/dL and dP&L/dQ slope tuples are reconstructed from sweep_axis-filtered rows
