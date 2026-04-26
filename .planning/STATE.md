@@ -144,6 +144,10 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - config.backtest.* knobs appear as depends-on-config edge targets in architecture.yml but not as explicit config_knob node declarations — architecture tests check edges, not nodes
 - Path traversal guard in emit_backtest_manifest uses CWD-relative Path(var/backtest).resolve() — tests must use same root pattern
 
+### Roadmap Evolution
+
+- Phase 05.1 inserted after Phase 5: Ship-Gate Execution — Historical Data Fetch + Ingest + Screener + Economics Gate + Backtest Run (URGENT — Phase 5 engineering verified green but ship-gate decision never run on real ingested data; only synthetic tests + 41-row UAT clo_history snapshot exist; historical NDJSON fetcher missing from codebase. Source identified: `https://historical-data.boros.finance` (public ZIP/NDJSON, no auth, updated every 2-3 days). Local alembic head = 0002, behind Phase-4's 0007.)
+
 ### Pending Todos
 
 None yet.

@@ -190,6 +190,37 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: TBD
 **UI hint**: yes
 
+### Phase 05.1: Ship-Gate Execution: Historical Data Fetch + Ingest + Screener + Economics Gate + Backtest Run (INSERTED)
+
+**Goal:** Run the Phase-5 backtest engine end-to-end against real Boros historical data and produce a binding ship-gate verdict (PASS → Phase 6 unblocked; FAIL → real kill report + project halt). Phase 5 verified the engine is correct on synthetic tests; Phase 5.1 verifies the *strategy* by feeding real data through it. Bridges the gap that Phase 1 left open — only a 41-row `clo_history` UAT snapshot and a single `BINANCE-ETHUSDT-29MAY2026` fill-model artifact exist on disk; no `market-trades/`, no `order-book/`, no `underlying-apr/`, no operator-calibrated `market_reward_calibration` rows, alembic head still at `0002` (behind Phase-4's `0007`). Source identified: `https://historical-data.boros.finance` (public ZIP/NDJSON dumps, no auth, layout matches the Phase-1 ingester 1:1).
+
+**Depends on:** Phase 5
+
+**Requirements**: BACK-07 (operationalize bootstrap ship-gate against real data), DATA-08 (run screener on real ingested tape), DATA-09 (run economics kill-switch — empty shortlist halts project), DATA-10 (record re-screen baseline). Cross-cutting: PROTO-01..05 apply (RUN_MANIFEST per run, architecture.yml updates, wiki cite + supersedence on every finding).
+
+**Scope**:
+  - **Schema reconciliation**: `cd python && uv run alembic upgrade head` — bring local SQLite from `0002` → `0007`. Verify `market_reward_calibration` table exists post-upgrade.
+  - **Historical-data fetcher** (~50–100 LOC, new): `scripts/fetch_historical_data.py` — pull ZIP archives from `https://historical-data.boros.finance` per `{kind, market, YYYY-MM}`, unzip into `data/ndjson/{kind}/{market}/{YYYY-MM}.ndjson` (or matching layout the ingester expects). Operator-overridable URL pattern + checksum/size telemetry. Reconnaissance step: 5-min HTTP probe to determine exact URL template (directory listing JSON vs presigned ZIP per folder vs static file tree). Document findings in a wiki page.
+  - **Bulk ingest**: for each market in the 29-market `clo_history` set with non-zero `cloLowerThresh`/`cloUpperThresh`, fetch + ingest 60d trade tape + matching order-book raw + `combined_{tickSize}/` snapshots + underlying-apr (Binance/OKX/HyperLiquid funding history for the appropriate exchange) + settlement + market-data via `python -m boros_brain.data.ingester.cli`. Validate AMM conservation per DATA-05 (B3 pitfall).
+  - **Screener run**: `python -m boros_brain.screener` against the ingested tape → produces real `var/reports/shortlist.json` (current placeholder is `{"markets":["MKT"]}`). Persist screener inputs + outputs with `RUN_MANIFEST`.
+  - **Economics gate**: `python -m boros_brain.screener.economics_gate` — drops markets where `R_apr_on_collateral < alt_yield + estimated_fill_loss_rate`. **Empty shortlist = real kill report at `docs/kill-report-<ULID>.md` with concrete numbers and project halt.** Distinct from the existing test-residue `docs/kill-report-20260426.md` (which uses fixture market `MARKET-PASSING-DATA08`).
+  - **Reward-budget operator calibration**: `python -m boros_brain.reward_model calibrate` for each shortlist market — writes `market_reward_calibration` rows with `data_source='operator'` per Phase 3 LOCKED D-01. Backtest reads these (NOT `reward_budget_history`).
+  - **Fill-model calibration**: run Phase 2 fill-model fits on shortlist markets so `data/parquet/fill_model_artifacts/` covers each rather than just ETHUSDT-29MAY2026.
+  - **Backtest CLI run**: `python -m boros_brain.backtest` end-to-end → emits `RUN_MANIFEST`, runs replay → cancel-latency sweep → competition sweep → forfeit-branch sanity row → bootstrap ship-gate → perturbation grid → 2D contour. Writes `ship_gate_verdict.json` + `ship_gate_report.md` + Hive-partitioned result parquets.
+  - **Verdict + wiki + supersedence**: regardless of PASS/FAIL, file the verdict as a wiki page with `Status: Current` (PASS) or `Status: Current — Phase 5 ship-gate FAIL, project halted YYYY-MM-DD` (FAIL). On PASS, supersede the test-residue `docs/kill-report-20260426.md` (or delete it, since it never represented a real halt).
+  - Engineering Protocols 1/2/3 apply: every fetch/ingest/screen/calibrate/backtest run emits RUN_MANIFEST; `docs/architecture.yml` updated with `HistoricalDataFetcher` node; every finding (URL pattern, per-market screener pass/fail rationale, calibration values) gets a wiki page.
+
+**Success Criteria** (what must be TRUE):
+  1. Local SQLite alembic head is `0007`; `market_reward_calibration` table exists; downstream tools no longer crash on missing-table.
+  2. `data/ndjson/` contains a real 60d window of trade tape + order-book + underlying-apr for at least every screener-eligible market (non-zero CLO bounds, ≥30d to maturity); `data/parquet/` mirrors after ingest with AMM conservation passing on every snapshot.
+  3. `var/reports/shortlist.json` contains a real list of 0–4 markets that passed DATA-08 + DATA-09 (replacing the `["MKT"]` placeholder), and either: (a) shortlist is non-empty AND backtest produces a `ship_gate_verdict.json` with PASS/FAIL set, OR (b) shortlist is empty AND a real kill report is filed at `docs/kill-report-<ULID>.md` with per-market R_apr numbers + halt rationale; project state moves to halted.
+  4. On PASS: backtest results parquets exist under `data/parquet/backtest_results/` per Phase 5 BACK-05 spec; `ship_gate_report.md` is filed and wiki-cited; perturbation grid + 2D contour outputs are present; the verdict is the wiki-recorded artifact that gates Phase 6.
+  5. On FAIL: kill report names which markets failed, by how much (`R_apr − threshold`), and what would need to change for the strategy to be viable; `STATE.md` reflects project halt; no Phase 6 work begins.
+  6. `docs/architecture.yml` has the `HistoricalDataFetcher` node + edges; pre-commit `architecture_lint.py` exits 0; full pytest suite remains green (412 passed baseline from Phase 5 verification).
+
+**Plans**: TBD (run `/gsd-plan-phase 05.1` to break down)
+**UI hint**: no
+
 ### Phase 6: Execution Layer (TypeScript hands)
 **Goal**: Build the TypeScript `hands` process that owns the hot path (WS fill → pre-signed cancel calldata → Send Txs Bot submit with no IPC hop). This phase has the highest concentration of non-obvious engineering pitfalls (C1–C7); the nonce model must be documented in `docs/ARCHITECTURE.md` before any cancel code is written. Target software cancel latency <500ms; end-to-end budget 2–5s. Build in parallel with Phases 4–5 where possible.
 **Depends on**: Phase 4 (decision engine + breakers produce commands it must execute; Phase 5 can run in parallel)
