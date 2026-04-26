@@ -179,12 +179,14 @@ Decimal phases appear between their surrounding integers in numeric order.
   - 2D sensitivity contour on two most-uncertain knobs reported in ship-gate report.
   - Nautilus-adapter vs hand-rolled ~1500 LoC bailout decision made day-1 of Phase 5; no pre-phase research needed, but the decision is explicit and wiki-filed.
   - Engineering Protocols 1/2/3 apply: cite `[[Architecture overview v0.5]]`; update `architecture.yml` with `BacktestEngine` node; every backtest run emits RUN_MANIFEST.
+  - **Wave-0 prerequisite — test-infra cleanup (carried from Phase 4):** Fix the pre-existing ZMQ ipc-fixture leak that causes `tests/test_breaker_coordinator_publishes_kill_lane_per_safe.py::test_coordinator_publishes_kill_lane_per_safe[*]` to deadlock when run in the full 323-test collection (passes in Phase-4 subset run; hangs when ordered alongside other ZMQ tests). Concrete tasks: (a) add `pytest-timeout` dev-dep + `[tool.pytest.ini_options].timeout = 30` so future hangs fail fast; (b) diagnose the `ipc_dir` fixture or `zmq.asyncio.Context.instance()` singleton leak across parametrize params; (c) full pytest -q must produce 323/323 green before any BACK-* deliverable ships. Forcing function: BACK-07 ship-gate explicitly requires full-suite green.
 **Success Criteria** (what must be TRUE):
   1. The replay engine processes the candidate market's full trade tape in `eventIndex` order with no out-of-order events, maintains AMM conservation on every snapshot, and produces a P&L number that is reproducible bit-for-bit across reruns with the same `RUN_MANIFEST`.
   2. The `dP&L/dL` cancel-latency sweep and `dP&L/dQ_competing` competition sweep both produce monotonic-in-expected-direction curves (or an explicit anomaly report if they don't), and a calibration plot shows predicted vs realized `P(fill)` within the documented tolerance.
   3. The bootstrap ship-gate evaluates: 5th-percentile annualized P&L from N resamples `>` `alternative_yield + all_fees` (pass → proceed to Phase 6+7) OR `≤` that threshold (fail → strategy kill, project halts with written report).
   4. The voluntary-cancel sensitivity row is produced as a sanity check; P0-01 is resolved (benign branch, flag = `False`), so Phase 7 paper is no longer gated on this. Material divergence between branches, if observed, is logged as a follow-up trigger for opportunistic contract verification — not a blocker.
   5. The perturbation grid report identifies any knob whose ±20% perturbation flips the sign of the ship-gate decision — such knobs are flagged as fragility concerns in the phase-transition note.
+  6. `cd python && uv run pytest -q` produces a single deterministic green-run on the full 323-test collection (no `--ignore` exclusions) — i.e. the Phase-4 carried `test_breaker_coordinator_publishes_kill_lane_per_safe[*]` ZMQ ipc-fixture hang is fixed; `pytest-timeout` is wired so future hangs fail fast rather than block the suite.
 **Plans**: TBD
 **UI hint**: yes
 
