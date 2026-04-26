@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: milestone
 status: executing
-stopped_at: Completed 05-05-PLAN.md — BACK-05 output writer + plot generators (bc662c9)
-last_updated: "2026-04-26T16:40:48.913Z"
+stopped_at: Completed 05-06-PLAN.md — forfeit_branch sweep + BACK-06 GREEN (da2c43a)
+last_updated: "2026-04-26T16:47:53.747Z"
 last_activity: 2026-04-26 -- Phase --phase execution started
 progress:
   total_phases: 9
   completed_phases: 4
   total_plans: 37
-  completed_plans: 33
-  percent: 89
+  completed_plans: 34
+  percent: 92
 ---
 
 # Project State
@@ -30,7 +30,7 @@ Plan: 1 of --name
 Status: Executing Phase --phase
 Last activity: 2026-04-26 -- Phase --phase execution started
 
-Progress: [██████████] 100%
+Progress: [█████████░] 92%
 
 ## Performance Metrics
 
@@ -68,6 +68,7 @@ Progress: [██████████] 100%
 | Phase 01 P12 | 35 | 2 tasks | 11 files |
 | Phase 05-event-driven-backtest-ship-gate P04 | 7 | 4 tasks | 9 files |
 | Phase 05-event-driven-backtest-ship-gate P05 | 5 | 3 tasks | 5 files |
+| Phase 05-event-driven-backtest-ship-gate P06 | 4 | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -134,6 +135,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [2026-04-26 05-04] BACK-03/04 sweep dispatchers: run_cancel_latency_sweep + run_competition_sweep each produce N rows (operator-overridable grid); central-finite-difference dP&L/dL < 0 on always-fills synthetic; each child run gets fresh manifest with parent_run_id (PROTO-01 D2 guard)
 - Hive partition layout: parquet_root/run_id=<ulid>/sweep_axis=<...>/[sweep_value=<...>/]results.parquet — base axis omits sweep_value dir (BACK-05)
 - Path-traversal guard test uses white-box _ensure_under_root call — avoids OS-dependent depth counting (how many ../ escape a tmp_path)
+- P0-01 LOCKED: voluntary_cancel_forfeits_accumulated=False by default; BACK-06 sweep is a sanity check (not a blocker); forfeit_branch_load_bearing signals material divergence without auto-failing ship-gate
 
 ### Pending Todos
 
@@ -148,8 +150,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-26T16:40:48.909Z
-Stopped at: Completed 05-05-PLAN.md — BACK-05 output writer + plot generators (bc662c9)
+Last session: 2026-04-26T16:47:53.743Z
+Stopped at: Completed 05-06-PLAN.md — forfeit_branch sweep + BACK-06 GREEN (da2c43a)
 Resume file: None
 
 **Completed this session (2026-04-24 second pass):**

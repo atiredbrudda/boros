@@ -128,7 +128,8 @@ Requirements for the v0.5 release. Every requirement is testable (either automat
 **: **Competition sensitivity sweep** — backtest runs with synthetic Q_total_in_range multipliers and reports `dP&L / dQ_competing` for scaling discipline.
 - [x] **BACK-05
 **: Backtest outputs: net P&L per unit collateral annualized, Sharpe-equivalent, max drawdown, calibration plot (predicted P(fill) vs realized), dP&L/dL curve, dP&L/dQ_competing curve.
-- [ ] **BACK-06**: **Voluntary-cancel sensitivity** — backtest runs both branches of the P0-01 flag (`voluntary_cancel_forfeits_accumulated` true/false) and reports divergence as a sanity check. P0-01 is resolved (flag = `False` per 2026-04-23 Boros official statement, [[Voluntary cancel reward behavior]]); this sensitivity row no longer blocks paper trading, but material divergence would indicate the EV formula is sensitive to a still-official-only (not contract-traced) finding — flag for follow-up contract verification in that case.
+- [x] **BACK-06
+**: **Voluntary-cancel sensitivity** — backtest runs both branches of the P0-01 flag (`voluntary_cancel_forfeits_accumulated` true/false) and reports divergence as a sanity check. P0-01 is resolved (flag = `False` per 2026-04-23 Boros official statement, [[Voluntary cancel reward behavior]]); this sensitivity row no longer blocks paper trading, but material divergence would indicate the EV formula is sensitive to a still-official-only (not contract-traced) finding — flag for follow-up contract verification in that case.
 - [ ] **BACK-07**: **Bootstrap ship-gate** — Phase 7 passes only if the 5th percentile of bootstrapped annualized P&L exceeds `alternative_yield + all_fees`. Point estimate > alt yield is insufficient; we need distribution tail.
 - [ ] **BACK-08**: **Perturbation grid** — backtest runs with each knob perturbed ±20% individually; sign-flipping on any knob is a fragility flag surfaced in the ship-gate report.
 
