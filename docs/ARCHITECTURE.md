@@ -706,6 +706,29 @@ flowchart LR
 
 [[backtest-cancel-latency-sweep]] [[backtest-competition-sweep]]
 
+## Phase 5 Wave 2 — Output Schema + Parquet Writer + Plot Generators (Plan 05-05)
+
+Plan 05-05 lands BACK-05: the Hive-partitioned parquet writer and plot helpers under
+`backtest/report.py`. Plot generation is a SEPARATE subcommand (Plan 05-09); the replay
+engine has no matplotlib dependency — replay determinism is unaffected by matplotlib version
+drift. Path-traversal guard mirrors `loss_model/artifact.py:51-62`.
+
+```mermaid
+flowchart LR
+    subgraph phase5_wave2_report["Phase 5 Wave 2: Output schema + plots (Plan 05-05)"]
+        bt_report["backtest/report.py<br/>write_backtest_row, plots,<br/>write_ship_gate_verdict_json (BACK-05)"]
+    end
+
+    subgraph parquet_bt["Hive-partitioned backtest output"]
+        parquet_backtest_results["data/parquet/backtest_results/<br/>run_id=&lt;ulid&gt;/sweep_axis=&lt;...&gt;/<br/>BACK-05"]
+    end
+
+    %% Phase 5 Wave 2 report wiring (Plan 05-05)
+    bt_report -- "writes (path-traversal-guarded)" --> parquet_backtest_results
+```
+
+[[backtest-output-schema-and-parquet-partitioning]]
+
 ## Related protocols
 
 - Engineering Protocol #1 — LLM Wiki. Every research / decision / postmortem

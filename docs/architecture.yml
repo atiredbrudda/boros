@@ -1446,6 +1446,18 @@ nodes:
     path: python/src/boros_brain/backtest/sweeps/competition.py
     public_functions: [run_competition_sweep, compute_dpnl_dq]
 
+  # ── Phase 5 Wave 2 output schema + parquet writer + plots — Plan 05-05 ──
+  - id: brain.backtest.report
+    type: module
+    process: brain
+    path: python/src/boros_brain/backtest/report.py
+    public_functions: [write_backtest_row, write_ship_gate_verdict_json, write_lineage_a_b_row, plot_calibration, plot_dpnl_dl, plot_dpnl_dq]
+
+  - id: parquet.backtest_results
+    type: storage
+    path: data/parquet/backtest_results
+    notes: "Hive-partitioned by run_id / sweep_axis / sweep_value (BACK-05)"
+
 edges:
   # ── brain internal wiring ──────────────────────────────────────────────
   - from: brain
@@ -2711,3 +2723,7 @@ edges:
   - {from: brain.backtest.sweeps.competition, to: brain.backtest.replay, type: calls, notes: "ReplayEngine instantiation per multiplier value"}
   - {from: brain.backtest.sweeps.cancel_latency, to: config.backtest.cancel_latency_grid, type: depends-on-config}
   - {from: brain.backtest.sweeps.competition, to: config.backtest.competition_multipliers, type: depends-on-config}
+
+  # ── Phase 5 Wave 2 report edges — Plan 05-05 ───────────────────────────
+  - {from: brain.backtest.report, to: parquet.backtest_results, type: writes, notes: "Hive-partitioned writes via polars; path-traversal guard"}
+  - {from: brain.backtest.report, to: config.backtest.output_parquet_root, type: depends-on-config}
