@@ -733,6 +733,31 @@ flowchart LR
 
 [[backtest-output-schema-and-parquet-partitioning]]
 
+## Phase 5 Wave 3 — Bootstrap + Ship-Gate Verdict (Plan 05-07)
+
+Plan 05-07 lands BACK-07: the hard pass/fail criterion for Phase 5. Block-bootstrap
+(N=2000 resamples, block_seconds=86400) over per-day P&L, seeded deterministically from
+`RUN_MANIFEST.run_id` ULID tail bytes. 5th-percentile annualized P&L must exceed
+`screener.alt_yield + backtest.all_fees_threshold` (default 0.06 = 5% + 1%) to ship.
+Fail path writes `var/backtest/<run_id>/ship-gate-report.md` and raises `ShipGateHalt(SystemExit)`
+with exit code 1. PITFALL #6 prevention: `block_bootstrap_pnl` requires an explicit
+`np.random.Generator` — never calls top-level `numpy.random.*`.
+
+```mermaid
+flowchart LR
+    subgraph phase5_wave3_shipgate["Phase 5 Wave 3: Bootstrap + ship-gate (Plan 05-07)"]
+        bt_bootstrap["backtest/bootstrap.py<br/>seed_from_manifest, make_rng,<br/>block_bootstrap_pnl (BACK-07)"]
+        bt_ship_gate["backtest/ship_gate.py<br/>evaluate_ship_gate, ShipGateHalt,<br/>write_ship_gate_report (BACK-07)"]
+    end
+
+    %% Phase 5 Wave 3 ship-gate wiring (Plan 05-07)
+    bt_ship_gate --> bt_bootstrap
+    bt_bootstrap -- "RNG seed from run_id ULID tail" --> brain_manifest_writer
+    bt_ship_gate -- "reads alt_yield" --> screener_economics_gate
+```
+
+[[backtest-bootstrap-methodology-v05]] [[backtest-ship-gate-threshold-assembly]] [[backtest-reproducibility-rng-seed-from-manifest]]
+
 ## Related protocols
 
 - Engineering Protocol #1 — LLM Wiki. Every research / decision / postmortem

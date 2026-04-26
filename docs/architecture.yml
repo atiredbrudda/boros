@@ -1465,6 +1465,19 @@ nodes:
     path: python/src/boros_brain/backtest/sweeps/forfeit_branch.py
     public_functions: [run_forfeit_branch_sweep]
 
+  # ── Phase 5 Wave 3 bootstrap + ship-gate verdict — Plan 05-07 ──────────
+  - id: brain.backtest.bootstrap
+    type: module
+    process: brain
+    path: python/src/boros_brain/backtest/bootstrap.py
+    public_functions: [seed_from_manifest, make_rng, block_bootstrap_pnl]
+
+  - id: brain.backtest.ship_gate
+    type: module
+    process: brain
+    path: python/src/boros_brain/backtest/ship_gate.py
+    public_functions: [assemble_threshold, evaluate_ship_gate, write_ship_gate_report]
+
 edges:
   # ── brain internal wiring ──────────────────────────────────────────────
   - from: brain
@@ -2739,3 +2752,12 @@ edges:
   - {from: brain.backtest.sweeps.forfeit_branch, to: brain.backtest.replay, type: calls, notes: "ReplayEngine instantiation per voluntary_cancel_forfeits_accumulated branch"}
   - {from: brain.backtest.sweeps.forfeit_branch, to: config.backtest.budget_haircut_pessimistic, type: depends-on-config}
   - {from: brain.backtest.sweeps.forfeit_branch, to: config.strategy.voluntary_cancel_forfeits_accumulated, type: depends-on-config, notes: "P0-01 RESOLVED — flag default False; sweep tests both branches as sanity check"}
+
+  # ── Phase 5 Wave 3 bootstrap + ship-gate edges — Plan 05-07 ────────────
+  - {from: brain.backtest.bootstrap, to: brain.manifest.writer, type: depends-on, notes: "RNG seed derived from manifest.run_id ULID tail (bit-for-bit reproducibility)"}
+  - {from: brain.backtest.ship_gate, to: brain.screener.economics_gate, type: reads, notes: "alt_yield component of threshold"}
+  - {from: brain.backtest.ship_gate, to: brain.backtest.bootstrap, type: calls, notes: "evaluate_ship_gate consumes block_bootstrap_pnl distribution"}
+  - {from: brain.backtest.bootstrap, to: config.backtest.bootstrap_n_resamples, type: depends-on-config}
+  - {from: brain.backtest.bootstrap, to: config.backtest.bootstrap_block_seconds, type: depends-on-config}
+  - {from: brain.backtest.ship_gate, to: config.backtest.all_fees_threshold, type: depends-on-config}
+  - {from: brain.backtest.ship_gate, to: config.screener.alt_yield, type: depends-on-config}

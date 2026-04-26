@@ -103,4 +103,41 @@ class ReplayOutput:
     n_amm_violations: int = 0  # MUST stay 0; violations raise AMMConsumptionIdentityError
 
 
-__all__ = ["StrictBase", "BacktestRunOutput", "ReplayConfig", "ReplayOutput"]
+class ThresholdComponents(StrictBase):
+    """BACK-07 threshold breakdown — alt_yield + all_fees with components breakdown.
+
+    [[backtest-ship-gate-threshold-assembly]]
+    """
+
+    alternative_yield: float
+    all_fees: float
+    total: float
+    components: dict[str, float]
+
+
+class ShipGateVerdict(StrictBase):
+    """BACK-07 ship-gate verdict — 5th-pct vs threshold.
+
+    Persisted to ship_gate_verdict.json sidecar. Plan 05-05 write_ship_gate_verdict_json
+    consumes this shape.
+
+    [[backtest-bootstrap-methodology-v05]]
+    """
+
+    p5_annualized_pnl: float
+    threshold: float
+    passed: bool
+    n_resamples: int
+    block_seconds: int
+    seed: int
+    manifest_run_id: str
+
+
+__all__ = [
+    "StrictBase",
+    "BacktestRunOutput",
+    "ReplayConfig",
+    "ReplayOutput",
+    "ThresholdComponents",
+    "ShipGateVerdict",
+]
