@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: milestone
 status: executing
-stopped_at: Completed 05-04-PLAN.md — sweep dispatchers BACK-03/04 (698d7d4, 2b1682e)
-last_updated: "2026-04-26T16:30:48.567Z"
+stopped_at: Completed 05-05-PLAN.md — BACK-05 output writer + plot generators (bc662c9)
+last_updated: "2026-04-26T16:40:48.913Z"
 last_activity: 2026-04-26 -- Phase --phase execution started
 progress:
   total_phases: 9
   completed_phases: 4
   total_plans: 37
-  completed_plans: 32
-  percent: 86
+  completed_plans: 33
+  percent: 89
 ---
 
 # Project State
@@ -67,6 +67,7 @@ Progress: [██████████] 100%
 | Phase 01 P11 | 35 | 3 tasks | 14 files |
 | Phase 01 P12 | 35 | 2 tasks | 11 files |
 | Phase 05-event-driven-backtest-ship-gate P04 | 7 | 4 tasks | 9 files |
+| Phase 05-event-driven-backtest-ship-gate P05 | 5 | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -131,6 +132,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [2026-04-24 UAT] LLM Wiki stays at /Users/macbookair/Documents/project/test/rerun7/LLM Wiki/ — not moved. CLAUDE.md ../LLM Wiki/ references updated to absolute path to match.
 - Architecture update co-committed with Task 1/2 code (PROTOCOL 2 pre-commit enforcement): Wave 1 nodes (brain.backtest.config/schemas/synthetic_orders/cancel_latency/replay) + Wave 2 nodes (sweeps.cancel_latency, sweeps.competition) registered in docs/architecture.yml
 - [2026-04-26 05-04] BACK-03/04 sweep dispatchers: run_cancel_latency_sweep + run_competition_sweep each produce N rows (operator-overridable grid); central-finite-difference dP&L/dL < 0 on always-fills synthetic; each child run gets fresh manifest with parent_run_id (PROTO-01 D2 guard)
+- Hive partition layout: parquet_root/run_id=<ulid>/sweep_axis=<...>/[sweep_value=<...>/]results.parquet — base axis omits sweep_value dir (BACK-05)
+- Path-traversal guard test uses white-box _ensure_under_root call — avoids OS-dependent depth counting (how many ../ escape a tmp_path)
 
 ### Pending Todos
 
@@ -145,8 +148,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-26T16:30:48.563Z
-Stopped at: Completed 05-04-PLAN.md — sweep dispatchers BACK-03/04 (698d7d4, 2b1682e)
+Last session: 2026-04-26T16:40:48.909Z
+Stopped at: Completed 05-05-PLAN.md — BACK-05 output writer + plot generators (bc662c9)
 Resume file: None
 
 **Completed this session (2026-04-24 second pass):**
