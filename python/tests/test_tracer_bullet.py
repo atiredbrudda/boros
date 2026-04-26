@@ -107,30 +107,33 @@ async def test_zmq_echo_roundtrip_under_10ms(ipc_dir: Path) -> None:
     cmd_endpoint = f"ipc://{ipc_dir}/cmd"
     kill_endpoint = f"ipc://{ipc_dir}/cmd.kill"
     bus = CmdBus(cmd_endpoint=cmd_endpoint, kill_endpoint=kill_endpoint)
-    ctx = zmq.asyncio.Context.instance()
-    pull = ctx.socket(zmq.PULL)
-    pull.connect(cmd_endpoint)
-    await asyncio.sleep(0.05)
+    ctx = zmq.asyncio.Context()  # NOT Context.instance() — per-test, terminate at end
+    try:
+        pull = ctx.socket(zmq.PULL)
+        pull.connect(cmd_endpoint)
+        await asyncio.sleep(0.05)
 
-    latencies: list[float] = []
-    for i in range(30):  # tracer-bullet = smoke test; 30 iters is enough
-        msg = PlaceCmd(
-            order_id=f"t-{i}",
-            market_id="ETHUSDT-29MAY2026",
-            side="long",
-            depth_ticks=50,
-            size_wei="1",
-            rate=9400,
-            run_id="tracer",
-        )
-        t0 = time.perf_counter()
-        await bus.send_cmd(msg)
-        _ = await pull.recv_json()
-        t1 = time.perf_counter()
-        latencies.append((t1 - t0) * 1000.0)
+        latencies: list[float] = []
+        for i in range(30):  # tracer-bullet = smoke test; 30 iters is enough
+            msg = PlaceCmd(
+                order_id=f"t-{i}",
+                market_id="ETHUSDT-29MAY2026",
+                side="long",
+                depth_ticks=50,
+                size_wei="1",
+                rate=9400,
+                run_id="tracer",
+            )
+            t0 = time.perf_counter()
+            await bus.send_cmd(msg)
+            _ = await pull.recv_json()
+            t1 = time.perf_counter()
+            latencies.append((t1 - t0) * 1000.0)
 
-    median_ms = statistics.median(latencies)
-    pull.close()
+        median_ms = statistics.median(latencies)
+        pull.close()
+    finally:
+        ctx.term()
     bus.close()
     assert median_ms < 10.0, f"tracer-bullet ZMQ roundtrip median {median_ms:.2f}ms > 10ms budget"
 

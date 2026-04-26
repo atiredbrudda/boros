@@ -27,36 +27,39 @@ async def test_zmq_echo_roundtrip_under_10ms(ipc_dir: Path) -> None:
 
     bus = CmdBus(cmd_endpoint=cmd_endpoint, kill_endpoint=kill_endpoint)
 
-    # Separate asyncio context for the hands-side Pull so we don't tangle with
-    # the CmdBus's zmq.asyncio.Context.instance() singleton under test.
-    ctx = zmq.asyncio.Context.instance()
-    pull = ctx.socket(zmq.PULL)
-    pull.connect(cmd_endpoint)
-    # Small delay to let the connect settle — ZMQ is asynchronous.
-    await asyncio.sleep(0.05)
+    # Separate context for the hands-side Pull — per-test Context() avoids
+    # singleton routing-state leaks across parametrize/test-order interactions.
+    ctx = zmq.asyncio.Context()  # NOT Context.instance() — per-test, terminate at end
+    try:
+        pull = ctx.socket(zmq.PULL)
+        pull.connect(cmd_endpoint)
+        # Small delay to let the connect settle — ZMQ is asynchronous.
+        await asyncio.sleep(0.05)
 
-    latencies_ms: list[float] = []
-    N = 100
-    for i in range(N):
-        msg = PlaceCmd(
-            order_id=f"ord-{i}",
-            market_id="ETHUSDT-29MAY2026",
-            side="long",
-            depth_ticks=50,
-            size_wei="1000000000000000000",
-            rate=9400,
-            run_id="test-run",
-        )
-        t0 = time.perf_counter()
-        await bus.send_cmd(msg)
-        received = await pull.recv_json()
-        t1 = time.perf_counter()
-        assert received["order_id"] == f"ord-{i}"
-        latencies_ms.append((t1 - t0) * 1000.0)
+        latencies_ms: list[float] = []
+        N = 100
+        for i in range(N):
+            msg = PlaceCmd(
+                order_id=f"ord-{i}",
+                market_id="ETHUSDT-29MAY2026",
+                side="long",
+                depth_ticks=50,
+                size_wei="1000000000000000000",
+                rate=9400,
+                run_id="test-run",
+            )
+            t0 = time.perf_counter()
+            await bus.send_cmd(msg)
+            received = await pull.recv_json()
+            t1 = time.perf_counter()
+            assert received["order_id"] == f"ord-{i}"
+            latencies_ms.append((t1 - t0) * 1000.0)
 
-    median = statistics.median(latencies_ms)
-    p95 = statistics.quantiles(latencies_ms, n=20)[18]  # ~p95
-    pull.close()
+        median = statistics.median(latencies_ms)
+        p95 = statistics.quantiles(latencies_ms, n=20)[18]  # ~p95
+        pull.close()
+    finally:
+        ctx.term()
     bus.close()
 
     assert median < 10.0, f"median round-trip {median:.3f}ms exceeds 10ms budget (p95={p95:.3f}ms)"

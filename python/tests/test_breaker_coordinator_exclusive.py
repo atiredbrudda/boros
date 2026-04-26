@@ -83,40 +83,43 @@ async def test_kill_fires_once(
     bus = CmdBus(cmd_endpoint=cmd_endpoint, kill_endpoint=kill_endpoint)
 
     # PULL sockets connect (not bind) to avoid double-bind hang.
-    ctx = zmq.asyncio.Context.instance()
-    kill_pull = ctx.socket(zmq.PULL)
-    kill_pull.connect(kill_endpoint)
-    await asyncio.sleep(0.05)  # slow-joiner protection
+    ctx = zmq.asyncio.Context()  # NOT Context.instance() — per-test, terminate at end
+    try:
+        kill_pull = ctx.socket(zmq.PULL)
+        kill_pull.connect(kill_endpoint)
+        await asyncio.sleep(0.05)  # slow-joiner protection
 
-    coord = BreakerCoordinator(
-        cmd_bus=bus,
-        config=default_config,
-        run_id="test-coord-001",
-        gas_cache=None,
-        breakers=[_AlwaysTrippedBreaker()],
-    )
+        coord = BreakerCoordinator(
+            cmd_bus=bus,
+            config=default_config,
+            run_id="test-coord-001",
+            gas_cache=None,
+            breakers=[_AlwaysTrippedBreaker()],
+        )
 
-    # First tick — breaker tripped → expect one kill message.
-    await coord.tick(
-        sqlite_path=tmp_sqlite_path,
-        w3=None,
-        parquet_root=tmp_path,
-        current_chain_ts=BASE_TS,
-    )
-    kill_msg = await asyncio.wait_for(kill_pull.recv_json(), timeout=1.0)
-    assert kill_msg.get("kind") == "kill", f"Unexpected kill message: {kill_msg}"
+        # First tick — breaker tripped → expect one kill message.
+        await coord.tick(
+            sqlite_path=tmp_sqlite_path,
+            w3=None,
+            parquet_root=tmp_path,
+            current_chain_ts=BASE_TS,
+        )
+        kill_msg = await asyncio.wait_for(kill_pull.recv_json(), timeout=1.0)
+        assert kill_msg.get("kind") == "kill", f"Unexpected kill message: {kill_msg}"
 
-    # Second tick — still tripped, must NOT re-fire (Pitfall #6 hysteresis).
-    await coord.tick(
-        sqlite_path=tmp_sqlite_path,
-        w3=None,
-        parquet_root=tmp_path,
-        current_chain_ts=BASE_TS + 1,
-    )
-    with pytest.raises(asyncio.TimeoutError):
-        await asyncio.wait_for(kill_pull.recv_json(), timeout=0.1)
+        # Second tick — still tripped, must NOT re-fire (Pitfall #6 hysteresis).
+        await coord.tick(
+            sqlite_path=tmp_sqlite_path,
+            w3=None,
+            parquet_root=tmp_path,
+            current_chain_ts=BASE_TS + 1,
+        )
+        with pytest.raises(asyncio.TimeoutError):
+            await asyncio.wait_for(kill_pull.recv_json(), timeout=0.1)
 
-    kill_pull.close()
+        kill_pull.close()
+    finally:
+        ctx.term()
     bus.close()
 
 
@@ -137,42 +140,45 @@ async def test_suppression(
 
     bus = CmdBus(cmd_endpoint=cmd_endpoint, kill_endpoint=kill_endpoint)
 
-    ctx = zmq.asyncio.Context.instance()
-    cmd_pull = ctx.socket(zmq.PULL)
-    cmd_pull.connect(cmd_endpoint)
-    kill_pull = ctx.socket(zmq.PULL)
-    kill_pull.connect(kill_endpoint)
-    await asyncio.sleep(0.05)
+    ctx = zmq.asyncio.Context()  # NOT Context.instance() — per-test, terminate at end
+    try:
+        cmd_pull = ctx.socket(zmq.PULL)
+        cmd_pull.connect(cmd_endpoint)
+        kill_pull = ctx.socket(zmq.PULL)
+        kill_pull.connect(kill_endpoint)
+        await asyncio.sleep(0.05)
 
-    coord = BreakerCoordinator(
-        cmd_bus=bus,
-        config=default_config,
-        run_id="test-coord-002",
-        gas_cache=None,
-        breakers=[_AlwaysTrippedBreaker()],
-    )
+        coord = BreakerCoordinator(
+            cmd_bus=bus,
+            config=default_config,
+            run_id="test-coord-002",
+            gas_cache=None,
+            breakers=[_AlwaysTrippedBreaker()],
+        )
 
-    # Fire the breaker.
-    await coord.tick(
-        sqlite_path=tmp_sqlite_path,
-        w3=None,
-        parquet_root=tmp_path,
-        current_chain_ts=BASE_TS,
-    )
-    # Drain the kill message so we start fresh. Kill may not have arrived yet — OK for this test.
-    with contextlib.suppress(TimeoutError):
-        await asyncio.wait_for(kill_pull.recv_json(), timeout=0.5)
+        # Fire the breaker.
+        await coord.tick(
+            sqlite_path=tmp_sqlite_path,
+            w3=None,
+            parquet_root=tmp_path,
+            current_chain_ts=BASE_TS,
+        )
+        # Drain the kill message so we start fresh. Kill may not have arrived yet — OK for this test.
+        with contextlib.suppress(TimeoutError):
+            await asyncio.wait_for(kill_pull.recv_json(), timeout=0.5)
 
-    # Use PLACE (not HOLD) to properly test suppression of the normal cmd path.
-    fake_place_decision = type("FakeDecision", (), {"decision_kind": "PLACE"})()
-    await coord.gate([fake_place_decision], current_chain_ts=BASE_TS + 1)
+        # Use PLACE (not HOLD) to properly test suppression of the normal cmd path.
+        fake_place_decision = type("FakeDecision", (), {"decision_kind": "PLACE"})()
+        await coord.gate([fake_place_decision], current_chain_ts=BASE_TS + 1)
 
-    # No PlaceCmd should have arrived on cmd_pull (suppressed by active breaker).
-    with pytest.raises(asyncio.TimeoutError):
-        await asyncio.wait_for(cmd_pull.recv_json(), timeout=0.1)
+        # No PlaceCmd should have arrived on cmd_pull (suppressed by active breaker).
+        with pytest.raises(asyncio.TimeoutError):
+            await asyncio.wait_for(cmd_pull.recv_json(), timeout=0.1)
 
-    cmd_pull.close()
-    kill_pull.close()
+        cmd_pull.close()
+        kill_pull.close()
+    finally:
+        ctx.term()
     bus.close()
 
 
@@ -193,31 +199,37 @@ async def test_suppression_logged(
 
     bus = CmdBus(cmd_endpoint=cmd_endpoint, kill_endpoint=kill_endpoint)
 
-    ctx = zmq.asyncio.Context.instance()
-    kill_pull = ctx.socket(zmq.PULL)
-    kill_pull.connect(kill_endpoint)
-    await asyncio.sleep(0.05)
+    ctx = zmq.asyncio.Context()  # NOT Context.instance() — per-test, terminate at end
+    try:
+        kill_pull = ctx.socket(zmq.PULL)
+        kill_pull.connect(kill_endpoint)
+        await asyncio.sleep(0.05)
 
-    coord = BreakerCoordinator(
-        cmd_bus=bus,
-        config=default_config,
-        run_id="test-coord-003",
-        gas_cache=None,
-        breakers=[_AlwaysTrippedBreaker()],
-    )
+        coord = BreakerCoordinator(
+            cmd_bus=bus,
+            config=default_config,
+            run_id="test-coord-003",
+            gas_cache=None,
+            breakers=[_AlwaysTrippedBreaker()],
+        )
 
-    await coord.tick(
-        sqlite_path=tmp_sqlite_path,
-        w3=None,
-        parquet_root=tmp_path,
-        current_chain_ts=BASE_TS,
-    )
-    with contextlib.suppress(TimeoutError):
-        await asyncio.wait_for(kill_pull.recv_json(), timeout=0.5)
+        await coord.tick(
+            sqlite_path=tmp_sqlite_path,
+            w3=None,
+            parquet_root=tmp_path,
+            current_chain_ts=BASE_TS,
+        )
+        with contextlib.suppress(TimeoutError):
+            await asyncio.wait_for(kill_pull.recv_json(), timeout=0.5)
 
-    # Use PLACE (not HOLD) so the coordinator writes a suppression row.
-    fake_place = type("FakeDecision", (), {"decision_kind": "PLACE"})()
-    await coord.gate([fake_place], current_chain_ts=BASE_TS + 1)
+        # Use PLACE (not HOLD) so the coordinator writes a suppression row.
+        fake_place = type("FakeDecision", (), {"decision_kind": "PLACE"})()
+        await coord.gate([fake_place], current_chain_ts=BASE_TS + 1)
+
+        kill_pull.close()
+    finally:
+        ctx.term()
+    bus.close()
 
     # Verify suppression row exists in breaker_events.
     from boros_brain.state.db import open_connection
@@ -225,6 +237,3 @@ async def test_suppression_logged(
     with open_connection(tmp_sqlite_path) as conn:
         rows = conn.execute("SELECT kind FROM breaker_events WHERE kind = 'suppression'").fetchall()
     assert len(rows) >= 1, f"Expected at least 1 suppression row in breaker_events, got {len(rows)}"
-
-    kill_pull.close()
-    bus.close()

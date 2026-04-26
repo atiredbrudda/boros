@@ -25,7 +25,7 @@ async def test_kill_lane_preempts_cmd(ipc_dir: Path) -> None:
 
     bus = CmdBus(cmd_endpoint=cmd_endpoint, kill_endpoint=kill_endpoint)
 
-    ctx = zmq.asyncio.Context.instance()
+    ctx = zmq.asyncio.Context()  # NOT Context.instance() — per-test, terminate at end
     cmd_pull = ctx.socket(zmq.PULL)
     cmd_pull.connect(cmd_endpoint)
     kill_pull = ctx.socket(zmq.PULL)
@@ -75,6 +75,7 @@ async def test_kill_lane_preempts_cmd(ipc_dir: Path) -> None:
 
     cmd_pull.close()
     kill_pull.close()
+    ctx.term()
     bus.close()
 
     assert processed, "consumer processed no messages"

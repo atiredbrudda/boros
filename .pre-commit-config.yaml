@@ -63,6 +63,13 @@ repos:
         # Hook reads staged files via git diff --cached internally.
         # .planning/ docs are excluded at hook level (grep skips .env.vault by name).
 
+      - id: no-zmq-singleton-in-tests
+        name: ban zmq.asyncio.Context.instance() under python/tests/
+        entry: python3 scripts/no_zmq_singleton_in_tests_lint.py
+        language: system
+        pass_filenames: false
+        always_run: true
+
       - id: no_time_time_hotpath
         name: Forbid time.time() in brain/{decision,data,screener} (INFRA-14 / PITFALLS §C7)
         entry: python3 scripts/no_time_time_lint.py
