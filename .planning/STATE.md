@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: milestone
 status: executing
-stopped_at: Completed 05-09-PLAN.md — CLI + RUN_MANIFEST + architecture diagram — Phase 5 COMPLETE (00cac33)
-last_updated: "2026-04-26T23:17:42.584Z"
-last_activity: 2026-04-26 -- Phase --phase execution started
+stopped_at: Completed 05.1-01-PLAN.md — Wave 0 schema + URL probe + fetcher scaffold + architecture delta (ebe197a)
+last_updated: "2026-04-26T23:39:13.063Z"
+last_activity: 2026-04-27 -- Phase 05.1-01 Wave 0 complete
 progress:
   total_phases: 10
   completed_phases: 5
   total_plans: 42
-  completed_plans: 37
-  percent: 88
+  completed_plans: 38
+  percent: 90
 ---
 
 # Project State
@@ -72,6 +72,7 @@ Progress: [██████████] 100%
 | Phase 05-event-driven-backtest-ship-gate P06 | 4 | 3 tasks | 4 files |
 | Phase 05-event-driven-backtest-ship-gate P07 | 5 | 4 tasks | 5 files |
 | Phase 05-event-driven-backtest-ship-gate P09 | 35 | 7 tasks | 10 files |
+| Phase 05.1 P01 | 0 | 5 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -147,6 +148,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [2026-04-27 05.1-W0 probe] **Market-ID format DIVERGENCE flagged**: archive uses `{N}-{EXCHANGE}-{ASSET}-{MATURITY}` (numeric on-chain ID prefix); local `clo_history.market_id` uses just `{EXCHANGE}-{ASSET}-{MATURITY}`. Same human name maps to multiple numeric IDs (re-deployments, e.g. `108-` and `109-HYPERLIQUID-BTC-29MAY2026` are distinct on-chain markets). Phase 5.1 Wave 1 must resolve via `Boros GET /markets` cross-reference and persist a `{symbol→marketId}` mapping (`var/fetcher/market_id_mapping.json`) before bulk fetch. Recommendation: backtest the highest-numeric-ID variant (most recent deployment) per human name; emit a wiki note when multiple variants exist.
 - [2026-04-27 05.1-W0 probe] **Estimated Wave 1 fetch budget**: ~70 MB compressed for 25 pre-filtered markets × 60d × 6 kinds. Trivial; fetch completes in minutes at modest bandwidth. Whole-archive fetch is bounded at ~169 MB.
 - [2026-04-27 05.1-01] Wave 0 complete: alembic head 0007; fetcher scaffold + 7 tests GREEN; URL pattern locked to Branch A (files.json master manifest + per-file static GET) per [[boros-historical-data-archive-url-pattern]]; pre-filter list at [[markets-pre-filter-2026-04-26]] (25 markets); test-residue docs/kill-report-20260426.md deleted; architecture delta committed (PROTO-02).
+- URL pattern Branch A: files.json master manifest + per-file static GET (no server-side folder ZIP); market-ID numeric-prefix divergence requires Wave 1 GET /markets cross-reference
+- data.ndjson declared as new storage node in architecture.yml; Wave 1 plan adds reads edges from ingester
+- scripts/__init__.py + pythonpath='..' added so python/tests can import scripts.fetch_historical_data as a package
 
 ### Roadmap Evolution
 
@@ -165,8 +169,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-26T17:32:59.217Z
-Stopped at: Completed 05-09-PLAN.md — CLI + RUN_MANIFEST + architecture diagram — Phase 5 COMPLETE (00cac33)
+Last session: 2026-04-26T23:39:13.059Z
+Stopped at: Completed 05.1-01-PLAN.md — Wave 0 schema + URL probe + fetcher scaffold + architecture delta (ebe197a)
 Resume file: None
 
 **Completed this session (2026-04-24 second pass):**
