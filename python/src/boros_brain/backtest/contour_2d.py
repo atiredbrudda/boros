@@ -82,6 +82,14 @@ async def run_2d_contour_grid(
     a_unp = _locate_value(leaves, knob_a_path)
     b_unp = _locate_value(leaves, knob_b_path)
 
+    if a_unp == 0.0 or b_unp == 0.0:
+        raise ValueError(
+            f"contour_2d: knob value is zero for path "
+            f"{'a' if a_unp == 0.0 else 'b'} "
+            f"({'a: ' + knob_a_path if a_unp == 0.0 else 'b: ' + knob_b_path}). "
+            "Relative perturbation is undefined at zero. Set a non-zero default or "
+            "choose a different contour knob pair."
+        )
     a_grid = np.linspace(a_unp * (1.0 - pct), a_unp * (1.0 + pct), grid_size)
     b_grid = np.linspace(b_unp * (1.0 - pct), b_unp * (1.0 + pct), grid_size)
 
