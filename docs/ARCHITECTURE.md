@@ -783,6 +783,18 @@ flowchart LR
     bt_cli --> bt_ship_gate
     bt_cli --> bt_report
     bt_run_manifest --> bt_perturbation
+
+    subgraph phase05_1_fetcher["Phase 5.1 Wave 0: Historical-data fetcher (Plan 05.1-01)"]
+        fetch_script["scripts/fetch_historical_data.py<br/>RUN_MANIFEST preamble (PROTO-01)<br/>Idempotent via sha256 manifest<br/>ZIP-bomb cap + path-traversal guard"]
+        fetcher_manifest["var/fetcher/manifest.json<br/>idempotency manifest<br/>(sha256 + content-length per file)"]
+    end
+
+    %% Phase 5.1 fetcher wiring (Plan 05.1-01)
+    fetch_script -- "HTTPS GET archives" --> ext_boros_historical[ext.boros_historical_data]
+    fetch_script -- "writes NDJSON" --> data_ndjson[data/ndjson/]
+    fetch_script -- "writes" --> fetcher_manifest
+    fetch_script -- "RUN_MANIFEST row" --> state_run_manifests[state.run_manifests]
+    fetch_script -- "calls" --> brain_manifest_writer
 ```
 
 [[backtest-bootstrap-methodology-v05]] [[backtest-ship-gate-threshold-assembly]] [[backtest-reproducibility-rng-seed-from-manifest]]

@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: milestone
-status: planning
+status: executing
 stopped_at: Completed 05-09-PLAN.md — CLI + RUN_MANIFEST + architecture diagram — Phase 5 COMPLETE (00cac33)
-last_updated: "2026-04-26T22:49:30.165Z"
-last_activity: 2026-04-26
+last_updated: "2026-04-26T23:17:42.584Z"
+last_activity: 2026-04-26 -- Phase --phase execution started
 progress:
   total_phases: 10
   completed_phases: 5
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-24)
 
 **Core value:** Earn net-positive yield on $100 collateral from the Boros Limit Order Liquidity Rewards pool that beats stablecoin alternatives, after gas and fill-loss — on a live, single-market deployment. If -EV, detect cheaply and kill; do not limp.
-**Current focus:** Phase --phase — 05
+**Current focus:** Phase 05.1 — Wave 0 complete; ready for Wave 1
 
 ## Current Position
 
-Phase: 6
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-04-26
+Phase: 05.1 — EXECUTING
+Plan: 05.1-01 complete
+Status: Executing Phase 05.1
+Last activity: 2026-04-27 -- Phase 05.1-01 Wave 0 complete
 
 Progress: [██████████] 100%
 
@@ -146,6 +146,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [2026-04-27 05.1-W0 probe] **Boros historical-data archive layout LOCKED** ([[boros-historical-data-archive-layout]]): `https://historical-data.boros.finance/files.json` is the master manifest (JSON array of `{path, size}`, 2466 entries / ~217 KB / ~169 MB total compressed). Files served as static `${origin}/${URI-encoded-path}` GET. Folder-as-ZIP is client-side JSZip glue, NOT a server endpoint — fetcher iterates manifest + per-file GET. Order-book has BOTH `raw/` (1 file/market-month, ~400 KB compressed) and `combined_{0.0001,0.001,0.01,0.1}/` per-tick aggregations. `underlying-apr/` is FLAT (no per-month split) — one file per `Exchange-Asset` pair. ETag + Last-Modified support idempotent re-fetch. Cloudflare-fronted, HTTP/2, no auth, no observed rate-limit. Last archive update 2026-04-26 15:44 UTC.
 - [2026-04-27 05.1-W0 probe] **Market-ID format DIVERGENCE flagged**: archive uses `{N}-{EXCHANGE}-{ASSET}-{MATURITY}` (numeric on-chain ID prefix); local `clo_history.market_id` uses just `{EXCHANGE}-{ASSET}-{MATURITY}`. Same human name maps to multiple numeric IDs (re-deployments, e.g. `108-` and `109-HYPERLIQUID-BTC-29MAY2026` are distinct on-chain markets). Phase 5.1 Wave 1 must resolve via `Boros GET /markets` cross-reference and persist a `{symbol→marketId}` mapping (`var/fetcher/market_id_mapping.json`) before bulk fetch. Recommendation: backtest the highest-numeric-ID variant (most recent deployment) per human name; emit a wiki note when multiple variants exist.
 - [2026-04-27 05.1-W0 probe] **Estimated Wave 1 fetch budget**: ~70 MB compressed for 25 pre-filtered markets × 60d × 6 kinds. Trivial; fetch completes in minutes at modest bandwidth. Whole-archive fetch is bounded at ~169 MB.
+- [2026-04-27 05.1-01] Wave 0 complete: alembic head 0007; fetcher scaffold + 7 tests GREEN; URL pattern locked to Branch A (files.json master manifest + per-file static GET) per [[boros-historical-data-archive-url-pattern]]; pre-filter list at [[markets-pre-filter-2026-04-26]] (25 markets); test-residue docs/kill-report-20260426.md deleted; architecture delta committed (PROTO-02).
 
 ### Roadmap Evolution
 

@@ -2813,3 +2813,28 @@ edges:
   - {from: brain.backtest.cli, to: brain.backtest.report, type: calls}
   - {from: brain.backtest.cli, to: brain.backtest.run_manifest, type: calls, notes: "PROTOCOL 3 sidecar JSON"}
   - {from: brain.backtest.run_manifest, to: brain.backtest.perturbation, type: calls, notes: "reflection lockstep — assert_manifest_contains_all_botconfig_leaves reuses enumerate_perturbable_leaves"}
+
+  # ── Phase 05.1 historical-data fetcher — Plan 05.1-01 (Wave 0) ──────────
+  - id: scripts.fetch_historical_data
+    type: external
+    path: scripts/fetch_historical_data.py
+    notes: "Phase 05.1 historical-data fetcher: pulls ZIP/NDJSON archives from historical-data.boros.finance into data/ndjson/. Idempotent via var/fetcher/manifest.json. Operator-invoked one-shot."
+
+  - id: var.fetcher.manifest
+    type: storage
+    path: var/fetcher/manifest.json
+    notes: "Phase 05.1 idempotency manifest — sha256 + content-length per fetched file. Skip rule on re-run."
+
+  - id: data.ndjson
+    type: storage
+    path: data/ndjson/
+    notes: "NDJSON archives extracted from Boros historical-data dump. Layout: {kind}/{market}/{YYYY-MM}.ndjson. Consumed by boros_brain.data.ingester.cli (Phase 1)."
+
+  # ── Phase 05.1 fetcher edges ─────────────────────────────────────────────
+  - {from: scripts.fetch_historical_data, to: ext.boros_historical_data, type: depends-on-config, notes: "HTTPS GET ZIP archives — base URL via --base-url CLI arg"}
+  - {from: scripts.fetch_historical_data, to: data.ndjson, type: writes, notes: "Atomic write per file (tmp + os.replace); per-entry path-traversal guard"}
+  - {from: scripts.fetch_historical_data, to: var.fetcher.manifest, type: writes, notes: "Idempotency manifest — skip rule on re-run; atomic JSON write"}
+  - {from: scripts.fetch_historical_data, to: state.run_manifests, type: writes, notes: "RUN_MANIFEST 4-step preamble (PROTO-01)"}
+  - {from: scripts.fetch_historical_data, to: brain.manifest.writer, type: calls, notes: "build_run_manifest + write_manifest at CLI entry"}
+  - {from: scripts.fetch_historical_data, to: brain.config.loader, type: calls, notes: "load_config(args.config) for the manifest preamble"}
+  - {from: scripts.fetch_historical_data, to: brain.logging.structlog_setup, type: calls, notes: "configure_logging(tier='historical_fetcher')"}

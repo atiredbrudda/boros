@@ -45,7 +45,7 @@ testpaths = ["tests"]
 asyncio_mode = "auto"
 addopts = "-ra --strict-markers"
 timeout = 30
-pythonpath = ["src"]
+pythonpath = ["src", ".."]
 markers = [
   "slow: long-running (skipped by quick pass)",
   "wave0_scaffold: tracer-bullet stubs wired once dependent plan lands",
