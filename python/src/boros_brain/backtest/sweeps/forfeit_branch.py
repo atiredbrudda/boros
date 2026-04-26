@@ -13,6 +13,7 @@ contract-trace verification of P0-01. NOT an auto-ship-gate-fail.
 
 from __future__ import annotations
 
+import statistics
 from dataclasses import replace
 from typing import Literal
 
@@ -90,7 +91,9 @@ async def run_forfeit_branch_sweep(
     benign_rows = [r for r in rows if r.voluntary_cancel_branch == "benign"]
     punitive_rows = [r for r in rows if r.voluntary_cancel_branch == "punitive"]
     if benign_rows and punitive_rows:
-        divergence = abs(benign_rows[0].annualized_pnl_pct - punitive_rows[0].annualized_pnl_pct)
+        benign_pnl = statistics.mean(r.annualized_pnl_pct for r in benign_rows)
+        punitive_pnl = statistics.mean(r.annualized_pnl_pct for r in punitive_rows)
+        divergence = abs(benign_pnl - punitive_pnl)
         threshold = float(config.backtest.voluntary_cancel_divergence_warn_pct)
         if divergence < threshold:
             log.info(
