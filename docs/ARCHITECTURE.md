@@ -754,9 +754,21 @@ flowchart LR
     bt_ship_gate --> bt_bootstrap
     bt_bootstrap -- "RNG seed from run_id ULID tail" --> brain_manifest_writer
     bt_ship_gate -- "reads alt_yield" --> screener_economics_gate
+
+    subgraph phase5_wave3_perturbation["Phase 5 Wave 3: Perturbation + 2D contour (Plan 05-08)"]
+        bt_perturbation["backtest/perturbation.py<br/>enumerate_perturbable_leaves<br/>run_perturbation_grid (BACK-08)"]
+        bt_contour_2d["backtest/contour_2d.py<br/>run_2d_contour_grid (BACK-08)<br/>5×5 on (L, p_purge) default"]
+    end
+
+    %% Phase 5 Wave 3 perturbation wiring (Plan 05-08)
+    bt_perturbation --> bt_replay
+    bt_perturbation --> bt_ship_gate
+    bt_contour_2d --> bt_replay
+    bt_contour_2d --> bt_ship_gate
 ```
 
 [[backtest-bootstrap-methodology-v05]] [[backtest-ship-gate-threshold-assembly]] [[backtest-reproducibility-rng-seed-from-manifest]]
+[[backtest-perturbation-grid-pydantic-reflection]] [[backtest-fragility-and-sign-flip-detection]]
 
 ## Related protocols
 

@@ -180,6 +180,59 @@ def plot_dpnl_dq(slopes: list[tuple[float, float]], *, out_path: Path) -> Path:
     return out_path
 
 
+def append_perturbation_section_to_ship_gate_report(
+    report_path: Path,
+    rows: list[Any],  # list[PerturbationRow] — type forward-ref to avoid circular import
+    *,
+    n_fragile_threshold: int = 0,
+) -> Path:
+    """BACK-08: append a `## Perturbation Grid` section to ship-gate-report.md.
+
+    Per BACK-08 ROADMAP scope: "sign-flipping on any knob is a fragility flag in
+    the ship-gate report." This function is the implementation of "in the
+    ship-gate report" — it APPENDS to var/backtest/<run_id>/ship-gate-report.md
+    written by ship_gate.write_ship_gate_report.
+
+    Sign-flip is RECORDED, not an automatic ship-gate fail (RESEARCH.md L1045 —
+    operator decides). `n_fragile_threshold` is a future hook for operator
+    policy; default 0 means "report all flags, never auto-fail."
+    """
+    if not report_path.exists():
+        raise FileNotFoundError(
+            f"ship-gate report not found at {report_path}; " "run ship_gate.write_ship_gate_report first"
+        )
+    n_fragile = sum(1 for r in rows if r.fragile)
+    lines = [
+        "",
+        "## Perturbation Grid (BACK-08)",
+        "",
+        f"- Total numeric leaves perturbed: **{len(rows)}**",
+        f"- Fragile knobs (sign-flip on ±perturbation_pct): **{n_fragile}**",
+        "",
+        "> **Note:** Sign-flip is RECORDED, not an automatic ship-gate fail.",
+        "> The operator decides whether to ship under flagged fragility.",
+        "",
+        "| knob_path | unperturbed_p5 | low_p5 (−pct) | high_p5 (+pct) | fragile |",
+        "|-----------|----------------|---------------|----------------|---------|",
+    ]
+    for r in rows:
+        flag = "**YES**" if r.fragile else "no"
+        lines.append(
+            f"| `{r.knob_path}` | {r.baseline_p5_pnl:.4f} | " f"{r.low_p5_pnl:.4f} | {r.high_p5_pnl:.4f} | {flag} |"
+        )
+    lines.append("")
+    addendum = "\n".join(lines)
+    with report_path.open("a") as f:
+        f.write(addendum)
+    log.info(
+        "ship_gate.perturbation_section_appended",
+        path=str(report_path),
+        n_rows=len(rows),
+        n_fragile=n_fragile,
+    )
+    return report_path
+
+
 __all__ = [
     "write_backtest_row",
     "write_ship_gate_verdict_json",
@@ -187,4 +240,5 @@ __all__ = [
     "plot_calibration",
     "plot_dpnl_dl",
     "plot_dpnl_dq",
+    "append_perturbation_section_to_ship_gate_report",
 ]

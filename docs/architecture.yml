@@ -1451,7 +1451,7 @@ nodes:
     type: module
     process: brain
     path: python/src/boros_brain/backtest/report.py
-    public_functions: [write_backtest_row, write_ship_gate_verdict_json, write_lineage_a_b_row, plot_calibration, plot_dpnl_dl, plot_dpnl_dq]
+    public_functions: [write_backtest_row, write_ship_gate_verdict_json, write_lineage_a_b_row, plot_calibration, plot_dpnl_dl, plot_dpnl_dq, append_perturbation_section_to_ship_gate_report]
 
   - id: parquet.backtest_results
     type: storage
@@ -1477,6 +1477,19 @@ nodes:
     process: brain
     path: python/src/boros_brain/backtest/ship_gate.py
     public_functions: [assemble_threshold, evaluate_ship_gate, write_ship_gate_report]
+
+  # ── Phase 5 Wave 3 perturbation + 2D contour — Plan 05-08 ──────────────
+  - id: brain.backtest.perturbation
+    type: module
+    process: brain
+    path: python/src/boros_brain/backtest/perturbation.py
+    public_functions: [enumerate_perturbable_leaves, detect_sign_flip, run_perturbation_grid]
+
+  - id: brain.backtest.contour_2d
+    type: module
+    process: brain
+    path: python/src/boros_brain/backtest/contour_2d.py
+    public_functions: [run_2d_contour_grid, contour_grid_to_parquet]
 
 edges:
   # ── brain internal wiring ──────────────────────────────────────────────
@@ -2761,3 +2774,11 @@ edges:
   - {from: brain.backtest.bootstrap, to: config.backtest.bootstrap_block_seconds, type: depends-on-config}
   - {from: brain.backtest.ship_gate, to: config.backtest.all_fees_threshold, type: depends-on-config}
   - {from: brain.backtest.ship_gate, to: config.screener.alt_yield, type: depends-on-config}
+
+  # ── Phase 5 Wave 3 perturbation + contour edges — Plan 05-08 ───────────
+  - {from: brain.backtest.perturbation, to: brain.backtest.replay, type: calls, notes: "per-knob child run: replace(base_run, ...) → ReplayEngine(...).run()"}
+  - {from: brain.backtest.perturbation, to: brain.backtest.ship_gate, type: calls, notes: "compares ship-gate-compatible 5th-percentile P&L per perturbed run"}
+  - {from: brain.backtest.contour_2d, to: brain.backtest.replay, type: calls}
+  - {from: brain.backtest.contour_2d, to: brain.backtest.ship_gate, type: calls}
+  - {from: brain.backtest.perturbation, to: config.backtest.perturbation_pct, type: depends-on-config}
+  - {from: brain.backtest.contour_2d, to: config.backtest.contour_2d_knobs, type: depends-on-config}
