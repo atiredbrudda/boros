@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: milestone
-status: ready_to_plan
-stopped_at: phase 4 verified passed 7/7; phase 0 marked complete; DATA-11 carried-concern reconciled (Phase 3 LOCKED D-01)
-last_updated: "2026-04-26T00:00:00Z"
-last_activity: 2026-04-26 -- Phase 4 re-verified PASSED; Phase 0 marked complete; ready for Phase 5 planning
+status: planning
+stopped_at: context exhaustion at 91% (2026-04-25)
+last_updated: "2026-04-26T06:19:05.893Z"
+last_activity: 2026-04-25
 progress:
   total_phases: 9
-  completed_phases: 5  # Phase 0 + Phases 1-4
-  total_plans: 28
+  completed_phases: 4
+  total_plans: 37
   completed_plans: 28
-  percent: 56
+  percent: 76
 ---
 
 # Project State
@@ -163,4 +163,4 @@ Resume file: None
 **Next action:**
 /clear then `/gsd-plan-phase 2` — Phase 02: Fill Model (NHPP v0.5)
 
-**Planned Phase:** 04 (decision-engine-predictive-circuit-breakers) — 8 plans — 2026-04-25T18:51:04.175Z
+**Planned Phase:** 5 (Event-Driven Backtest (Ship-Gate)) — 9 plans — 2026-04-26T06:19:05.885Z
