@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: milestone
-status: planning
-stopped_at: context exhaustion at 91% (2026-04-25)
-last_updated: "2026-04-26T06:19:05.893Z"
-last_activity: 2026-04-25
+status: executing
+stopped_at: Completed 05-04-PLAN.md — sweep dispatchers BACK-03/04 (698d7d4, 2b1682e)
+last_updated: "2026-04-26T16:30:48.567Z"
+last_activity: 2026-04-26 -- Phase --phase execution started
 progress:
   total_phases: 9
   completed_phases: 4
   total_plans: 37
-  completed_plans: 28
-  percent: 76
+  completed_plans: 32
+  percent: 86
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-24)
 
 **Core value:** Earn net-positive yield on $100 collateral from the Boros Limit Order Liquidity Rewards pool that beats stablecoin alternatives, after gas and fill-loss — on a live, single-market deployment. If -EV, detect cheaply and kill; do not limp.
-**Current focus:** Phase 5 — Event-Driven Backtest (ship-gate); ready to plan
+**Current focus:** Phase --phase — 05
 
 ## Current Position
 
-Phase: 5
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-04-25
+Phase: --phase (05) — EXECUTING
+Plan: 1 of --name
+Status: Executing Phase --phase
+Last activity: 2026-04-26 -- Phase --phase execution started
 
 Progress: [██████████] 100%
 
@@ -66,6 +66,7 @@ Progress: [██████████] 100%
 | Phase 01 P01-09 | unknown | 3 tasks | 16 files |
 | Phase 01 P11 | 35 | 3 tasks | 14 files |
 | Phase 01 P12 | 35 | 2 tasks | 11 files |
+| Phase 05-event-driven-backtest-ship-gate P04 | 7 | 4 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -128,6 +129,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [2026-04-24 UAT] GET /markets returns HYPERLIQUID-BTC-29MAY2026 twice (duplicate symbol). MarketsPoller.tick() now deduplicates by symbol with a warning log; clo_history PK (snapshot_ts, market_id) constraint still enforced.
 - [2026-04-24 UAT] DOTENV_PRIVATE_KEY_PRODUCTION was wrong env var name in both wrapper scripts; corrected to DOTENV_PRIVATE_KEY (matches .env.keys naming convention for plain .env file).
 - [2026-04-24 UAT] LLM Wiki stays at /Users/macbookair/Documents/project/test/rerun7/LLM Wiki/ — not moved. CLAUDE.md ../LLM Wiki/ references updated to absolute path to match.
+- Architecture update co-committed with Task 1/2 code (PROTOCOL 2 pre-commit enforcement): Wave 1 nodes (brain.backtest.config/schemas/synthetic_orders/cancel_latency/replay) + Wave 2 nodes (sweeps.cancel_latency, sweeps.competition) registered in docs/architecture.yml
+- [2026-04-26 05-04] BACK-03/04 sweep dispatchers: run_cancel_latency_sweep + run_competition_sweep each produce N rows (operator-overridable grid); central-finite-difference dP&L/dL < 0 on always-fills synthetic; each child run gets fresh manifest with parent_run_id (PROTO-01 D2 guard)
 
 ### Pending Todos
 
@@ -142,8 +145,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-25T17:47:38.441Z
-Stopped at: context exhaustion at 91% (2026-04-25)
+Last session: 2026-04-26T16:30:48.563Z
+Stopped at: Completed 05-04-PLAN.md — sweep dispatchers BACK-03/04 (698d7d4, 2b1682e)
 Resume file: None
 
 **Completed this session (2026-04-24 second pass):**
