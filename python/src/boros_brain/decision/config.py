@@ -8,6 +8,7 @@ verifies the leaf count.
 [[ev-cancel-rule]]: cancel_cost_ewma_alpha, p_purge_default used in engine.evaluate
 [[circuit-breakers-v05]]: 10 per-breaker sub-models in BreakerConfig
 """
+
 from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict, Field

@@ -26,10 +26,12 @@ References
 PITFALLS §C5 (Phase 4 #5): hardcoded cancel_cost scalar violates DECIDE-03.
     The lint script (no_hardcoded_cancel_cost_lint.py) catches regressions.
 """
+
 from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass, field
+from typing import Any
 
 import structlog
 
@@ -63,7 +65,7 @@ class GasHistoryCache:
     last_value_pendle: float = 0.0
     ewma_state: float = field(default=0.0)
 
-    async def cancel_cost_pendle(self, *, w3, config: BotConfig) -> float:
+    async def cancel_cost_pendle(self, *, w3: Any, config: BotConfig) -> float:
         """Return cancel_cost in PENDLE, fetching fee_history at most once per TTL.
 
         Parameters
@@ -111,7 +113,7 @@ class GasHistoryCache:
                 w3.eth.fee_history(block_window, "latest", [50]),
                 timeout=5.0,
             )
-        except (asyncio.TimeoutError, Exception) as exc:
+        except (TimeoutError, Exception) as exc:
             log.warning(
                 "gas_history.fetch_failed",
                 err=str(exc),
@@ -132,7 +134,7 @@ class GasHistoryCache:
         # Pad priority with zeros if shorter than base_fees (edge case on very new chains).
         while len(priority) < len(base_fees):
             priority.append(0)
-        samples = [int(b) + int(p) for b, p in zip(base_fees, priority[: len(base_fees)])]
+        samples = [int(b) + int(p) for b, p in zip(base_fees, priority[: len(base_fees)], strict=False)]
 
         # ── EWMA ─────────────────────────────────────────────────────────────
         alpha = config.decision.cancel_cost_ewma_alpha

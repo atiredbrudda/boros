@@ -13,6 +13,7 @@ Exit codes:
 [[predeploy-gate-cli]]: predeploy-gate subcommand spec and Pitfall #8
 [[breaker-coordinator-kill-mutex]]: reset-breaker context
 """
+
 from __future__ import annotations
 
 import argparse
@@ -133,7 +134,7 @@ def _reset_breaker(config: object, breaker_name: str, run_id: str) -> int:
     from ..state.writers.breaker_events import insert_breaker_event
 
     log = structlog.get_logger("decision.cli.reset_breaker")
-    sqlite_path = Path(config.infra.sqlite_path)  # type: ignore[union-attr]
+    sqlite_path = Path(config.infra.sqlite_path)  # type: ignore[attr-defined]
 
     from datetime import UTC, datetime
 

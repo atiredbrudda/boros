@@ -12,6 +12,7 @@ side-split assumption is stale and placement should be paused for recalibration.
 
 drift_pct = (lag_split - latest_split) / lag_split
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -89,9 +90,7 @@ async def test_fires_at_30_pct_drift(
         config=config,
         current_chain_ts=BASE_TS,
     )
-    assert sig.tripped is True, (
-        f"32% side-budget drift should trip SAFE-08, got tripped={sig.tripped}"
-    )
+    assert sig.tripped is True, f"32% side-budget drift should trip SAFE-08, got tripped={sig.tripped}"
     assert sig.kill_command_kind == "HALVE_POSITION_AND_ALERT"
 
 
@@ -134,9 +133,7 @@ async def test_silent_at_20_pct_drift(
         config=config,
         current_chain_ts=BASE_TS,
     )
-    assert sig.tripped is False, (
-        f"20% side-budget drift should not trip SAFE-08, got tripped={sig.tripped}"
-    )
+    assert sig.tripped is False, f"20% side-budget drift should not trip SAFE-08, got tripped={sig.tripped}"
 
 
 @pytest.mark.asyncio
@@ -179,9 +176,7 @@ async def test_silent_on_zero_baseline_split(
         current_chain_ts=BASE_TS,
     )
     assert sig.tripped is False
-    assert sig.reason == "zero_baseline_split", (
-        f"Expected reason='zero_baseline_split', got {sig.reason!r}"
-    )
+    assert sig.reason == "zero_baseline_split", f"Expected reason='zero_baseline_split', got {sig.reason!r}"
 
 
 @pytest.mark.asyncio
@@ -217,6 +212,6 @@ async def test_silent_on_insufficient_history(
         current_chain_ts=BASE_TS,
     )
     assert sig.tripped is False
-    assert "insufficient_calibration_history" in sig.reason, (
-        f"Expected reason containing 'insufficient_calibration_history', got {sig.reason!r}"
-    )
+    assert (
+        "insufficient_calibration_history" in sig.reason
+    ), f"Expected reason containing 'insufficient_calibration_history', got {sig.reason!r}"

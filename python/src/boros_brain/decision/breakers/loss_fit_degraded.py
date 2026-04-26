@@ -21,6 +21,7 @@ Wiki reference:
   [[circuit-breakers-v05]]: full breaker taxonomy
   [[ou-on-basis-loss-scaffold]]: loss model scaffold context
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -28,8 +29,8 @@ from typing import Any
 
 import structlog
 
-from .base import Breaker, BreakerSignal
 from ...state.writers.loss_grid_artifacts import get_latest_loss_grid
+from .base import Breaker, BreakerSignal
 
 log = structlog.get_logger(__name__)
 
@@ -133,15 +134,16 @@ class LossFitDegradedBreaker(Breaker):
         )
 
 
-def _get_any_latest_loss_grid(sqlite_path: Path, side: str):
+def _get_any_latest_loss_grid(sqlite_path: Path, side: str) -> Any:
     """Read latest loss_grid_artifacts row for the given side, any market.
 
     Fallback for test environments where config.markets is empty and market_id=""
     does not match any real market_id in the DB.
     """
-    from boros_brain.state.db import open_connection
     import json
+
     from boros_brain.loss_model.schemas import LossGridArtifact, LossGridCell
+    from boros_brain.state.db import open_connection
 
     with open_connection(sqlite_path) as conn:
         row = conn.execute(

@@ -17,12 +17,14 @@ See [[ev-cancel-rule-implementation-v05]] and [[gas-history-ewma-cancel-cost]] f
 ... except (ImportError, ModuleNotFoundError):
 ...     pass
 """
+
 from __future__ import annotations
 
 from pathlib import Path
 
 import pytest
-from hypothesis import HealthCheck, given, settings, strategies as st
+from hypothesis import HealthCheck, given, settings
+from hypothesis import strategies as st
 
 # RED state guard: module under test lands in Plan 04-03.
 # pytest.importorskip causes the entire module to be collected but skipped
@@ -110,9 +112,7 @@ async def test_ev_sign_matches_decision(
     config = _patch_config_for_engine(default_config)
     req = _build_eval_input(p_purge=0.0)
     gas_cache = gas_mod.GasHistoryCache()
-    out = await engine.evaluate(
-        req, sqlite_path=db, config=config, gas_cache=gas_cache, w3=None
-    )
+    out = await engine.evaluate(req, sqlite_path=db, config=config, gas_cache=gas_cache, w3=None)
     assert out.decision_kind == "HOLD"
     assert out.ev_hold_pendle > 0.0
 
@@ -155,9 +155,7 @@ async def test_ev_sign_negative_yields_cancel(
         current_features={"basis_spread": 100.0},  # very high → high lambda → high p_fill
     )
     gas_cache = gas_mod.GasHistoryCache()
-    out = await engine.evaluate(
-        req, sqlite_path=db, config=config, gas_cache=gas_cache, w3=None
-    )
+    out = await engine.evaluate(req, sqlite_path=db, config=config, gas_cache=gas_cache, w3=None)
     assert out.decision_kind == "CANCEL"
     assert out.ev_hold_pendle < 0.0
 
@@ -187,6 +185,7 @@ def test_ev_monotonicity(
     """
     import asyncio
     from unittest.mock import patch
+
     from boros_brain.fill_model.schemas import PredictOutput
     from boros_brain.loss_model.schemas import ExpectedLossOutput
 
@@ -228,26 +227,26 @@ def test_ev_monotonicity(
             p_purge=0.0,
         )
         # Patch engine's local binding of predict and expected_loss (not source module)
-        with patch("boros_brain.decision.engine.predict", _mock_predict), \
-             patch("boros_brain.decision.engine.expected_loss", _mock_expected_loss):
-            out = await engine.evaluate(
-                req, sqlite_path=db, config=config, gas_cache=gas_cache, w3=None
-            )
+        with (
+            patch("boros_brain.decision.engine.predict", _mock_predict),
+            patch("boros_brain.decision.engine.expected_loss", _mock_expected_loss),
+        ):
+            out = await engine.evaluate(req, sqlite_path=db, config=config, gas_cache=gas_cache, w3=None)
         return out.ev_hold_pendle
 
     ev_low_pfill = asyncio.run(_run_with_pfill(p_fill_q1, r_share_1))
     ev_high_pfill = asyncio.run(_run_with_pfill(p_fill_q2, r_share_1))
     # Higher p_fill → lower EV (monotone)
-    assert ev_low_pfill >= ev_high_pfill - 1e-9, (
-        f"p_fill monotonicity violated: ev({p_fill_q1})={ev_low_pfill} < ev({p_fill_q2})={ev_high_pfill}"
-    )
+    assert (
+        ev_low_pfill >= ev_high_pfill - 1e-9
+    ), f"p_fill monotonicity violated: ev({p_fill_q1})={ev_low_pfill} < ev({p_fill_q2})={ev_high_pfill}"
 
     ev_low_rshare = asyncio.run(_run_with_pfill(p_fill_q1, r_share_1))
     ev_high_rshare = asyncio.run(_run_with_pfill(p_fill_q1, r_share_2))
     # Higher r_share → higher EV
-    assert ev_high_rshare >= ev_low_rshare - 1e-9, (
-        f"r_share monotonicity violated: ev({r_share_2})={ev_high_rshare} < ev({r_share_1})={ev_low_rshare}"
-    )
+    assert (
+        ev_high_rshare >= ev_low_rshare - 1e-9
+    ), f"r_share monotonicity violated: ev({r_share_2})={ev_high_rshare} < ev({r_share_1})={ev_low_rshare}"
 
 
 @pytest.mark.asyncio
@@ -274,9 +273,7 @@ async def test_propagates_predict_errors(
     req = _build_eval_input()
     gas_cache = gas_mod.GasHistoryCache()
     with pytest.raises(FillModelStaleFeatureError):
-        await engine.evaluate(
-            req, sqlite_path=db, config=config, gas_cache=gas_cache, w3=None
-        )
+        await engine.evaluate(req, sqlite_path=db, config=config, gas_cache=gas_cache, w3=None)
 
 
 @pytest.mark.asyncio
@@ -291,8 +288,8 @@ async def test_propagates_loss_errors(
     LossModelNoFreshGridError must propagate to the caller unchanged.
     predict() is also mocked so it succeeds, allowing the loss error to propagate.
     """
-    from boros_brain.loss_model.expected_loss import LossModelNoFreshGridError
     from boros_brain.fill_model.schemas import PredictOutput
+    from boros_brain.loss_model.expected_loss import LossModelNoFreshGridError
 
     db = seed_loss_grid_artifact(fit_status="ok", market_id=MARKET_ID, side="long")
 
@@ -301,8 +298,11 @@ async def test_propagates_loss_errors(
 
     # Predict must succeed so the loss error reaches the caller
     _ok_predict = PredictOutput(
-        p_fill_this_epoch=0.1, lambda_per_second=0.001,
-        fit_run_id="mock", fit_age_s=0.0, fit_status="ok",
+        p_fill_this_epoch=0.1,
+        lambda_per_second=0.001,
+        fit_run_id="mock",
+        fit_age_s=0.0,
+        fit_status="ok",
     )
 
     def _mock_predict(*a, **kw):
@@ -315,6 +315,4 @@ async def test_propagates_loss_errors(
     req = _build_eval_input()
     gas_cache = gas_mod.GasHistoryCache()
     with pytest.raises(LossModelNoFreshGridError):
-        await engine.evaluate(
-            req, sqlite_path=db, config=config, gas_cache=gas_cache, w3=None
-        )
+        await engine.evaluate(req, sqlite_path=db, config=config, gas_cache=gas_cache, w3=None)

@@ -223,6 +223,8 @@ def run_screener(config: Any) -> list[str]:
     This wrapper is the seam that the predeploy_gate CLI and tests patch so
     unit tests can control the shortlist without touching the filesystem.
     """
-    config_path = str(config.infra.config_path) if hasattr(config.infra, "config_path") else "strategy/v0.5-default.yaml"
+    config_path = (
+        str(config.infra.config_path) if hasattr(config.infra, "config_path") else "strategy/v0.5-default.yaml"
+    )
     screener_metrics_path = getattr(config.infra, "screener_metrics_path", "var/reports/screener_metrics.json")
     return run_economics_gate(config_path, screener_metrics_path)

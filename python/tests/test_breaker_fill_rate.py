@@ -8,6 +8,7 @@ The fill-rate circuit breaker fires when fills accumulate faster than
 K_fills_per_hour (decision.breakers.fill_rate.k_fills_per_hour, default=4).
 Fills are bad — runaway fill rate signals placement has drifted into the market.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -45,9 +46,7 @@ async def test_fires_at_4_fills(
         config=default_config,
         current_chain_ts=CURRENT_TS,
     )
-    assert sig.tripped is True, (
-        f"Expected tripped=True for 4 fills in {ONE_HOUR_S}s, got tripped=False"
-    )
+    assert sig.tripped is True, f"Expected tripped=True for 4 fills in {ONE_HOUR_S}s, got tripped=False"
     assert sig.kill_command_kind == "PAUSE_AND_ALERT"
 
 
@@ -71,6 +70,4 @@ async def test_silent_at_3_fills(
         config=default_config,
         current_chain_ts=CURRENT_TS,
     )
-    assert sig.tripped is False, (
-        f"Expected tripped=False for 3 fills in {ONE_HOUR_S}s, got tripped=True"
-    )
+    assert sig.tripped is False, f"Expected tripped=False for 3 fills in {ONE_HOUR_S}s, got tripped=True"

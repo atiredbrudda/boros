@@ -11,6 +11,7 @@ Test IDs:
 - T-03-E-06: expected_loss raises LossModelNoFreshGridError on absent grid
 - T-03-E-07: expected_loss raises ValueError on negative tau
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -20,7 +21,6 @@ import structlog
 
 from boros_brain.config.schema import BotConfig, DataConfig, MarketCalibration
 from boros_brain.loss_model.artifact import write_loss_grid_artifact
-from boros_brain.loss_model.config import LossModelConfig
 from boros_brain.loss_model.expected_loss import (
     LossModelNoFreshGridError,
     expected_loss,
@@ -64,9 +64,7 @@ def _apply_migrations(db: Path) -> None:
     from alembic.config import Config
 
     ROOT = Path(__file__).resolve().parents[2]
-    ALEMBIC_INI = (
-        ROOT / "python" / "src" / "boros_brain" / "state" / "migrations" / "alembic.ini"
-    )
+    ALEMBIC_INI = ROOT / "python" / "src" / "boros_brain" / "state" / "migrations" / "alembic.ini"
     cfg = Config(str(ALEMBIC_INI))
     cfg.set_main_option("script_location", str(ALEMBIC_INI.parent))
     cfg.set_main_option("sqlalchemy.url", f"sqlite:///{db}")
@@ -110,7 +108,7 @@ def test_fit_health_gate_passes_on_full_grid() -> None:
     # 7 depth × 6 tau × 10 fills = 420 fills, comfortably over min_samples_per_cell=5
     for d_idx in range(7):
         for t_idx in range(6):
-            for k in range(10):
+            for _k in range(10):
                 fills.append(
                     _make_fill(
                         depth_idx=d_idx,
@@ -128,9 +126,9 @@ def test_fit_health_gate_passes_on_full_grid() -> None:
         window_end_ts=1_700_000_000,
         run_id="test-run-fit-ok",
     )
-    assert artifact.fit_status == "ok", (
-        f"expected ok; cells: {[(c.depth_bucket_idx, c.tau_bucket_idx, c.n_samples) for c in artifact.cells]}"
-    )
+    assert (
+        artifact.fit_status == "ok"
+    ), f"expected ok; cells: {[(c.depth_bucket_idx, c.tau_bucket_idx, c.n_samples) for c in artifact.cells]}"
     assert len(artifact.cells) == 42  # 7 depth × 6 tau cells populated
 
 
@@ -238,9 +236,7 @@ def test_expected_loss_nearest_neighbor(tmp_path: Path) -> None:
         event_index_coverage="full",
         created_at=0,
     )
-    write_loss_grid_artifact(
-        artifact, sqlite_path=db, parquet_root=tmp_path / "parquet"
-    )
+    write_loss_grid_artifact(artifact, sqlite_path=db, parquet_root=tmp_path / "parquet")
 
     config = _tiny_config()
     # Target = depth_bucket 3, tau_bucket 3 — adjacent to (2,2). dist = sqrt(2) ~ 1.41
@@ -291,9 +287,7 @@ def test_expected_loss_coarse_bound(tmp_path: Path) -> None:
         event_index_coverage="full",
         created_at=0,
     )
-    write_loss_grid_artifact(
-        artifact, sqlite_path=db, parquet_root=tmp_path / "parquet"
-    )
+    write_loss_grid_artifact(artifact, sqlite_path=db, parquet_root=tmp_path / "parquet")
 
     config = _tiny_config()
     # Target = (6, 5) — Euclidean dist to (0,0) = sqrt(61) ~ 7.81 > knn_max_distance=4.0.
@@ -308,9 +302,7 @@ def test_expected_loss_coarse_bound(tmp_path: Path) -> None:
         out = expected_loss(req, sqlite_path=db, config=config)
 
     assert out.fallback_mode == "coarse_bound"
-    assert out.expected_loss_pendle == pytest.approx(
-        config.screener.fill_loss_coarse_bound * 1.0
-    )
+    assert out.expected_loss_pendle == pytest.approx(config.screener.fill_loss_coarse_bound * 1.0)
     events = [r["event"] for r in captured]
     assert "loss_model.sparse_cell_fallback" in events, events
 

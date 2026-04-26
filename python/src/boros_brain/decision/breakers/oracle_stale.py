@@ -15,6 +15,7 @@ Wiki reference:
   [[breaker-oracle-stale]]: spec, 0.7 × maxUpdateDelay early-fire discipline
   [[circuit-breakers-v05]]: full breaker taxonomy
 """
+
 from __future__ import annotations
 
 from pathlib import Path

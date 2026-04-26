@@ -248,7 +248,6 @@ async def run(config_path: Path, dry_run: bool = False) -> int:
         The read_open_orders_for_market helper is imported lazily to avoid a
         circular import with state.writers.open_orders (which has TEST_ONLY=True).
         """
-        from .state.db import open_connection as _open_conn
         from .state.writers.open_orders import read_open_orders_for_market
 
         sqlite_path_obj = Path(cfg.infra.sqlite_path)
@@ -270,9 +269,7 @@ async def run(config_path: Path, dry_run: bool = False) -> int:
             # v0.5: open_orders is empty until Phase 6 hands places orders.
             # The shape below is the wiring contract — Phase 6 populates it.
             try:
-                orders = read_open_orders_for_market(
-                    sqlite_path_obj, market_id=cfg.market_id
-                )
+                orders = read_open_orders_for_market(sqlite_path_obj, market_id=cfg.market_id)
             except Exception:  # noqa: BLE001
                 orders = []
 
@@ -420,7 +417,8 @@ def _build_evaluate_input(order: dict[str, Any], cfg: Any, current_chain_ts: int
         time_to_maturity_s=int(market.maturity_ts - current_chain_ts) if market else 0,
         q_me_pendle=float(order.get("size_wei", 0)) * 1e-18 if order.get("size_wei") else 0.0,
         sigma_others_pendle=float(market.sigma_others_pendle) if market else 0.0,
-        e_liq_per_epoch_pendle=0.0,  # Phase 6: from reward_budget_history
+        # Phase 5/6: from market_reward_calibration (LOCKED D-01 supersedes reward_budget_history live polling).
+        e_liq_per_epoch_pendle=0.0,
         side_split=0.5,  # Phase 6: from market_reward_calibration
         t_frac=float(market.t_frac) if market else 1.0,
         p_purge=0.0,  # Phase 6: from protocol purge probability

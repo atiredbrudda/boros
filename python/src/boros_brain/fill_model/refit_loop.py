@@ -9,6 +9,7 @@ data/poller/markets_poller.run_markets_poller.
 
 [[rolling-14-day-refit-cadence-and-staleness]]
 """
+
 from __future__ import annotations
 
 import asyncio

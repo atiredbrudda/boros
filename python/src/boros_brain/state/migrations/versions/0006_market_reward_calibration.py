@@ -17,6 +17,7 @@ DDL using CREATE TABLE IF NOT EXISTS, so on a fresh database the table is
 created by 0001. This migration detects that case via inspection and only
 creates the table and index if they don't already exist.
 """
+
 from __future__ import annotations
 
 import sqlalchemy as sa

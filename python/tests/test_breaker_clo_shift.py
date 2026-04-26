@@ -9,6 +9,7 @@ Covers:
 Tick scale: config.markets[0].scale = 10000 (Binance ETH-rate market).
 5 ticks = 5/10000 = 0.0005 APR shift.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -132,6 +133,5 @@ async def test_stay_out_of_range_branch_under_punitive(
     )
     assert sig.tripped is True
     assert sig.kill_command_kind == "CANCEL_ALL_HOLD_NO_REPLACE", (
-        f"A1×A3 compound under punitive branch: expected CANCEL_ALL_HOLD_NO_REPLACE, "
-        f"got {sig.kill_command_kind!r}"
+        f"A1×A3 compound under punitive branch: expected CANCEL_ALL_HOLD_NO_REPLACE, " f"got {sig.kill_command_kind!r}"
     )

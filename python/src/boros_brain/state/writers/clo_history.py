@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import sqlite3
 from pathlib import Path
+from typing import Any
 
 import structlog
 
@@ -131,7 +132,7 @@ def read_clo_history_latest_n(
     sqlite_path: Path,
     market_id: str,
     n: int = 2,
-) -> list[dict[str, object]]:
+) -> list[dict[str, Any]]:
     """Return the latest n clo_history rows for market_id, ordered DESC by snapshot_ts.
 
     Self-managing connection. Used by CloShiftBreaker.check() to compare the two

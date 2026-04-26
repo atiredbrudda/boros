@@ -9,6 +9,7 @@ using CREATE TABLE IF NOT EXISTS, so on a fresh database the table is created by
 0001. This migration detects that case via inspection and only creates the table
 and index if they don't already exist — same pattern used by 0002 / 0003 / 0004.
 """
+
 from __future__ import annotations
 
 import sqlalchemy as sa
@@ -54,9 +55,7 @@ def upgrade() -> None:
             ),
         )
 
-    if not _has_index(
-        "competition_history", "ix_competition_history_market_polled"
-    ):
+    if not _has_index("competition_history", "ix_competition_history_market_polled"):
         op.create_index(
             "ix_competition_history_market_polled",
             "competition_history",
@@ -65,9 +64,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    if _has_index(
-        "competition_history", "ix_competition_history_market_polled"
-    ):
+    if _has_index("competition_history", "ix_competition_history_market_polled"):
         op.drop_index(
             "ix_competition_history_market_polled",
             table_name="competition_history",

@@ -11,6 +11,7 @@ parquet glob is bounded to one exchange/symbol partition.
 [[underlying-apr-cadence-by-exchange]]: cadence table by exchange
 [[breaker-underlying-feed-stale]]: SAFE-09 spec, staleness threshold formula
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -48,9 +49,7 @@ def read_underlying_apr_max_ts(parquet_root: Path, exchange: str, symbol: str) -
     glob = str(partition_path / "*.parquet")
     conn = duckdb.connect(":memory:")
     try:
-        row = conn.execute(
-            f"SELECT MAX(snapshot_ts) FROM read_parquet('{glob}')"
-        ).fetchone()
+        row = conn.execute(f"SELECT MAX(snapshot_ts) FROM read_parquet('{glob}')").fetchone()
         return int(row[0]) if row and row[0] is not None else None
     finally:
         conn.close()

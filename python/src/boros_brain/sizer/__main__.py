@@ -1,4 +1,5 @@
 """Enables ``python -m boros_brain.sizer``."""
+
 import sys
 
 from .cli import main

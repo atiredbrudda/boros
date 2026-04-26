@@ -16,6 +16,7 @@ collateral (cap_budget ≈ 13.7 PENDLE), Q_cap is smaller AND smaller than Q_max
 
 [[reward-cap-geometry-v05]]
 """
+
 from __future__ import annotations
 
 import math
@@ -39,23 +40,14 @@ def compute_q_cap(
     Q_me (denominator <= 0 — cap_budget >= E_liq × side_split × t_frac).
     """
     if pendle_price_usd <= 0.0:
-        raise ValueError(
-            f"pendle_price_usd must be > 0, got {pendle_price_usd}"
-        )
+        raise ValueError(f"pendle_price_usd must be > 0, got {pendle_price_usd}")
     if epoch_days <= 0.0:
         raise ValueError(f"epoch_days must be > 0, got {epoch_days}")
 
-    cap_budget = (
-        10.0
-        * collateral_usd
-        * (epoch_days / 365.0)
-        / pendle_price_usd
-    )
+    cap_budget = 10.0 * collateral_usd * (epoch_days / 365.0) / pendle_price_usd
 
     numerator = sigma_others_pendle * cap_budget
-    denominator = (
-        e_liq_per_epoch_pendle * side_split * t_frac - cap_budget * t_frac
-    )
+    denominator = e_liq_per_epoch_pendle * side_split * t_frac - cap_budget * t_frac
 
     if denominator <= 0.0:
         # Cap is at or above E_liq × side_split × t_frac — unreachable at any finite Q_me.

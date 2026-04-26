@@ -41,13 +41,9 @@ def build_parser() -> argparse.ArgumentParser:
     # curve subcommand: compute r_capped_curve and print as JSON
     curve_p = sub.add_parser("curve", help="Compute r_capped_curve for a (market, side)")
     curve_p.add_argument("--market", required=True, help="market_id")
-    curve_p.add_argument(
-        "--side", required=True, choices=["long", "short"], help="long or short"
-    )
+    curve_p.add_argument("--side", required=True, choices=["long", "short"], help="long or short")
     curve_p.add_argument("--q-me", type=float, default=0.001, help="Q_me in PENDLE-units")
-    curve_p.add_argument(
-        "--sigma-others", type=float, default=60.0, help="Σ_others in PENDLE-units"
-    )
+    curve_p.add_argument("--sigma-others", type=float, default=60.0, help="Σ_others in PENDLE-units")
     curve_p.add_argument(
         "--e-liq-pendle",
         type=float,
@@ -87,9 +83,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="E_liq_per_epoch_pendle from Pendle dApp / docs / team",
     )
     cal_p.add_argument("--long-split", type=float, required=True, help="Long-side fraction (0..1)")
-    cal_p.add_argument(
-        "--short-split", type=float, required=True, help="Short-side fraction (0..1)"
-    )
+    cal_p.add_argument("--short-split", type=float, required=True, help="Short-side fraction (0..1)")
     cal_p.add_argument(
         "--source",
         default="dapp_ui",
@@ -122,11 +116,7 @@ def main(argv: list[str] | None = None) -> int:
 
     # MANIFEST-FIRST (PROTO-01).
     manifest = build_run_manifest(config)
-    sqlite_path_str = (
-        args.sqlite_path
-        if getattr(args, "sqlite_path", None)
-        else config.infra.sqlite_path
-    )
+    sqlite_path_str = args.sqlite_path if getattr(args, "sqlite_path", None) else config.infra.sqlite_path
     sqlite_path = Path(sqlite_path_str)
 
     configure_logging(
@@ -134,9 +124,7 @@ def main(argv: list[str] | None = None) -> int:
         tier="reward_model",
         logs_dir=config.infra.logs_dir,
     )
-    write_manifest(
-        manifest, logs_dir=config.infra.logs_dir, sqlite_path=sqlite_path
-    )
+    write_manifest(manifest, logs_dir=config.infra.logs_dir, sqlite_path=sqlite_path)
     log = structlog.get_logger("reward_model.cli")
     log.info("RUN_MANIFEST", **manifest.model_dump())
     log.info("reward_model.cli_started", subcommand=args.cmd)

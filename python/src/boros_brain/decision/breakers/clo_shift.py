@@ -24,6 +24,7 @@ Wiki reference:
   [[clo-shift-stay-out-of-range-branch]]: A1xA3 compound risk detail
   [[circuit-breakers-v05]]: full breaker taxonomy
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -31,8 +32,8 @@ from typing import Any
 
 import structlog
 
-from .base import Breaker, BreakerSignal
 from ...state.writers.clo_history import read_clo_history_latest_n
+from .base import Breaker, BreakerSignal
 
 log = structlog.get_logger(__name__)
 
@@ -95,8 +96,8 @@ class CloShiftBreaker(Breaker):
 
         # Resolve rows: prefer market-scoped query when markets configured,
         # fall back to global-latest-2 when markets=[] (test convenience path).
+        market_id = config.markets[0].market_id if config.markets else "<no_markets>"
         if config.markets:
-            market_id = config.markets[0].market_id
             rows = read_clo_history_latest_n(sqlite_path, market_id, n=2)
         else:
             rows = _read_clo_latest_n_any(sqlite_path, n=2)
@@ -105,7 +106,7 @@ class CloShiftBreaker(Breaker):
             log.debug(
                 "clo_shift.insufficient_history",
                 n=len(rows),
-                market_id=market.market_id,
+                market_id=market_id,
             )
             return BreakerSignal(tripped=False, reason="insufficient_history")
 
@@ -167,7 +168,7 @@ class CloShiftBreaker(Breaker):
         )
 
 
-def _read_clo_latest_n_any(sqlite_path: Path, n: int = 2) -> list[dict[str, object]]:
+def _read_clo_latest_n_any(sqlite_path: Path, n: int = 2) -> list[dict[str, Any]]:
     """Read the latest n clo_history rows without market_id filter.
 
     Used when no markets are configured in BotConfig (test convenience path).

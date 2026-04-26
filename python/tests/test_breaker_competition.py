@@ -11,6 +11,7 @@ Covers:
 SAFE-06 detects a sudden collapse in competing order flow. Drop threshold default: 50%
 over one epoch. Q_total = q_me_pendle + sigma_others_pendle.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -64,7 +65,7 @@ async def test_fires_on_50_pct_drop(
     db = seed_competition_history(
         rows=[
             ("2026-04-18T00:00:00Z", BASE_TS - EPOCH_S, 10.0, 190.0),  # 1 epoch ago, Q_total=200
-            ("2026-04-25T00:00:00Z", BASE_TS, 10.0, 70.0),             # now, Q_total=80
+            ("2026-04-25T00:00:00Z", BASE_TS, 10.0, 70.0),  # now, Q_total=80
         ],
         market_id=MARKET_ID,
     )
@@ -76,9 +77,9 @@ async def test_fires_on_50_pct_drop(
         config=config,
         current_chain_ts=BASE_TS,
     )
-    assert sig.tripped is True, (
-        f"60% competition drop should trip SAFE-06, got tripped={sig.tripped} reason={sig.reason!r}"
-    )
+    assert (
+        sig.tripped is True
+    ), f"60% competition drop should trip SAFE-06, got tripped={sig.tripped} reason={sig.reason!r}"
     assert sig.kill_command_kind == "PAUSE_AND_ALERT"
 
 
@@ -93,7 +94,7 @@ async def test_silent_on_30_pct_drop(
     db = seed_competition_history(
         rows=[
             ("2026-04-18T00:00:00Z", BASE_TS - EPOCH_S, 10.0, 190.0),  # Q_total=200
-            ("2026-04-25T00:00:00Z", BASE_TS, 10.0, 130.0),             # Q_total=140
+            ("2026-04-25T00:00:00Z", BASE_TS, 10.0, 130.0),  # Q_total=140
         ],
         market_id=MARKET_ID,
     )
@@ -105,9 +106,7 @@ async def test_silent_on_30_pct_drop(
         config=config,
         current_chain_ts=BASE_TS,
     )
-    assert sig.tripped is False, (
-        f"30% competition drop should not trip SAFE-06, got tripped={sig.tripped}"
-    )
+    assert sig.tripped is False, f"30% competition drop should not trip SAFE-06, got tripped={sig.tripped}"
 
 
 @pytest.mark.asyncio
@@ -124,8 +123,8 @@ async def test_silent_on_zero_baseline(
     config = _config_with_market(default_config)
     db = seed_competition_history(
         rows=[
-            ("2026-04-18T00:00:00Z", BASE_TS - EPOCH_S, 0.0, 0.0),   # Q_total=0 baseline
-            ("2026-04-25T00:00:00Z", BASE_TS, 10.0, 50.0),             # Q_total=60
+            ("2026-04-18T00:00:00Z", BASE_TS - EPOCH_S, 0.0, 0.0),  # Q_total=0 baseline
+            ("2026-04-25T00:00:00Z", BASE_TS, 10.0, 50.0),  # Q_total=60
         ],
         market_id=MARKET_ID,
     )
@@ -138,9 +137,7 @@ async def test_silent_on_zero_baseline(
         current_chain_ts=BASE_TS,
     )
     assert sig.tripped is False
-    assert "zero_baseline" in sig.reason, (
-        f"Expected reason='zero_baseline', got {sig.reason!r}"
-    )
+    assert "zero_baseline" in sig.reason, f"Expected reason='zero_baseline', got {sig.reason!r}"
 
 
 @pytest.mark.asyncio
@@ -170,6 +167,4 @@ async def test_silent_on_insufficient_history(
         current_chain_ts=BASE_TS,
     )
     assert sig.tripped is False
-    assert "insufficient_history" in sig.reason, (
-        f"Expected reason='insufficient_history', got {sig.reason!r}"
-    )
+    assert "insufficient_history" in sig.reason, f"Expected reason='insufficient_history', got {sig.reason!r}"

@@ -16,14 +16,15 @@ both Pendle docs format ("2026-04-25T00:00:00Z") and Python datetime
 [[breaker-side-budget-rebalance]]: SAFE-08 spec, drift_threshold, A2 absorbed
 [[circuit-breakers-v05]]: breaker taxonomy + routing
 """
+
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from .base import Breaker, BreakerSignal
 from ...state.writers.market_reward_calibration import read_market_reward_calibration_history
+from .base import Breaker, BreakerSignal
 
 __all__ = ["SideBudgetBreaker"]
 
@@ -71,9 +72,7 @@ class SideBudgetBreaker(Breaker):
         # T-04-05-03: normalize Z → +00:00 for fromisoformat compatibility.
         latest_ts_str = latest["calibrated_at_utc"].replace("Z", "+00:00")
         latest_dt = datetime.fromisoformat(latest_ts_str)
-        one_epoch_iso = (
-            latest_dt - timedelta(days=config.reward_share_model.epoch_days)
-        ).isoformat()
+        one_epoch_iso = (latest_dt - timedelta(days=config.reward_share_model.epoch_days)).isoformat()
 
         epoch_lag_row = next(
             (r for r in rows if r["calibrated_at_utc"].replace("Z", "+00:00") <= one_epoch_iso),

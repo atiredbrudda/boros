@@ -8,6 +8,7 @@ T-03-01 mitigation: parquet sidecar paths are derived from artifact.market_id,
 side, and window_end_ts — operator-controlled fields are normalised through
 Path.resolve() and verified to remain inside parquet_root before mkdir/write.
 """
+
 from __future__ import annotations
 
 import json
@@ -45,9 +46,7 @@ def write_loss_grid_artifact(
     """
     # Stamp created_at if not yet set (sentinel pattern — keeps fit.py lint-clean)
     if artifact.created_at == 0:
-        artifact = artifact.model_copy(
-            update={"created_at": int(datetime.now(UTC).timestamp())}
-        )
+        artifact = artifact.model_copy(update={"created_at": int(datetime.now(UTC).timestamp())})
 
     parquet_root_resolved = parquet_root.resolve()
     out_dir = (
@@ -58,8 +57,7 @@ def write_loss_grid_artifact(
     ).resolve()
     if not out_dir.is_relative_to(parquet_root_resolved):
         raise ValueError(
-            f"loss_grid_artifacts path traversal blocked: {out_dir} "
-            f"is outside {parquet_root_resolved}"
+            f"loss_grid_artifacts path traversal blocked: {out_dir} " f"is outside {parquet_root_resolved}"
         )
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / "artifact.parquet"

@@ -25,9 +25,11 @@ PITFALLS:
 [[ev-cancel-rule-implementation-v05]]
 [[gas-history-ewma-cancel-cost]]
 """
+
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any, Literal
 
 import structlog
 
@@ -56,7 +58,7 @@ async def evaluate(
     sqlite_path: Path,
     config: BotConfig,
     gas_cache: GasHistoryCache,
-    w3,
+    w3: Any,
 ) -> EvaluateOutput:
     """Async EV-based cancel rule. Cancel iff EV_hold < 0. NEVER swallows model errors.
 
@@ -146,29 +148,21 @@ async def evaluate(
     # ── Step 5: EV_hold — branch on voluntary_cancel_forfeits_accumulated ────
     p_no_fill_unpurged = (1.0 - p_fill) * (1.0 - p_purge)
 
+    branch: Literal["benign", "punitive"]
     if config.strategy.voluntary_cancel_forfeits_accumulated:
         # PUNITIVE branch: EV subtracts already-accumulated epoch rewards as sunk cost.
         # Retained for Phase 5 backtest sensitivity sweep only; NOT the production default.
         sunk = req.r_me_per_epoch_pendle_accumulated_so_far
-        ev_hold = (
-            r_share * p_no_fill_unpurged
-            - e_loss * p_fill
-            - cancel_cost * p_purge
-            - sunk
-        )
+        ev_hold = r_share * p_no_fill_unpurged - e_loss * p_fill - cancel_cost * p_purge - sunk
         branch = "punitive"
     else:
         # BENIGN branch (default, D-01 / P0-01 resolved): purely forward-looking.
         # voluntary_cancel_forfeits_accumulated = False confirmed 2026-04-23.
-        ev_hold = (
-            r_share * p_no_fill_unpurged
-            - e_loss * p_fill
-            - cancel_cost * p_purge
-        )
+        ev_hold = r_share * p_no_fill_unpurged - e_loss * p_fill - cancel_cost * p_purge
         branch = "benign"
 
     # ── Step 6: Decision ─────────────────────────────────────────────────────
-    decision = "CANCEL" if ev_hold < 0.0 else "HOLD"
+    decision: Literal["CANCEL", "HOLD"] = "CANCEL" if ev_hold < 0.0 else "HOLD"
 
     log.debug(
         "engine.evaluate",

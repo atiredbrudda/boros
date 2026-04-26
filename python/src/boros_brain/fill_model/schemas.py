@@ -5,6 +5,7 @@ Plan 02-03 appends FitArtifact, PredictInput, PredictOutput, FillModelStaleFeatu
 FillModelNoFreshFitError. Keep this file the single home for all fill_model shape
 declarations so architecture.yml has a single `brain.fill_model.schemas` node.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

@@ -18,10 +18,11 @@ side ([[fill-model-predict-contract]]).
 
 See [[ou-on-basis-loss-scaffold]].
 """
+
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 
 if TYPE_CHECKING:
     from ..config.schema import BotConfig
@@ -37,15 +38,14 @@ class OUBasisLossModel(Protocol):
 
     def expected_loss(
         self,
-        req: "ExpectedLossInput",
+        req: ExpectedLossInput,
         *,
         sqlite_path: Path,
-        config: "BotConfig",
-    ) -> "ExpectedLossOutput": ...
+        config: BotConfig,
+    ) -> ExpectedLossOutput: ...
 
 
-def fit_ou_basis(*args, **kwargs) -> None:
+def fit_ou_basis(*args: Any, **kwargs: Any) -> None:
     raise NotImplementedError(
-        "LOSS-03 scaffold — v1.0 drop-in point. "
-        "See [[ou-on-basis-loss-scaffold]] for the implementation plan."
+        "LOSS-03 scaffold — v1.0 drop-in point. " "See [[ou-on-basis-loss-scaffold]] for the implementation plan."
     )

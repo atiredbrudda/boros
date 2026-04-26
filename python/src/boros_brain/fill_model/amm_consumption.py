@@ -15,6 +15,7 @@ ingest time).
 
 [[amm-consumption-model-v05]]
 """
+
 from __future__ import annotations
 
 import polars as pl
@@ -52,9 +53,9 @@ def compute_amm_share_timeseries(
     Output schema:
         snapshot_ts | tick | amm_share
     """
-    raw_sel = raw.filter(
-        (pl.col("snapshot_ts") >= epoch_start_ts) & (pl.col("snapshot_ts") < epoch_end_ts)
-    ).select(["snapshot_ts", "tick", "size"])
+    raw_sel = raw.filter((pl.col("snapshot_ts") >= epoch_start_ts) & (pl.col("snapshot_ts") < epoch_end_ts)).select(
+        ["snapshot_ts", "tick", "size"]
+    )
     combined_sel = combined.filter(
         (pl.col("snapshot_ts") >= epoch_start_ts) & (pl.col("snapshot_ts") < epoch_end_ts)
     ).select(["snapshot_ts", "tick", pl.col("size_combined")])
@@ -107,9 +108,7 @@ def assert_epoch_conservation(
     Logs fill_model.amm_conservation_violation (error) BEFORE raising so
     the operator has a grep-joinable record by run_id.
     """
-    expected = (
-        book_ahead_start - taker_consumption_ahead - amm_consumption + net_placements_ahead
-    )
+    expected = book_ahead_start - taker_consumption_ahead - amm_consumption + net_placements_ahead
     delta = book_ahead_end - expected
     if abs(delta) > tolerance:
         log.error(

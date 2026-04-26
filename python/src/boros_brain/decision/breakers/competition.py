@@ -13,13 +13,14 @@ STRIDE: T-04-05-01 — first-day guard prevents false-fire on day 1.
 [[breaker-competition-collapse]]: SAFE-06 spec, drop_threshold default, Pitfall #3
 [[circuit-breakers-v05]]: breaker taxonomy + routing
 """
+
 from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
 
-from .base import Breaker, BreakerSignal
 from ...state.writers.competition_history import read_competition_history_since
+from .base import Breaker, BreakerSignal
 
 __all__ = ["CompetitionBreaker"]
 
@@ -47,9 +48,7 @@ class CompetitionBreaker(Breaker):
         """Evaluate SAFE-06 competition collapse condition."""
         cfg = config.decision.breakers.competition
         market = config.markets[0]
-        one_epoch_ago = current_chain_ts - int(
-            config.reward_share_model.epoch_days * 86400
-        )
+        one_epoch_ago = current_chain_ts - int(config.reward_share_model.epoch_days * 86400)
 
         rows = read_competition_history_since(sqlite_path, market.market_id, one_epoch_ago)
 

@@ -5,8 +5,9 @@ from __future__ import annotations
 import shutil
 import tempfile
 import uuid
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, Literal
+from typing import Literal
 
 import pytest
 
@@ -22,6 +23,7 @@ ROOT = Path(__file__).resolve().parents[2]
 # helper so test helpers can call it directly without a fixture dependency).
 # Mirrors test_fill_model_predict_contract.py lines 37-46.
 # ---------------------------------------------------------------------------
+
 
 def apply_migrations(db: Path) -> None:
     """Run alembic migrations to head against db. Mirrors test_fill_model_predict_contract.py."""
@@ -110,8 +112,8 @@ def seed_margin_history(tmp_sqlite_path: Path) -> Callable:
         market_id: str = "BINANCE-ETHUSDT-29MAY2026",
         base_chain_ts: int = 1_700_000_000,
     ) -> Path:
-        from boros_brain.state.writers.margin_history import insert_margin_snapshot
         from boros_brain.state.db import open_connection
+        from boros_brain.state.writers.margin_history import insert_margin_snapshot
 
         apply_migrations(tmp_sqlite_path)
         with open_connection(tmp_sqlite_path) as conn:
@@ -143,8 +145,8 @@ def seed_clo_history(tmp_sqlite_path: Path) -> Callable:
         rows: list[tuple[int, float, float]],
         market_id: str = "BINANCE-ETHUSDT-29MAY2026",
     ) -> Path:
-        from boros_brain.state.writers.clo_history import insert_clo_snapshot
         from boros_brain.state.db import open_connection
+        from boros_brain.state.writers.clo_history import insert_clo_snapshot
 
         apply_migrations(tmp_sqlite_path)
         with open_connection(tmp_sqlite_path) as conn:
@@ -174,8 +176,8 @@ def seed_competition_history(tmp_sqlite_path: Path) -> Callable:
         rows: list[tuple[str, int, float, float]],
         market_id: str = "BINANCE-ETHUSDT-29MAY2026",
     ) -> Path:
-        from boros_brain.state.writers.competition_history import insert_competition_row
         from boros_brain.state.db import open_connection
+        from boros_brain.state.writers.competition_history import insert_competition_row
 
         apply_migrations(tmp_sqlite_path)
         with open_connection(tmp_sqlite_path) as conn:
@@ -234,8 +236,8 @@ def seed_loss_grid_artifact(tmp_sqlite_path: Path) -> Callable:
         market_id: str = "BINANCE-ETHUSDT-29MAY2026",
         side: str = "long",
     ) -> Path:
-        from boros_brain.state.writers.loss_grid_artifacts import insert_loss_grid_artifact
         from boros_brain.loss_model.schemas import LossGridArtifact
+        from boros_brain.state.writers.loss_grid_artifacts import insert_loss_grid_artifact
 
         apply_migrations(tmp_sqlite_path)
         artifact = LossGridArtifact(
@@ -331,18 +333,18 @@ def seed_tx_receipts_fills(tmp_sqlite_path: Path) -> Callable:
                     " event_type, chain_ts, market_id, order_id) "
                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                     (
-                        f"0x{'a' * 62}{i:02d}",   # unique tx_hash (PK)
+                        f"0x{'a' * 62}{i:02d}",  # unique tx_hash (PK)
                         "test-001",
-                        since_chain_ts + i,         # submitted_at_ts (required NOT NULL)
-                        since_chain_ts + i + 1,     # confirmed_at_ts
-                        "confirmed",                # status (required NOT NULL)
-                        None,                       # gas_used
-                        "close",                    # intent (required NOT NULL)
-                        None,                       # related_order_id
-                        "fill",                     # event_type
-                        since_chain_ts + i,         # chain_ts (SAFE-05 window filter)
-                        market_id,                  # market_id
-                        f"ord-fill-{i}",            # order_id
+                        since_chain_ts + i,  # submitted_at_ts (required NOT NULL)
+                        since_chain_ts + i + 1,  # confirmed_at_ts
+                        "confirmed",  # status (required NOT NULL)
+                        None,  # gas_used
+                        "close",  # intent (required NOT NULL)
+                        None,  # related_order_id
+                        "fill",  # event_type
+                        since_chain_ts + i,  # chain_ts (SAFE-05 window filter)
+                        market_id,  # market_id
+                        f"ord-fill-{i}",  # order_id
                     ),
                 )
             conn.commit()

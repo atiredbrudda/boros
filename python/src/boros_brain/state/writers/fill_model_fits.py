@@ -7,6 +7,7 @@ imports insert_fit_artifact. `brain.fill_model.predict.predict` imports `get_lat
 Any `INSERT INTO fill_model_fits` / `UPDATE fill_model_fits` / `DELETE FROM fill_model_fits`
 outside this module triggers scripts/sqlite_writer_lint.py.
 """
+
 from __future__ import annotations
 
 import json

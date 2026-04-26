@@ -12,6 +12,7 @@ Covers:
 The expected_cadence_s_per_exchange knob maps exchange name → cadence.
 Binance: 8h = 28800s. Hyperliquid: 1min = 60s.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -51,19 +52,19 @@ def _config_with_exchange(
     market["underlying_exchange"] = exchange
     market["underlying_symbol"] = symbol
     d["markets"] = [market]
-    d.setdefault("decision", {}).setdefault("breakers", {}).setdefault(
-        "underlying_stale", {}
-    )["expected_cadence_s_per_exchange"] = {exchange: float(expected_cadence_s)}
+    d.setdefault("decision", {}).setdefault("breakers", {}).setdefault("underlying_stale", {})[
+        "expected_cadence_s_per_exchange"
+    ] = {exchange: float(expected_cadence_s)}
     return BotConfig.model_validate(d)
 
 
 @pytest.mark.parametrize(
     "exchange, age_s, expected_cadence_s, should_fire",
     [
-        ("binance", 17_280, 28_800, False),    # 0.60× cadence — fresh
-        ("binance", 60_000, 28_800, True),     # 2.08× cadence — stale
-        ("hyperliquid", 121, 60, True),        # 2.02× cadence — stale
-        ("hyperliquid", 119, 60, False),       # 1.98× cadence — fresh
+        ("binance", 17_280, 28_800, False),  # 0.60× cadence — fresh
+        ("binance", 60_000, 28_800, True),  # 2.08× cadence — stale
+        ("hyperliquid", 121, 60, True),  # 2.02× cadence — stale
+        ("hyperliquid", 119, 60, False),  # 1.98× cadence — fresh
     ],
     ids=["binance_fresh", "binance_stale", "hyperliquid_stale", "hyperliquid_fresh"],
 )
@@ -88,7 +89,9 @@ async def test_underlying_stale_parametrized(
     )
 
     patched_config = _config_with_exchange(
-        default_config, exchange=exchange, symbol="ETHUSDT",
+        default_config,
+        exchange=exchange,
+        symbol="ETHUSDT",
         expected_cadence_s=expected_cadence_s,
     )
 

@@ -9,6 +9,7 @@
 # Hook overview:
 #   architecture-lint        — Protocol #2: no code change without architecture.yml update
 #   wiki-cite-lint           — Protocol #1: research/decisions/postmortem markdown must cite wiki
+#   wiki-index-lint          — Protocol #1 strengthening: every wiki page must be 1-hop reachable from index.md
 #   sqlite-writer-lint       — INFRA-03: single-writer-per-table discipline
 #   no-plain-keys            — T-04-03: block Ethereum private keys + PEM headers
 #   config-round-trip-test   — PROTO-04: BotConfig round-trip stays valid after changes
@@ -35,6 +36,15 @@ repos:
         # Only fire on markdown files directly under research/, decisions/, postmortem/
         # at repo root. Files under .planning/research/ are bootstrap-exempt (pre-hook).
         files: '^(research|decisions|postmortem)/.*\.md$'
+
+      - id: wiki-index-lint
+        name: Wiki index 1-hop lint (PROTO-01 strengthening)
+        entry: python3 scripts/wiki_index_lint.py
+        language: system
+        pass_filenames: false   # always scans the wiki workspace against its own index.md
+        # Soft-pass when the wiki dir is absent (env without checkout). Override:
+        # BOROS_WIKI_DIR=/path/to/workspaces/boros/wiki
+        always_run: true
 
       - id: sqlite-writer-lint
         name: Single-writer-per-table lint (INFRA-03)
@@ -90,7 +100,13 @@ repos:
         additional_dependencies:
           - pydantic==2.13.3
           - types-PyYAML
-        args: [--strict, --ignore-missing-imports, --no-warn-unused-ignores]
+        # --config-file points at python/pyproject.toml so [tool.mypy] settings
+        # (pydantic plugin, strict mode) load. Without this flag the hook runs
+        # from repo root, finds no config, and silently emits ~47 false positives.
+        args:
+          - --config-file=python/pyproject.toml
+          - --ignore-missing-imports
+          - --no-warn-unused-ignores
         files: '^python/src/'
 
   - repo: https://github.com/biomejs/pre-commit

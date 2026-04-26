@@ -50,12 +50,8 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     tgt_p.add_argument("--market", required=True, help="market_id")
-    tgt_p.add_argument(
-        "--side", required=True, choices=["long", "short"], help="long or short"
-    )
-    tgt_p.add_argument(
-        "--depth", type=int, default=5, help="depth_from_mark_ticks (default 5)"
-    )
+    tgt_p.add_argument("--side", required=True, choices=["long", "short"], help="long or short")
+    tgt_p.add_argument("--depth", type=int, default=5, help="depth_from_mark_ticks (default 5)")
     tgt_p.add_argument(
         "--queue-ahead-wei",
         type=int,
@@ -173,9 +169,7 @@ def main(argv: list[str] | None = None) -> int:
                 LossModelNoFreshGridError,
             ) as exc:
                 print(f"{type(exc).__name__}: {exc}", file=sys.stderr)
-                log.exception(
-                    "sizer.cli_domain_error", cmd=args.cmd, err=str(exc)
-                )
+                log.exception("sizer.cli_domain_error", cmd=args.cmd, err=str(exc))
                 return 1
 
             print(json.dumps(out.model_dump(), indent=2))

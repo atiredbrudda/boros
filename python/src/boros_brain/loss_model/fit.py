@@ -12,6 +12,7 @@ to keep bootstrap / exploratory fits from polluting state.loss_grid_artifacts.
 NO wall-clock calls in this module — all ts values come from caller; created_at
 sentinel = 0 (artifact.write_loss_grid_artifact stamps).
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -76,11 +77,7 @@ def build_loss_grid_artifact_from_fills(
     min_samp = lcfg.min_samples_per_cell
 
     # event_index coverage carry-through
-    eic: Literal["full", "degraded"] = (
-        "degraded"
-        if any(f.fill_event_index is None for f in fills)
-        else "full"
-    )
+    eic: Literal["full", "degraded"] = "degraded" if any(f.fill_event_index is None for f in fills) else "full"
 
     if not fills or len(fills) < int(min_samp * 0.5):
         log.warning(
@@ -205,9 +202,7 @@ def fit_loss_grid(
         sqlite_path = Path(str(config.infra.sqlite_path))
 
     if fills is None:
-        all_fills = replay_historical_fills(
-            config, market_id, window_start_ts, window_end_ts
-        )
+        all_fills = replay_historical_fills(config, market_id, window_start_ts, window_end_ts)
         # Filter to side
         fills_for_side = [f for f in all_fills if f.side == side]
     else:

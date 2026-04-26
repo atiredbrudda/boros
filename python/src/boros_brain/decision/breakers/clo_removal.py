@@ -12,6 +12,7 @@ Wiki reference:
   [[breaker-clo-removal-and-shift]]: SAFE-03 + SAFE-04 spec, tick conversion
   [[circuit-breakers-v05]]: full breaker taxonomy
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -19,8 +20,8 @@ from typing import Any
 
 import structlog
 
-from .base import Breaker, BreakerSignal
 from ...state.writers.clo_history import read_latest_clo_history
+from .base import Breaker, BreakerSignal
 
 log = structlog.get_logger(__name__)
 

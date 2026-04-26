@@ -11,6 +11,7 @@ Phase 3 Success Criterion #2 from the ROADMAP — RewardShareModel.R_capped(Q_me
 at $100 collateral produces sub_cap-labeled curve, and the cap-binding branch
 unit test passes at scaled-up collateral inputs.
 """
+
 from __future__ import annotations
 
 import math

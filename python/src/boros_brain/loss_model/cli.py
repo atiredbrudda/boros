@@ -65,10 +65,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     sub.add_parser(
         "force-degrade",
-        help=(
-            "Inject sparse-data scenario → fit_status='degraded' guaranteed "
-            "(Plan 03-01 smoke)"
-        ),
+        help=("Inject sparse-data scenario → fit_status='degraded' guaranteed " "(Plan 03-01 smoke)"),
     )
 
     return p
@@ -146,12 +143,10 @@ def main(argv: list[str] | None = None) -> int:
             # Persist a fit_status='degraded' artifact for testing the downstream
             # PLACE-suppression path (P3-9). No fills; replay short-circuits;
             # build_loss_grid_artifact_from_fills emits degraded with empty cells.
-            from .fit import build_loss_grid_artifact_from_fills
             from .artifact import write_loss_grid_artifact
+            from .fit import build_loss_grid_artifact_from_fills
 
-            market_id = (
-                config.markets[0].market_id if config.markets else "TEST-MARKET"
-            )
+            market_id = config.markets[0].market_id if config.markets else "TEST-MARKET"
             artifact = build_loss_grid_artifact_from_fills(
                 fills=[],
                 config=config,
@@ -161,9 +156,7 @@ def main(argv: list[str] | None = None) -> int:
                 window_end_ts=0,
                 run_id=manifest.run_id,
             )
-            write_loss_grid_artifact(
-                artifact, sqlite_path=Path(config.infra.sqlite_path)
-            )
+            write_loss_grid_artifact(artifact, sqlite_path=Path(config.infra.sqlite_path))
             log.info("loss_model.force_degrade_complete", run_id=manifest.run_id)
             return 0
 

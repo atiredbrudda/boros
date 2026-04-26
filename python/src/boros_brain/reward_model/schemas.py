@@ -36,7 +36,7 @@ class RewardCurveInput(StrictBase):
     sigma_others_pendle: float
     e_liq_per_epoch_pendle: float
     side_split: float  # 0..1
-    t_frac: float      # 1.0 for full-epoch posting in v0.5
+    t_frac: float  # 1.0 for full-epoch posting in v0.5
     collateral_usd: float
     pendle_price_usd: float
     epoch_days: float  # 7.0 locked
@@ -58,7 +58,7 @@ class CompetitionSnapshot(StrictBase):
     """
 
     market_id: str
-    polled_at_utc: str   # ISO8601
+    polled_at_utc: str  # ISO8601
     chain_ts: int
     q_me_pendle: float
     sigma_others_pendle: float

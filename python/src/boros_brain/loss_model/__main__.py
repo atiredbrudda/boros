@@ -1,4 +1,5 @@
 """Enables ``python -m boros_brain.loss_model``."""
+
 import sys
 
 from .cli import main

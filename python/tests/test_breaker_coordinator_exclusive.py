@@ -14,9 +14,11 @@ ZMQ pattern (per test_zmq_kill_priority.py):
   CmdBus PUSH sockets BIND the endpoints.
   Test PULL sockets CONNECT (not bind) — this avoids double-bind hangs.
 """
+
 from __future__ import annotations
 
 import asyncio
+import contextlib
 from pathlib import Path
 
 import pytest
@@ -157,11 +159,9 @@ async def test_suppression(
         parquet_root=tmp_path,
         current_chain_ts=BASE_TS,
     )
-    # Drain the kill message so we start fresh.
-    try:
+    # Drain the kill message so we start fresh. Kill may not have arrived yet — OK for this test.
+    with contextlib.suppress(TimeoutError):
         await asyncio.wait_for(kill_pull.recv_json(), timeout=0.5)
-    except asyncio.TimeoutError:
-        pass  # Kill may not have arrived yet — OK for this test
 
     # Use PLACE (not HOLD) to properly test suppression of the normal cmd path.
     fake_place_decision = type("FakeDecision", (), {"decision_kind": "PLACE"})()
@@ -212,10 +212,8 @@ async def test_suppression_logged(
         parquet_root=tmp_path,
         current_chain_ts=BASE_TS,
     )
-    try:
+    with contextlib.suppress(TimeoutError):
         await asyncio.wait_for(kill_pull.recv_json(), timeout=0.5)
-    except asyncio.TimeoutError:
-        pass
 
     # Use PLACE (not HOLD) so the coordinator writes a suppression row.
     fake_place = type("FakeDecision", (), {"decision_kind": "PLACE"})()
@@ -225,12 +223,8 @@ async def test_suppression_logged(
     from boros_brain.state.db import open_connection
 
     with open_connection(tmp_sqlite_path) as conn:
-        rows = conn.execute(
-            "SELECT kind FROM breaker_events WHERE kind = 'suppression'"
-        ).fetchall()
-    assert len(rows) >= 1, (
-        f"Expected at least 1 suppression row in breaker_events, got {len(rows)}"
-    )
+        rows = conn.execute("SELECT kind FROM breaker_events WHERE kind = 'suppression'").fetchall()
+    assert len(rows) >= 1, f"Expected at least 1 suppression row in breaker_events, got {len(rows)}"
 
     kill_pull.close()
     bus.close()

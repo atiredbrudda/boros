@@ -11,7 +11,10 @@ geometry is thus observable to Phase 4 DecisionEngine.
 
 [[reward-cap-geometry-v05]]
 """
+
 from __future__ import annotations
+
+from typing import Literal
 
 import structlog
 
@@ -44,13 +47,9 @@ def r_capped_curve(req: RewardCurveInput) -> RewardCurveOutput:
     """
     # Input validation (fail closed on operator / caller errors).
     if req.pendle_price_usd <= 0.0:
-        raise ValueError(
-            f"pendle_price_usd must be > 0, got {req.pendle_price_usd}"
-        )
+        raise ValueError(f"pendle_price_usd must be > 0, got {req.pendle_price_usd}")
     if req.e_liq_per_epoch_pendle < 0.0:
-        raise ValueError(
-            f"e_liq_per_epoch_pendle must be >= 0.0, got {req.e_liq_per_epoch_pendle}"
-        )
+        raise ValueError(f"e_liq_per_epoch_pendle must be >= 0.0, got {req.e_liq_per_epoch_pendle}")
     if req.epoch_days <= 0.0:
         raise ValueError(f"epoch_days must be > 0, got {req.epoch_days}")
 
@@ -59,25 +58,16 @@ def r_capped_curve(req: RewardCurveInput) -> RewardCurveOutput:
     if denom == 0.0 or req.q_me_pendle == 0.0:
         r_uncapped = 0.0
     else:
-        r_uncapped = (
-            req.e_liq_per_epoch_pendle
-            * req.side_split
-            * (req.q_me_pendle * req.t_frac)
-            / denom
-        )
+        r_uncapped = req.e_liq_per_epoch_pendle * req.side_split * (req.q_me_pendle * req.t_frac) / denom
 
     # cap_budget_per_epoch in PENDLE-units (A4 kink point).
-    cap_budget = (
-        10.0
-        * req.collateral_usd
-        * (req.epoch_days / 365.0)
-        / req.pendle_price_usd
-    )
+    cap_budget = 10.0 * req.collateral_usd * (req.epoch_days / 365.0) / req.pendle_price_usd
 
     # Regime classification — order matters: market_saturated takes priority over
     # cap_binding when Σ=0 and Q_me>0 (the formula returns full E_liq×side_split,
     # which CAN exceed cap_budget at scaled-up collateral but the geometric
     # interpretation is "we own the market" rather than "cap clipped a busy market").
+    regime: Literal["sub_cap", "cap_binding", "market_saturated"]
     if req.sigma_others_pendle == 0.0 and req.q_me_pendle > 0.0:
         regime = "market_saturated"
     elif r_uncapped >= cap_budget:

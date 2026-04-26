@@ -69,7 +69,7 @@ class BorosRestClient:
         """GET /markets — returns the list of active market objects."""
         resp = await self._client.get("/markets")
         resp.raise_for_status()
-        return resp.json()  # type: ignore[return-value]
+        return resp.json()  # type: ignore[no-any-return]
 
     async def post_get_net_margin(self, account_id: int) -> dict[str, Any]:
         """POST /accounts/get-net-margin — returns per-account margin data.
@@ -85,4 +85,4 @@ class BorosRestClient:
             json={"accountId": account_id},
         )
         resp.raise_for_status()
-        return resp.json()  # type: ignore[return-value]
+        return resp.json()  # type: ignore[no-any-return]

@@ -76,9 +76,7 @@ class LossModelConfig(StrictBase):
     PATTERNS §config.py gotcha.
     """
 
-    depth_bucket_edges: list[float] = Field(
-        default_factory=lambda: [0.0, 1.0, 2.0, 4.0, 8.0, 16.0, 32.0, 10000.0]
-    )
+    depth_bucket_edges: list[float] = Field(default_factory=lambda: [0.0, 1.0, 2.0, 4.0, 8.0, 16.0, 32.0, 10000.0])
     """Bin edges for depth_from_mark_ticks. Terminal sentinel 10000.0 (not inf)."""
 
     tau_bucket_edges_days: list[float] = Field(

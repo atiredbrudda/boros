@@ -12,20 +12,15 @@ decision.* knobs are wired into the Pydantic schema.
 The _collect_leaf_paths helper is copied verbatim from test_manifest_contains_all_knobs.py
 (lines 53-76) so this test is self-contained.
 """
+
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Any
-
-import pytest
 from pydantic import BaseModel
 
 from boros_brain.config.schema import BotConfig
 
 
-def _collect_leaf_paths(
-    model_cls: type[BaseModel], prefix: tuple[str, ...] = ()
-) -> set[tuple[str, ...]]:
+def _collect_leaf_paths(model_cls: type[BaseModel], prefix: tuple[str, ...] = ()) -> set[tuple[str, ...]]:
     """Walk every nested Pydantic sub-model recursively, returning leaf field paths.
 
     A leaf is a field whose annotation is NOT a BaseModel subclass (list, scalar, etc).

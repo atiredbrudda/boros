@@ -14,6 +14,7 @@ T-03-03 / T-03-04 mitigations: explicit n_samples == 0 branch routes to
 coarse_bound; every fallback emits ``loss_model.sparse_cell_fallback`` so the
 operator can audit grid sparsity.
 """
+
 from __future__ import annotations
 
 import math
@@ -36,6 +37,7 @@ from .schemas import (
 def _get_loss_model_config(config: BotConfig) -> LossModelConfig:
     """Plan-03-01-independent fallback. Mirror of replay._get_loss_model_config."""
     return getattr(config, "loss_model", None) or LossModelConfig()
+
 
 log = structlog.get_logger(__name__)
 
@@ -85,9 +87,7 @@ def expected_loss(
     if req.time_to_maturity_s < 0:
         raise ValueError(f"negative tau: {req.time_to_maturity_s}")
 
-    artifact: LossGridArtifact | None = get_latest_loss_grid(
-        sqlite_path, req.market_id, req.side
-    )
+    artifact: LossGridArtifact | None = get_latest_loss_grid(sqlite_path, req.market_id, req.side)
     if artifact is None:
         log.warning(
             "loss_model.no_fresh_grid",
@@ -95,9 +95,7 @@ def expected_loss(
             side=req.side,
             reason="no_grid_row",
         )
-        raise LossModelNoFreshGridError(
-            f"no grid for ({req.market_id}, {req.side})"
-        )
+        raise LossModelNoFreshGridError(f"no grid for ({req.market_id}, {req.side})")
 
     grid_age_s = float(req.current_chain_ts - artifact.window_end_ts)
     if grid_age_s < 0:
@@ -121,15 +119,11 @@ def expected_loss(
             fit_max_staleness_s=_get_loss_model_config(config).fit_max_staleness_s,
         )
         raise LossModelNoFreshGridError(
-            f"grid too stale: age={grid_age_s}s > "
-            f"max={_get_loss_model_config(config).fit_max_staleness_s}s"
+            f"grid too stale: age={grid_age_s}s > " f"max={_get_loss_model_config(config).fit_max_staleness_s}s"
         )
 
     final_status = artifact.fit_status
-    if (
-        grid_age_s > _get_loss_model_config(config).fit_warn_staleness_s
-        and final_status == "ok"
-    ):
+    if grid_age_s > _get_loss_model_config(config).fit_warn_staleness_s and final_status == "ok":
         final_status = "stale"
         log.warning(
             "loss_model.expected_loss_stale_grid",
@@ -176,9 +170,7 @@ def expected_loss(
     for c in artifact.cells:
         if c.n_samples == 0:
             continue
-        dist = math.sqrt(
-            (c.depth_bucket_idx - d_idx) ** 2 + (c.tau_bucket_idx - t_idx) ** 2
-        )
+        dist = math.sqrt((c.depth_bucket_idx - d_idx) ** 2 + (c.tau_bucket_idx - t_idx) ** 2)
         if dist <= knn_max:
             neighbors.append((dist, c))
     neighbors.sort(key=lambda x: x[0])
@@ -187,9 +179,7 @@ def expected_loss(
 
     if top_k and total_n >= min_samp:
         # Weighted aggregation by n_samples.
-        weighted = (
-            sum(_select_metric(c, agg) * c.n_samples for _, c in top_k) / total_n
-        )
+        weighted = sum(_select_metric(c, agg) * c.n_samples for _, c in top_k) / total_n
         # Use weighted means for p50/p95 surfacing too — operator inspects the cell
         # distribution from the weighted summary.
         weighted_p50 = sum(c.p50_pendle * c.n_samples for _, c in top_k) / total_n

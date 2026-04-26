@@ -42,9 +42,7 @@ class FillModelConfig(StrictBase):
     refit_cadence_s: float = Field(900.0, ge=60.0, le=3600.0)
     """How often (seconds) the refit loop re-runs fit_market_side and updates the cached artifact."""
 
-    covariate_whitelist: list[str] = Field(
-        default_factory=lambda: list(DEFAULT_COVARIATE_WHITELIST)
-    )
+    covariate_whitelist: list[str] = Field(default_factory=lambda: list(DEFAULT_COVARIATE_WHITELIST))
     """Subset of ALLOWED_COVARIATES to include in the GLM design matrix for this run."""
 
     queue_tracker_bias_mode: Literal["pessimistic", "optimistic", "realized"] = "pessimistic"
@@ -83,7 +81,6 @@ class FillModelConfig(StrictBase):
         bad = [x for x in v if x not in ALLOWED_COVARIATES]
         if bad:
             raise ValueError(
-                f"covariate_whitelist contains non-allowed entries: {bad}. "
-                f"Allowed: {sorted(ALLOWED_COVARIATES)}"
+                f"covariate_whitelist contains non-allowed entries: {bad}. " f"Allowed: {sorted(ALLOWED_COVARIATES)}"
             )
         return v

@@ -10,6 +10,7 @@ Single home for all sizer shape declarations so architecture.yml has a single
 
 [[sizing-optimizer-sub-cap-regime-v05]]
 """
+
 from __future__ import annotations
 
 from typing import Literal
@@ -79,6 +80,4 @@ class InsufficientCollateralError(RuntimeError):
     def __init__(self, q_min: float, q_max: float):
         self.q_min = q_min
         self.q_max = q_max
-        super().__init__(
-            f"Q_min={q_min} > Q_max={q_max} — collateral too thin for minimum order"
-        )
+        super().__init__(f"Q_min={q_min} > Q_max={q_max} — collateral too thin for minimum order")

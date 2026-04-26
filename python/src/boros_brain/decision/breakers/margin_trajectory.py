@@ -19,6 +19,7 @@ Strategy non-negotiable:
   (liquidation avoidance) when the extrapolated time-to-maintenance-margin
   is below time_to_mm_threshold_s.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -27,8 +28,8 @@ from typing import Any
 import numpy as np
 import structlog
 
-from .base import Breaker, BreakerSignal
 from ...state.writers.margin_history import read_margin_history
+from .base import Breaker, BreakerSignal
 
 log = structlog.get_logger(__name__)
 

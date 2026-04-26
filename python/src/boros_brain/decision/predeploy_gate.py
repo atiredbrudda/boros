@@ -14,13 +14,13 @@ last successful gate run.
 [[predeploy-gate-cli]]: CLI usage, Pitfall #8, Phase 7 boot guard
 [[economics-kill-switch-v05]]: underlying economics screener gate
 """
+
 from __future__ import annotations
 
 import hashlib
 import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
 
 import structlog
 
@@ -95,9 +95,7 @@ def run_predeploy_gate(
         return 1
 
     # 2. Verify the configured market is in the shortlist.
-    configured_market: str | None = (
-        config.markets[0].market_id if config.markets else None
-    )
+    configured_market: str | None = config.markets[0].market_id if config.markets else None
     gate_passed = bool(configured_market and configured_market in shortlist)
 
     log.info(
@@ -113,9 +111,7 @@ def run_predeploy_gate(
     config_hash = hashlib.sha256(config_json.encode()).hexdigest()[:16]
 
     # 4. Write wiki page (separate from DB to maintain the wiki audit trail).
-    _wiki_dir = wiki_dir or Path(
-        "/Users/macbookair/Documents/project/test/rerun7/LLM Wiki/workspaces/boros/wiki"
-    )
+    _wiki_dir = wiki_dir or Path("/Users/macbookair/Documents/project/test/rerun7/LLM Wiki/workspaces/boros/wiki")
     _write_wiki_page(
         wiki_dir=_wiki_dir,
         gate_passed=gate_passed,
@@ -129,9 +125,7 @@ def run_predeploy_gate(
 
     # 5. Persist gate record to state.predeploy_gate_records.
     chain_ts = int(datetime.now(UTC).timestamp())
-    wiki_page_path = str(
-        _wiki_dir / f"predeploy-gate-pass-{datetime.now(UTC).strftime('%Y%m%d-%H%M%S')}.md"
-    )
+    wiki_page_path = str(_wiki_dir / f"predeploy-gate-pass-{datetime.now(UTC).strftime('%Y%m%d-%H%M%S')}.md")
     with open_connection(sqlite_path) as conn:
         insert_predeploy_gate_record(
             conn,

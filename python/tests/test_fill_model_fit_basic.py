@@ -8,7 +8,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import polars as pl
-import pytest
 
 from boros_brain.config.schema import BotConfig, DataConfig
 from boros_brain.fill_model.fit import fit_market_side
@@ -72,29 +71,29 @@ def test_fit_converges_on_synthetic_poisson(tmp_path: Path) -> None:
     assert len(artifact.beta) == 1 + len(artifact.covariate_whitelist)
 
     # Non-intercept coefficients within 3 × stderr of β_true (loose — sampling variance on 2000 bins)
-    for i, (bhat, bse, btrue) in enumerate(zip(artifact.beta, artifact.beta_stderr, BETA_TRUE)):
+    for i, (bhat, bse, btrue) in enumerate(zip(artifact.beta, artifact.beta_stderr, BETA_TRUE, strict=False)):
         if i == 0:
             continue  # intercept has a wider tolerance due to exposure normalization
-        assert abs(bhat - btrue) < 3.0 * max(bse, 0.05), (
-            f"β[{i}] = {bhat} outside 3·SE of {btrue} (SE={bse})"
-        )
+        assert abs(bhat - btrue) < 3.0 * max(bse, 0.05), f"β[{i}] = {bhat} outside 3·SE of {btrue} (SE={bse})"
 
 
 def test_fit_degrades_on_sparse(tmp_path: Path) -> None:
     """T-02-M-02 — 10-row input (below min_events_per_param_ratio*params=60) → fit_status='degraded' + no crash."""
     n = 10
-    df = pl.DataFrame({
-        "market_id": [MARKET_ID] * n,
-        "side": ["long"] * n,
-        "bin_start": list(range(n)),
-        "trade_count": [0, 1, 0, 2, 1, 0, 0, 1, 2, 0],
-        "basis_spread": [0.1] * n,
-        "imbalance": [0.0] * n,
-        "sin_settlement": [0.0] * n,
-        "cos_settlement": [1.0] * n,
-        "ewma_vol": [0.1] * n,
-        "bin_duration_s": [60.0] * n,
-    })
+    df = pl.DataFrame(
+        {
+            "market_id": [MARKET_ID] * n,
+            "side": ["long"] * n,
+            "bin_start": list(range(n)),
+            "trade_count": [0, 1, 0, 2, 1, 0, 0, 1, 2, 0],
+            "basis_spread": [0.1] * n,
+            "imbalance": [0.0] * n,
+            "sin_settlement": [0.0] * n,
+            "cos_settlement": [1.0] * n,
+            "ewma_vol": [0.1] * n,
+            "bin_duration_s": [60.0] * n,
+        }
+    )
 
     db = tmp_path / "state.sqlite"
     _apply_migrations(db)

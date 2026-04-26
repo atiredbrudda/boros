@@ -192,23 +192,13 @@ def test_migration_0003_upgrades_and_downgrades(tmp_path: Path) -> None:
             "event_index_coverage",
             "fit_status",
         }.issubset(cols), f"missing columns: {cols}"
-        idx = {
-            r[1]
-            for r in c.execute(
-                "SELECT * FROM sqlite_master WHERE type='index'"
-            ).fetchall()
-        }
+        idx = {r[1] for r in c.execute("SELECT * FROM sqlite_master WHERE type='index'").fetchall()}
         assert "ix_fill_model_fits_market_side_end" in idx, f"index missing: {idx}"
 
     # Downgrade to 0002 (reward_budget_history) — fill_model_fits table must drop
     command.downgrade(cfg, "0002")
     with sqlite3.connect(str(db_path)) as c:
-        tables = {
-            r[0]
-            for r in c.execute(
-                "SELECT name FROM sqlite_master WHERE type='table'"
-            ).fetchall()
-        }
+        tables = {r[0] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()}
         assert "fill_model_fits" not in tables, f"fill_model_fits still present: {tables}"
 
 
@@ -220,9 +210,7 @@ def test_migration_head_includes_fill_model_fits(tmp_path: Path) -> None:
     command.upgrade(_alembic_config_for(db_path), "head")
 
     with sqlite3.connect(str(db_path)) as conn:
-        rows = conn.execute(
-            "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
-        ).fetchall()
+        rows = conn.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").fetchall()
     names = {r[0] for r in rows}
     names.discard("sqlite_sequence")
     names.discard("alembic_version")

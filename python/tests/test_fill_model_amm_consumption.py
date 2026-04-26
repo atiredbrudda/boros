@@ -2,11 +2,13 @@
 
 Tests for T-02-A-01 (non-negative amm_share) and T-02-A-02 (epoch conservation).
 """
+
 from __future__ import annotations
 
 import polars as pl
 import pytest
-from hypothesis import given, strategies as st
+from hypothesis import given
+from hypothesis import strategies as st
 
 from boros_brain.fill_model.amm_consumption import (
     AMMConsumptionIdentityError,
@@ -15,9 +17,13 @@ from boros_brain.fill_model.amm_consumption import (
 )
 
 
-def _make_balanced_epoch(combined_at_tick: float = 100.0, raw_at_tick: float = 60.0) -> tuple[pl.DataFrame, pl.DataFrame]:
+def _make_balanced_epoch(
+    combined_at_tick: float = 100.0, raw_at_tick: float = 60.0
+) -> tuple[pl.DataFrame, pl.DataFrame]:
     raw = pl.DataFrame({"snapshot_ts": [100, 200], "tick": [0, 0], "size": [raw_at_tick, raw_at_tick]})
-    combined = pl.DataFrame({"snapshot_ts": [100, 200], "tick": [0, 0], "size_combined": [combined_at_tick, combined_at_tick]})
+    combined = pl.DataFrame(
+        {"snapshot_ts": [100, 200], "tick": [0, 0], "size_combined": [combined_at_tick, combined_at_tick]}
+    )
     return raw, combined
 
 

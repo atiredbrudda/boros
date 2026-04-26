@@ -14,10 +14,10 @@ that also land in 04-06 (SAFE-10).
 
 Wave 0 invariant: this file MUST collect (not error) with importorskip-driven SKIP status.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
 import pytest
 
@@ -90,8 +90,8 @@ async def test_coordinator_publishes_kill_lane_per_safe(
     This test turns GREEN in Plan 04-06 Task 6 when the real breaker instances
     and the full coordinator.tick() loop are wired together.
     """
-    import zmq.asyncio
     import zmq
+    import zmq.asyncio
 
     cmd_endpoint = f"ipc://{ipc_dir}/{breaker_name}_cmd"
     kill_endpoint = f"ipc://{ipc_dir}/{breaker_name}_kill"
@@ -101,6 +101,7 @@ async def test_coordinator_publishes_kill_lane_per_safe(
     kill_pull.bind(kill_endpoint)
 
     import asyncio
+
     await asyncio.sleep(0.05)
 
     bus = CmdBus(cmd_endpoint=cmd_endpoint, kill_endpoint=kill_endpoint)
@@ -132,12 +133,9 @@ async def test_coordinator_publishes_kill_lane_per_safe(
     )
 
     kill_msg = await asyncio.wait_for(kill_pull.recv_json(), timeout=1.0)
-    assert kill_msg.get("kind") == "kill", (
-        f"{scenario}: expected kind='kill', got {kill_msg!r}"
-    )
+    assert kill_msg.get("kind") == "kill", f"{scenario}: expected kind='kill', got {kill_msg!r}"
     assert kill_msg.get("kill_command_kind") == expected_kill_kind, (
-        f"{scenario}: expected kill_command_kind={expected_kill_kind!r}, "
-        f"got {kill_msg.get('kill_command_kind')!r}"
+        f"{scenario}: expected kill_command_kind={expected_kill_kind!r}, " f"got {kill_msg.get('kill_command_kind')!r}"
     )
 
     kill_pull.close()

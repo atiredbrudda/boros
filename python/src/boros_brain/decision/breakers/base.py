@@ -6,6 +6,7 @@ The `BreakerCoordinator` (Plan 04-06) consumes `BreakerSignal` and owns the kill
 [[circuit-breakers-v05]]: breaker taxonomy + BreakerSignal routing
 [[ev-cancel-rule]]: kill authority integration with EV loop
 """
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod

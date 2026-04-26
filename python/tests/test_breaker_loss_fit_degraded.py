@@ -8,6 +8,7 @@ B5 (loss-fit degraded) is absorbed into the breaker framework rather than
 standing alone as a fallback. This ensures the operator is alerted when the
 loss model grid quality has degraded below the threshold for safe EV computation.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -47,12 +48,8 @@ async def test_fires_on_degraded_status(
         config=default_config,
         current_chain_ts=1_700_000_010,
     )
-    assert sig.tripped is True, (
-        f"fit_status='degraded' should trip B5, got tripped={sig.tripped}"
-    )
-    assert sig.kill_command_kind == "SHRINK_TO_Q_MIN", (
-        f"Expected SHRINK_TO_Q_MIN, got {sig.kill_command_kind!r}"
-    )
+    assert sig.tripped is True, f"fit_status='degraded' should trip B5, got tripped={sig.tripped}"
+    assert sig.kill_command_kind == "SHRINK_TO_Q_MIN", f"Expected SHRINK_TO_Q_MIN, got {sig.kill_command_kind!r}"
 
 
 @pytest.mark.asyncio
@@ -75,6 +72,4 @@ async def test_silent_on_ok_status(
         config=default_config,
         current_chain_ts=1_700_000_010,
     )
-    assert sig.tripped is False, (
-        f"fit_status='ok' should not trip B5, got tripped={sig.tripped}"
-    )
+    assert sig.tripped is False, f"fit_status='ok' should not trip B5, got tripped={sig.tripped}"

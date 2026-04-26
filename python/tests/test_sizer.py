@@ -12,6 +12,7 @@ Test IDs:
 Helpers seed fill_model_fits + loss_grid_artifacts via direct INSERTs (test-only,
 matching test_fill_model_predict_contract.py pattern). No new writer modules.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -48,9 +49,7 @@ def _apply_migrations(db: Path) -> None:
     from alembic.config import Config
 
     ROOT = Path(__file__).resolve().parents[2]
-    ALEMBIC_INI = (
-        ROOT / "python" / "src" / "boros_brain" / "state" / "migrations" / "alembic.ini"
-    )
+    ALEMBIC_INI = ROOT / "python" / "src" / "boros_brain" / "state" / "migrations" / "alembic.ini"
     cfg = Config(str(ALEMBIC_INI))
     cfg.set_main_option("script_location", str(ALEMBIC_INI.parent))
     cfg.set_main_option("sqlalchemy.url", f"sqlite:///{db}")
@@ -88,7 +87,10 @@ def _make_config(
 
 
 def _seed_fill_model_fit(
-    db: Path, *, market_id: str = MARKET_ID, side: str = "long",
+    db: Path,
+    *,
+    market_id: str = MARKET_ID,
+    side: str = "long",
     fit_window_end_ts: int = 1_700_000_000,
 ) -> None:
     """Insert a known-good fill_model fit artifact (non-degraded, fresh)."""
@@ -259,9 +261,9 @@ def test_scale_up_to_5k_cap_binding(tmp_path: Path) -> None:
     assert out.q_me_target_pendle > out.q_min_pendle
     # Q_me_target must be ≤ q_cap (or ≤ q_max if cap unreachable).
     upper_bound = min(out.q_max_pendle, out.q_cap_pendle)
-    assert out.q_me_target_pendle <= upper_bound + 1e-9, (
-        f"q_me_target={out.q_me_target_pendle} exceeded upper={upper_bound}"
-    )
+    assert (
+        out.q_me_target_pendle <= upper_bound + 1e-9
+    ), f"q_me_target={out.q_me_target_pendle} exceeded upper={upper_bound}"
     # In cap-binding regime at this scale, the optimum is at or below Q_cap.
     assert out.q_me_target_pendle <= out.q_cap_pendle + 1e-9
 
@@ -367,15 +369,11 @@ def test_optimizer_dominates_q_min(tmp_path: Path, sigma_others: float) -> None:
             epoch_days=config.reward_share_model.epoch_days,
         )
     )
-    ev_at_qmin = (
-        r_at_qmin.r_capped_pendle
-        - out.expected_loss_at_target * out.p_fill_at_target * out.q_min_pendle
-    )
+    ev_at_qmin = r_at_qmin.r_capped_pendle - out.expected_loss_at_target * out.p_fill_at_target * out.q_min_pendle
 
     # Optimizer ≥ q_min EV (within numerical slop).
     assert out.ev_at_target >= ev_at_qmin - 1e-9, (
-        f"optimizer EV={out.ev_at_target} < EV-at-qmin={ev_at_qmin} "
-        f"(sigma_others={sigma_others})"
+        f"optimizer EV={out.ev_at_target} < EV-at-qmin={ev_at_qmin} " f"(sigma_others={sigma_others})"
     )
 
 
@@ -403,7 +401,7 @@ def test_market_saturated_shortcut(tmp_path: Path) -> None:
     config = _make_config(
         sizer_config=SizerConfig(
             collateral_usd=100.0,
-            q_min_pendle=1.0,        # very large floor
+            q_min_pendle=1.0,  # very large floor
             q_max_safety_margin=0.9,
             optimizer_grid_points=50,
             optimizer_method="grid_plus_scipy",
@@ -423,7 +421,6 @@ def test_market_saturated_shortcut(tmp_path: Path) -> None:
     )
     out = q_me_target(req, sqlite_path=db, config=config)
     assert out.regime == "market_saturated", (
-        f"expected market_saturated; got regime={out.regime}, "
-        f"q_cap={out.q_cap_pendle}, q_min={out.q_min_pendle}"
+        f"expected market_saturated; got regime={out.regime}, " f"q_cap={out.q_cap_pendle}, q_min={out.q_min_pendle}"
     )
     assert out.q_me_target_pendle == pytest.approx(out.q_min_pendle)

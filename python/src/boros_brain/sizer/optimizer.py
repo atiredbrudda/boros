@@ -16,6 +16,7 @@ Contract:
 Design-locked. Phase 4 DecisionEngine depends on this signature.
 [[sizing-optimizer-sub-cap-regime-v05]]
 """
+
 from __future__ import annotations
 
 import math
@@ -43,9 +44,7 @@ log = structlog.get_logger(__name__)
 __all__ = ["q_me_target"]
 
 
-def _build_reward_input(
-    req: SizerInput, q_me_pendle: float, config: "BotConfig"
-) -> RewardCurveInput:
+def _build_reward_input(req: SizerInput, q_me_pendle: float, config: BotConfig) -> RewardCurveInput:
     """Helper to assemble RewardCurveInput from SizerInput + per-call q_me."""
     return RewardCurveInput(
         market_id=req.market_id,
@@ -65,7 +64,7 @@ def q_me_target(
     req: SizerInput,
     *,
     sqlite_path: Path,
-    config: "BotConfig",
+    config: BotConfig,
 ) -> SizerOutput:
     """Sync sizing optimizer. See module docstring for contract.
 
@@ -91,11 +90,7 @@ def q_me_target(
     """
     # --- Step 1-3: Q_min / Q_max + collateral guard ---
     q_min = config.sizer.q_min_pendle
-    q_max = (
-        config.sizer.collateral_usd
-        * config.sizer.q_max_safety_margin
-        / config.sizer.notional_per_yu_usd
-    )
+    q_max = config.sizer.collateral_usd * config.sizer.q_max_safety_margin / config.sizer.notional_per_yu_usd
     if q_min > q_max:
         raise InsufficientCollateralError(q_min, q_max)
 
@@ -145,9 +140,7 @@ def q_me_target(
 
     # --- Step 5: market_saturated shortcut (Q_cap unreachable below Q_min) ---
     if q_cap < q_min:
-        r_out: RewardCurveOutput = r_capped_curve(
-            _build_reward_input(req, q_min, config)
-        )
+        r_out: RewardCurveOutput = r_capped_curve(_build_reward_input(req, q_min, config))
         ev = r_out.r_capped_pendle - e_loss * p_fill * q_min
         log.info(
             "sizer.market_saturated_shortcut",
@@ -196,14 +189,10 @@ def q_me_target(
 
     # --- Step 9: Grid search + optional scipy polish ---
     def _objective(q: float) -> float:
-        r_out_q: RewardCurveOutput = r_capped_curve(
-            _build_reward_input(req, q, config)
-        )
+        r_out_q: RewardCurveOutput = r_capped_curve(_build_reward_input(req, q, config))
         return float(r_out_q.r_capped_pendle - e_loss * p_fill * q)
 
-    q_grid = np.logspace(
-        np.log10(q_min), np.log10(upper), config.sizer.optimizer_grid_points
-    )
+    q_grid = np.logspace(np.log10(q_min), np.log10(upper), config.sizer.optimizer_grid_points)
     objectives = np.array([_objective(float(q)) for q in q_grid])
 
     # T-03-10: NaN guard — fall back to grid-only argmax with a warning.
@@ -214,12 +203,8 @@ def q_me_target(
             side=req.side,
         )
         finite_mask = ~np.isnan(objectives)
-        if not finite_mask.any():
-            # Pathological — every objective is NaN. Return Q_min as the safe
-            # default (matches the degenerate-interval semantics).
-            q_opt = float(q_min)
-        else:
-            q_opt = float(q_grid[int(np.nanargmax(objectives))])
+        # Pathological case (every objective NaN): return Q_min as the safe default.
+        q_opt = float(q_min) if not finite_mask.any() else float(q_grid[int(np.nanargmax(objectives))])
     elif config.sizer.optimizer_method == "grid_only":
         q_opt = float(q_grid[int(np.argmax(objectives))])
     elif config.sizer.optimizer_method == "scipy_only":
@@ -248,13 +233,7 @@ def q_me_target(
                 )
                 q_polished = float(res.x)
                 # Guard: if scipy diverged below grid sanity, revert.
-                if (
-                    _objective(q_polished)
-                    < _objective(q_grid_best) - 1e-12
-                ):
-                    q_opt = q_grid_best
-                else:
-                    q_opt = q_polished
+                q_opt = q_grid_best if _objective(q_polished) < _objective(q_grid_best) - 1e-12 else q_polished
             except Exception as exc:  # noqa: BLE001
                 log.warning(
                     "sizer.scipy_polish_failed",
@@ -264,9 +243,7 @@ def q_me_target(
                 q_opt = q_grid_best
 
     # --- Build SizerOutput at q_opt ---
-    r_out_final: RewardCurveOutput = r_capped_curve(
-        _build_reward_input(req, q_opt, config)
-    )
+    r_out_final: RewardCurveOutput = r_capped_curve(_build_reward_input(req, q_opt, config))
     ev_final = _objective(q_opt)
 
     log.info(

@@ -23,6 +23,7 @@ over-firing the fill-rate breaker.
 Idempotency: every DDL operation is guarded by _has_table / _has_index /
 _has_column inspection, so this migration can be re-applied without error.
 """
+
 from __future__ import annotations
 
 import sqlalchemy as sa

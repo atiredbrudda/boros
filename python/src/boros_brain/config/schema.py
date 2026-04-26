@@ -144,7 +144,7 @@ class MarketRewardCalibration(StrictBase):
     e_liq_per_epoch_pendle: float = Field(..., ge=0.0)
     long_side_split: float = Field(..., ge=0.0, le=1.0)
     short_side_split: float = Field(..., ge=0.0, le=1.0)
-    calibrated_at_utc: str   # ISO8601
+    calibrated_at_utc: str  # ISO8601
     source: Literal["dapp_ui", "team_statement", "pendle_docs"] = "dapp_ui"
 
     @field_validator("short_side_split")
@@ -178,7 +178,7 @@ class MarketCalibration(StrictBase):
     clo_upper_thresh: float
     fIndex_oracle_address: str
     maturity_ts: int
-    reward_calibration: MarketRewardCalibration | None = None   # NEW Plan 03-02
+    reward_calibration: MarketRewardCalibration | None = None  # NEW Plan 03-02
     max_update_delay_s: int = Field(600, ge=60, le=86400)
     """SAFE-02: maxUpdateDelay for this market's oracle (seconds).
 

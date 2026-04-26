@@ -10,6 +10,7 @@ positive slope means margin is growing (good). Breaker must NOT fire when growin
 
 See [[breaker-margin-trajectory]] and [[circuit-breakers-v05]] for spec.
 """
+
 from __future__ import annotations
 
 from pathlib import Path

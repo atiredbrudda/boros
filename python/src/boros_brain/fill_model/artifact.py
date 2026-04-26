@@ -4,6 +4,7 @@ Ordering: parquet first (orphan-tolerant), SQLite second.
 If SQLite insert fails, the parquet is still readable.
 If the parquet write fails, no SQLite row pollutes the latest-fit lookup.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime

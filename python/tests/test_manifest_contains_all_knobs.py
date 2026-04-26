@@ -131,9 +131,9 @@ def test_fill_model_leaves_surfaced(default_config: BotConfig) -> None:
     leaves = _collect_leaf_paths(BotConfig)
     fill_model_leaves = [".".join(leaf) for leaf in leaves if leaf and leaf[0] == "fill_model"]
     # 11 knobs; covariate_whitelist is a list-leaf (counted as 1) per the existing collector
-    assert len(fill_model_leaves) >= 11, (
-        f"expected >=11 fill_model leaves, got {len(fill_model_leaves)}: {fill_model_leaves}"
-    )
+    assert (
+        len(fill_model_leaves) >= 11
+    ), f"expected >=11 fill_model leaves, got {len(fill_model_leaves)}: {fill_model_leaves}"
     # Spot-check specific knobs
     assert "fill_model.window_days" in fill_model_leaves
     assert "fill_model.queue_tracker_bias_mode" in fill_model_leaves
@@ -159,18 +159,12 @@ def test_phase3_leaves_surfaced(default_config: BotConfig) -> None:
     pricing_leaves = [s for s in leaf_strs if s.startswith("pricing.")]
     sizer_leaves = [s for s in leaf_strs if s.startswith("sizer.")]
 
-    assert len(loss_leaves) >= 12, (
-        f"expected >=12 loss_model leaves (incl. fees.*), got {len(loss_leaves)}: {loss_leaves}"
-    )
-    assert len(reward_share_leaves) >= 5, (
-        f"expected >=5 reward_share_model leaves, got {reward_share_leaves}"
-    )
-    assert len(pricing_leaves) >= 4, (
-        f"expected >=4 pricing leaves, got {pricing_leaves}"
-    )
-    assert len(sizer_leaves) >= 6, (
-        f"expected >=6 sizer leaves, got {sizer_leaves}"
-    )
+    assert (
+        len(loss_leaves) >= 12
+    ), f"expected >=12 loss_model leaves (incl. fees.*), got {len(loss_leaves)}: {loss_leaves}"
+    assert len(reward_share_leaves) >= 5, f"expected >=5 reward_share_model leaves, got {reward_share_leaves}"
+    assert len(pricing_leaves) >= 4, f"expected >=4 pricing leaves, got {pricing_leaves}"
+    assert len(sizer_leaves) >= 6, f"expected >=6 sizer leaves, got {sizer_leaves}"
 
     # Aggregate count: 11 LossModelConfig leaves (depth_bucket_edges,
     # tau_bucket_edges_days, min_samples_per_cell, knn_k, knn_max_distance,
@@ -184,9 +178,7 @@ def test_phase3_leaves_surfaced(default_config: BotConfig) -> None:
     # a rough upper-bound; the actual leaf count is 34 (Plan 03-04 plan-prose
     # off-by-one — see SUMMARY.md Deviations §1).
     phase3_leaves = loss_leaves + reward_share_leaves + pricing_leaves + sizer_leaves
-    assert len(phase3_leaves) >= 34, (
-        f"expected >=34 total Phase-3 leaves, got {len(phase3_leaves)}: {phase3_leaves}"
-    )
+    assert len(phase3_leaves) >= 34, f"expected >=34 total Phase-3 leaves, got {len(phase3_leaves)}: {phase3_leaves}"
 
     # Spot-check specific critical knobs (one from each sub-model + fees nested).
     assert "loss_model.depth_bucket_edges" in loss_leaves

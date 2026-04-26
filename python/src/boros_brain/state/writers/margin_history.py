@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import sqlite3
 from pathlib import Path
+from typing import Any
 
 __all__ = ["insert_margin_snapshot", "read_margin_history"]
 
@@ -54,7 +55,7 @@ def read_margin_history(
     *,
     market_id: str | None = None,
     since_ts: int | None = None,
-) -> list[dict[str, object]]:
+) -> list[dict[str, Any]]:
     """Return margin_history rows as a list of dicts.
 
     Self-managing connection (opens + closes within this call). Used by

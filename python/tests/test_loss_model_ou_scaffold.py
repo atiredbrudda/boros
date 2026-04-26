@@ -2,6 +2,7 @@
 
 Test IDs: T-03-OU-01..03 (Plan 03-01, Task 1).
 """
+
 from __future__ import annotations
 
 import inspect
@@ -48,7 +49,6 @@ def test_ou_scaffold_protocol_matches_empirical_expected_loss() -> None:
     sig_protocol = inspect.signature(OUBasisLossModel.expected_loss)
     sig_empirical = inspect.signature(expected_loss)
     # Protocol has 'self', empirical doesn't. Compare params[1:] on protocol vs params[:] on empirical.
-    assert (
-        list(sig_protocol.parameters.keys())[1:]
-        == list(sig_empirical.parameters.keys())
+    assert list(sig_protocol.parameters.keys())[1:] == list(
+        sig_empirical.parameters.keys()
     ), f"signature drift: protocol={sig_protocol}, empirical={sig_empirical}"

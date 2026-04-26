@@ -18,9 +18,8 @@ Note: the wall-clock call is banned in loss_model/ by no_time_time_lint.py
 (extension lands in Plan 03-04; pre-emptive discipline). All ts values come
 from the caller (window_start_ts, window_end_ts).
 """
-from __future__ import annotations
 
-from pathlib import Path
+from __future__ import annotations
 
 import polars as pl
 import structlog
@@ -235,14 +234,9 @@ def build_per_fill_pnl_from_frame(
         depth_from_mark_ticks = int(row.get("depth_from_mark_ticks", 0) or 0)
 
         # Fees (PENDLE-units).
-        fee_taker = (
-            fill_size_float * fill_rate * (tau_days / 365.0) * fees.taker_fee_rate
-        )
+        fee_taker = fill_size_float * fill_rate * (tau_days / 365.0) * fees.taker_fee_rate
         fee_settlement = (
-            fill_size_float
-            * fill_rate
-            * (fees.settlement_period_s / 86400.0 / 365.0)
-            * fees.settlement_fee_rate
+            fill_size_float * fill_rate * (fees.settlement_period_s / 86400.0 / 365.0) * fees.settlement_fee_rate
         )
 
         # Sign: positive pnl_pendle = profit; negative = loss.
@@ -259,11 +253,7 @@ def build_per_fill_pnl_from_frame(
             PerFillPnL(
                 market_id=str(row["market_id"]),
                 side=side,  # type: ignore[arg-type]
-                fill_event_index=(
-                    int(row["fill_event_index"])
-                    if row.get("fill_event_index") is not None
-                    else None
-                ),
+                fill_event_index=(int(row["fill_event_index"]) if row.get("fill_event_index") is not None else None),
                 fill_block_ts=int(row["fill_block_ts"]),
                 fill_rate=fill_rate,
                 fill_size_float=fill_size_float,

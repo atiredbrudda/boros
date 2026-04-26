@@ -233,6 +233,4 @@ def test_phase3_tables_have_single_writer() -> None:
         assert path.exists(), f"writer module missing for {table}: {path}"
         text = path.read_text()
         for fn in fns:
-            assert f"def {fn}(" in text, (
-                f"expected `def {fn}(` in {path} (single-writer for {table})"
-            )
+            assert f"def {fn}(" in text, f"expected `def {fn}(` in {path} (single-writer for {table})"

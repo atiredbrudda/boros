@@ -11,6 +11,7 @@ Single home for all loss_model shape declarations so architecture.yml has a sing
 [[empirical-loss-grid-v05]]: bucket-edge convention + per-cell stats.
 [[ou-on-basis-loss-scaffold]]: v1.0 drop-in interface that mirrors expected_loss.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass

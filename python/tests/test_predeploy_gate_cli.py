@@ -14,6 +14,7 @@ Each test injects a market into the config (default_config has markets=[]) using
 model_dump / model_validate — same _config_with_market pattern from 04-05 breaker tests.
 Tests use a tmp wiki_dir to avoid polluting the real LLM Wiki.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -88,9 +89,7 @@ async def test_gate_passes_on_clean_run(
     from boros_brain.state.db import open_connection
 
     with open_connection(tmp_sqlite_path) as conn:
-        rows = conn.execute(
-            "SELECT gate_passed FROM predeploy_gate_records WHERE run_id = 'test-gate-001'"
-        ).fetchall()
+        rows = conn.execute("SELECT gate_passed FROM predeploy_gate_records WHERE run_id = 'test-gate-001'").fetchall()
     assert len(rows) == 1, f"Expected 1 predeploy_gate_records row, got {len(rows)}"
     assert rows[0][0] == 1, f"Expected gate_passed=True (1), got {rows[0][0]}"
 
@@ -126,9 +125,7 @@ async def test_gate_fails_when_market_dropped(
     from boros_brain.state.db import open_connection
 
     with open_connection(tmp_sqlite_path) as conn:
-        rows = conn.execute(
-            "SELECT gate_passed FROM predeploy_gate_records WHERE run_id = 'test-gate-002'"
-        ).fetchall()
+        rows = conn.execute("SELECT gate_passed FROM predeploy_gate_records WHERE run_id = 'test-gate-002'").fetchall()
     assert len(rows) == 1
     assert rows[0][0] == 0, f"Expected gate_passed=False (0), got {rows[0][0]}"
 
@@ -168,9 +165,9 @@ async def test_gate_records_git_sha_and_config_hash(
         ).fetchall()
     assert len(rows) == 1, f"Expected 1 row, got {len(rows)}"
     git_sha, config_hash = rows[0]
-    assert isinstance(git_sha, str) and len(git_sha) >= 7, (
-        f"git_sha must be a non-empty string (>=7 chars), got {git_sha!r}"
-    )
-    assert isinstance(config_hash, str) and len(config_hash) > 0, (
-        f"config_hash must be a non-empty string, got {config_hash!r}"
-    )
+    assert (
+        isinstance(git_sha, str) and len(git_sha) >= 7
+    ), f"git_sha must be a non-empty string (>=7 chars), got {git_sha!r}"
+    assert (
+        isinstance(config_hash, str) and len(config_hash) > 0
+    ), f"config_hash must be a non-empty string, got {config_hash!r}"

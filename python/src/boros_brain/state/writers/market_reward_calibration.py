@@ -10,17 +10,16 @@ Supersedes the Phase 1 ELiqPoller carried concern. See
 PROTO-02 single-writer discipline: any INSERT INTO market_reward_calibration
 outside this module triggers scripts/sqlite_writer_lint.py.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 import structlog
 
 Source = Literal["dapp_ui", "team_statement", "pendle_docs"]
-_ALLOWED_SOURCES: frozenset[str] = frozenset(
-    {"dapp_ui", "team_statement", "pendle_docs"}
-)
+_ALLOWED_SOURCES: frozenset[str] = frozenset({"dapp_ui", "team_statement", "pendle_docs"})
 
 __all__ = [
     "insert_market_reward_calibration",
@@ -53,9 +52,7 @@ def insert_market_reward_calibration(
     data_source is hardcoded to 'operator' inside the SQL — NOT a caller kwarg.
     """
     if source not in _ALLOWED_SOURCES:
-        raise ValueError(
-            f"source={source!r} not in {sorted(_ALLOWED_SOURCES)}"
-        )
+        raise ValueError(f"source={source!r} not in {sorted(_ALLOWED_SOURCES)}")
     if abs(long_side_split + short_side_split - 1.0) > 1e-9:
         raise ValueError(
             f"long_side_split + short_side_split must == 1.0 "
@@ -63,9 +60,7 @@ def insert_market_reward_calibration(
             f"= {long_side_split + short_side_split}). P3-4 guard."
         )
     if e_liq_per_epoch_pendle < 0.0:
-        raise ValueError(
-            f"e_liq_per_epoch_pendle must be >= 0.0, got {e_liq_per_epoch_pendle}"
-        )
+        raise ValueError(f"e_liq_per_epoch_pendle must be >= 0.0, got {e_liq_per_epoch_pendle}")
 
     from boros_brain.state.db import open_connection
 
@@ -98,9 +93,7 @@ def insert_market_reward_calibration(
     )
 
 
-def get_latest_market_reward_calibration(
-    sqlite_path: Path, market_id: str
-):
+def get_latest_market_reward_calibration(sqlite_path: Path, market_id: str) -> dict[str, Any] | None:
     """Return most-recent calibration row for market_id as a dict, or None."""
     from boros_brain.state.db import open_connection
 
@@ -126,9 +119,7 @@ def get_latest_market_reward_calibration(
     }
 
 
-def read_market_reward_calibration_history(
-    sqlite_path: Path, market_id: str, limit: int = 10
-) -> list[dict]:
+def read_market_reward_calibration_history(sqlite_path: Path, market_id: str, limit: int = 10) -> list[dict[str, Any]]:
     """Return up to `limit` calibration rows for market_id ordered DESC by calibrated_at_utc.
 
     rows[0] is the latest calibration; rows[-1] is the oldest within the window.
@@ -158,6 +149,7 @@ def read_market_reward_calibration_history(
                     "source",
                 ],
                 r,
+                strict=False,
             )
         )
         for r in rows

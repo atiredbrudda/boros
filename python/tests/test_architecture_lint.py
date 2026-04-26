@@ -25,7 +25,5 @@ def test_architecture_lint_clean() -> None:
         text=True,
     )
     assert result.returncode == 0, (
-        f"architecture_lint.py reported drift:\n"
-        f"stdout:\n{result.stdout}\n"
-        f"stderr:\n{result.stderr}"
+        f"architecture_lint.py reported drift:\n" f"stdout:\n{result.stdout}\n" f"stderr:\n{result.stderr}"
     )

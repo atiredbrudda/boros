@@ -16,6 +16,7 @@ ZMQ LINGER: already set on CmdBus sockets (Pitfall #9).
 [[breaker-coordinator-kill-mutex]]: SAFE-10 spec and coordinator design
 [[circuit-breakers-v05]]: full breaker taxonomy
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -111,7 +112,7 @@ class BreakerCoordinator:
                     ),
                     timeout=0.2,  # Pitfall #1: 200ms per breaker
                 )
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 log.warning(
                     "breaker.timeout",
                     name=b.name,
@@ -168,11 +169,7 @@ class BreakerCoordinator:
             elif not sig.tripped and was_tripped:
                 # Hysteresis: only un-trip after min_re_arm_s has elapsed.
                 re_arm_cfg = getattr(self._config.decision.breakers, b.name, None)
-                re_arm_s: float = (
-                    getattr(re_arm_cfg, "min_re_arm_s", 60.0)
-                    if re_arm_cfg is not None
-                    else 60.0
-                )
+                re_arm_s: float = getattr(re_arm_cfg, "min_re_arm_s", 60.0) if re_arm_cfg is not None else 60.0
                 if current_chain_ts - self._tripped[b.name] >= re_arm_s:
                     del self._tripped[b.name]
                     log.info(
@@ -202,9 +199,7 @@ class BreakerCoordinator:
 
         return signals
 
-    async def gate(
-        self, decisions: list[Any], *, current_chain_ts: int
-    ) -> None:
+    async def gate(self, decisions: list[Any], *, current_chain_ts: int) -> None:
         """Suppress all PLACE/CANCEL while any breaker is active (SAFE-10 exclusivity).
 
         When no breakers are tripped, forward PLACE/CANCEL decisions through the
@@ -225,7 +220,6 @@ class BreakerCoordinator:
 
         # Suppression path: at least one breaker is tripped.
         active_breaker_names = ",".join(sorted(self._tripped.keys()))
-        suppressed_any = False
         for d in decisions:
             if d.decision_kind in ("PLACE", "CANCEL"):
                 log.warning(
@@ -233,7 +227,6 @@ class BreakerCoordinator:
                     decision_kind=d.decision_kind,
                     active_breakers=list(self._tripped.keys()),
                 )
-                suppressed_any = True
                 try:
                     payload_json: str | None = None
                     if hasattr(d, "model_dump_json"):

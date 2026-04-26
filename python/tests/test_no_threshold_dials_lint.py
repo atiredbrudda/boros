@@ -12,15 +12,12 @@ See scripts/no_threshold_dials_lint.py — skeleton lands in Plan 04-01;
 regex + ALLOWED_FILES tightened in Plan 04-03. [[ev-cancel-rule]]
 See [[ev-cancel-rule-implementation-v05]] for the full EV equation.
 """
+
 from __future__ import annotations
 
 import importlib.util
 import os
 from pathlib import Path
-
-import pytest
-
-from boros_brain.config.schema import BotConfig
 
 # The lint script tests do NOT need importorskip — the script files are
 # plain Python in scripts/ (no boros_brain import required to collect).
@@ -57,9 +54,7 @@ def test_audit_passes_on_main() -> None:
         os.chdir(REPO_ROOT)
         mod = _load_lint_module(lint_script)
         exit_code = mod.main()
-        assert exit_code == 0, (
-            f"no_threshold_dials_lint exited {exit_code} (expected 0 on a clean tree)"
-        )
+        assert exit_code == 0, f"no_threshold_dials_lint exited {exit_code} (expected 0 on a clean tree)"
     finally:
         os.chdir(old_cwd)
 
@@ -78,16 +73,12 @@ def test_audit_catches_threshold_field(tmp_path: Path) -> None:
     bad_file = protected_dir / "_test_lint_probe_threshold.py"
     old_cwd = os.getcwd()
     try:
-        bad_file.write_text(
-            "class BadConfig:\n    cancel_threshold: float = 0.5\n"
-        )
+        bad_file.write_text("class BadConfig:\n    cancel_threshold: float = 0.5\n")
         # Lint uses relative PROTECTED_DIRS — must run from repo root
         os.chdir(REPO_ROOT)
         mod = _load_lint_module(lint_script)
         exit_code = mod.main()
-        assert exit_code == 1, (
-            f"Expected lint exit code 1 (threshold dial violation), got {exit_code}"
-        )
+        assert exit_code == 1, f"Expected lint exit code 1 (threshold dial violation), got {exit_code}"
     finally:
         os.chdir(old_cwd)
         bad_file.unlink(missing_ok=True)

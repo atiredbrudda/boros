@@ -127,9 +127,7 @@ class MarginPoller:
 
         # POST /accounts/get-net-margin returns per-account aggregate (not per-market).
         # Fan out one row per market for MarginTrajectoryBreaker query convenience.
-        net_margin, maintenance_margin, available_collateral = _parse_margin_response(
-            margin_data
-        )
+        net_margin, maintenance_margin, available_collateral = _parse_margin_response(margin_data)
 
         for market_id in self.markets:
             insert_margin_snapshot(
@@ -160,9 +158,7 @@ class MarginPoller:
         last_exc: BaseException | None = None
         for delay in _BACKOFF_DELAYS:
             try:
-                result: dict[str, Any] = await self.rest.post_get_net_margin(
-                    self.account_id
-                )
+                result: dict[str, Any] = await self.rest.post_get_net_margin(self.account_id)
                 return result
             except Exception as exc:
                 last_exc = exc

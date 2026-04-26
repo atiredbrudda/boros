@@ -10,6 +10,7 @@ using CREATE TABLE IF NOT EXISTS, so on a fresh database the table is created by
 and index if they don't already exist — matching the same pattern used by 0002 /
 0003 for the reward_budget_history / fill_model_fits idempotency.
 """
+
 from __future__ import annotations
 
 import sqlalchemy as sa
@@ -57,9 +58,7 @@ def upgrade() -> None:
                 server_default="full",
             ),
             sa.Column("created_at", sa.Integer(), nullable=False),
-            sa.CheckConstraint(
-                "side IN ('long','short')", name="ck_loss_grid_artifacts_side"
-            ),
+            sa.CheckConstraint("side IN ('long','short')", name="ck_loss_grid_artifacts_side"),
             sa.CheckConstraint(
                 "fit_status IN ('ok','degraded','stale')",
                 name="ck_loss_grid_artifacts_status",
@@ -68,15 +67,11 @@ def upgrade() -> None:
                 "event_index_coverage IN ('full','degraded')",
                 name="ck_loss_grid_artifacts_eic",
             ),
-            sa.PrimaryKeyConstraint(
-                "market_id", "side", "window_end_ts"
-            ),
+            sa.PrimaryKeyConstraint("market_id", "side", "window_end_ts"),
         )
 
     # Add index if not already present (covers both fresh-DB and legacy-upgrade paths).
-    if not _has_index(
-        "loss_grid_artifacts", "ix_loss_grid_artifacts_market_side_end"
-    ):
+    if not _has_index("loss_grid_artifacts", "ix_loss_grid_artifacts_market_side_end"):
         op.create_index(
             "ix_loss_grid_artifacts_market_side_end",
             "loss_grid_artifacts",
@@ -85,9 +80,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    if _has_index(
-        "loss_grid_artifacts", "ix_loss_grid_artifacts_market_side_end"
-    ):
+    if _has_index("loss_grid_artifacts", "ix_loss_grid_artifacts_market_side_end"):
         op.drop_index(
             "ix_loss_grid_artifacts_market_side_end",
             table_name="loss_grid_artifacts",

@@ -9,9 +9,9 @@ Covers:
 See [[gas-history-ewma-cancel-cost]] and [[ev-cancel-rule-implementation-v05]].
 PITFALLS §C5: hardcoded cancel_cost scalar is a DECIDE-03 invariant violation.
 """
+
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 from unittest.mock import AsyncMock
 
@@ -48,10 +48,14 @@ async def test_ewma_correctness(default_config: BotConfig) -> None:
 
     # Mock w3 — fee_history returns 101 blocks at 100 gwei base + 10 gwei tip.
     mock_w3 = AsyncMock()
-    fee_history_result = type("FH", (), {
-        "baseFeePerGas": [100 * 10**9] * 101,
-        "reward": [[10 * 10**9]] * 100,
-    })()
+    fee_history_result = type(
+        "FH",
+        (),
+        {
+            "baseFeePerGas": [100 * 10**9] * 101,
+            "reward": [[10 * 10**9]] * 100,
+        },
+    )()
     mock_w3.eth.fee_history = AsyncMock(return_value=fee_history_result)
 
     cache = gas_mod.GasHistoryCache()
@@ -61,9 +65,9 @@ async def test_ewma_correctness(default_config: BotConfig) -> None:
     # All 100 samples are identical (110 gwei), so EWMA = 110 gwei exactly.
     # tolerance ±15% to accommodate EWMA seeding vs simple average
     expected = 22.0  # PENDLE (Rule 1 fix: original value 0.022 had a 1000x arithmetic error)
-    assert abs(cost - expected) / expected < 0.15, (
-        f"cancel_cost_pendle={cost:.6f} deviates >15% from expected {expected}"
-    )
+    assert (
+        abs(cost - expected) / expected < 0.15
+    ), f"cancel_cost_pendle={cost:.6f} deviates >15% from expected {expected}"
 
 
 @pytest.mark.asyncio
@@ -74,10 +78,14 @@ async def test_ttl_cache(default_config: BotConfig) -> None:
     RPC calls on every decision loop tick.
     """
     mock_w3 = AsyncMock()
-    fee_history_result = type("FH", (), {
-        "baseFeePerGas": [100 * 10**9] * 101,
-        "reward": [[10 * 10**9]] * 100,
-    })()
+    fee_history_result = type(
+        "FH",
+        (),
+        {
+            "baseFeePerGas": [100 * 10**9] * 101,
+            "reward": [[10 * 10**9]] * 100,
+        },
+    )()
     mock_w3.eth.fee_history = AsyncMock(return_value=fee_history_result)
 
     cache = gas_mod.GasHistoryCache()
@@ -95,6 +103,7 @@ async def test_ttl_cache(default_config: BotConfig) -> None:
 def _load_lint_mod(lint_script: Path):
     """Load a lint script module from path, isolated from any cached module state."""
     import importlib.util
+
     spec = importlib.util.spec_from_file_location(lint_script.stem + "_fresh", lint_script)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
@@ -128,9 +137,7 @@ def test_linter_catches_hardcoded(tmp_path: Path) -> None:
         os.chdir(repo_root)
         mod = _load_lint_mod(lint_script)
         exit_code = mod.main()
-        assert exit_code == 1, (
-            f"Expected lint exit code 1 (violation found), got {exit_code}"
-        )
+        assert exit_code == 1, f"Expected lint exit code 1 (violation found), got {exit_code}"
     finally:
         os.chdir(old_cwd)
         bad_file.unlink(missing_ok=True)
@@ -153,8 +160,6 @@ def test_linter_passes_when_clean() -> None:
         os.chdir(repo_root)
         mod = _load_lint_mod(lint_script)
         exit_code = mod.main()
-        assert exit_code == 0, (
-            f"no_hardcoded_cancel_cost_lint exited {exit_code} (expected 0 on a clean tree)"
-        )
+        assert exit_code == 0, f"no_hardcoded_cancel_cost_lint exited {exit_code} (expected 0 on a clean tree)"
     finally:
         os.chdir(old_cwd)

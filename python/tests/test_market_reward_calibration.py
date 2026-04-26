@@ -3,6 +3,7 @@
 Tests the Pydantic + writer + SQL CHECK three-layer guard discipline for the
 operator-supplied E_liq_per_epoch + side splits.
 """
+
 from __future__ import annotations
 
 import sqlite3
@@ -70,9 +71,7 @@ def test_split_validator_rejects_sum_mismatch(tmp_path: Path) -> None:
             run_id="test_run",
         )
     msg = str(exc_info.value)
-    assert "must == 1.0" in msg or "1.0" in msg, (
-        f"expected P3-4 split-sum error, got: {msg}"
-    )
+    assert "must == 1.0" in msg or "1.0" in msg, f"expected P3-4 split-sum error, got: {msg}"
 
 
 def test_data_source_check_rejects_non_operator(tmp_path: Path) -> None:
@@ -115,7 +114,7 @@ def test_source_enum_rejects_invalid(tmp_path: Path) -> None:
     db.touch()
     _apply_migrations(db)
 
-    with pytest.raises(Exception):
+    with pytest.raises((ValueError, sqlite3.IntegrityError)):
         insert_operator_calibration(
             db,
             market_id="M",
@@ -162,9 +161,7 @@ def test_cli_calibrate_smoke(tmp_path: Path) -> None:
         capture_output=True,
         text=True,
     )
-    assert result.returncode == 0, (
-        f"calibrate CLI failed:\nSTDOUT: {result.stdout}\nSTDERR: {result.stderr}"
-    )
+    assert result.returncode == 0, f"calibrate CLI failed:\nSTDOUT: {result.stdout}\nSTDERR: {result.stderr}"
     row = get_latest_market_reward_calibration(db, "BINANCE-ETHUSDT-29MAY2026")
     assert row is not None
     assert row["e_liq_per_epoch_pendle"] == 273.0
@@ -207,6 +204,5 @@ def test_cli_calibrate_split_mismatch_returns_2(tmp_path: Path) -> None:
         text=True,
     )
     assert result.returncode == 2, (
-        f"expected exit 2 (validation), got {result.returncode}\n"
-        f"STDOUT: {result.stdout}\nSTDERR: {result.stderr}"
+        f"expected exit 2 (validation), got {result.returncode}\n" f"STDOUT: {result.stdout}\nSTDERR: {result.stderr}"
     )

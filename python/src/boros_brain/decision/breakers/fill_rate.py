@@ -17,6 +17,7 @@ Wiki reference:
   [[breaker-fill-rate-runaway]]: spec, PAUSE_AND_ALERT non-self-clearing semantics
   [[circuit-breakers-v05]]: full breaker taxonomy
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -24,8 +25,8 @@ from typing import Any
 
 import structlog
 
-from .base import Breaker, BreakerSignal
 from ...state.writers.tx_receipts import read_tx_receipts_fill_count
+from .base import Breaker, BreakerSignal
 
 log = structlog.get_logger(__name__)
 

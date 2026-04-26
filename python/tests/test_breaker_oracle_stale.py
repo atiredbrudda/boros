@@ -9,6 +9,7 @@ Covers:
 See RESEARCH.md §SAFE-02 lines ~530-540 for the fIndex staleness threshold.
 The 0.7 fraction is the SAFE-02 config knob (decision.breakers.oracle_stale.fraction_of_max).
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -31,9 +32,7 @@ THRESHOLD_FRACTION = 0.70
 def _mock_findex_reader(f_time: int):
     """Return a mock findex_reader that returns the given f_time."""
     reader = MagicMock()
-    reader.read_latest_findex = AsyncMock(
-        return_value=type("FIndex", (), {"f_time": f_time})()
-    )
+    reader.read_latest_findex = AsyncMock(return_value=type("FIndex", (), {"f_time": f_time})())
     return reader
 
 
@@ -57,9 +56,9 @@ async def test_fires_above_threshold(
         f_time=f_time,
         max_update_delay=MAX_UPDATE_DELAY,
     )
-    assert sig.tripped is True, (
-        f"Expected tripped=True for age_s={age_s} > 0.7*{MAX_UPDATE_DELAY}={0.7*MAX_UPDATE_DELAY}"
-    )
+    assert (
+        sig.tripped is True
+    ), f"Expected tripped=True for age_s={age_s} > 0.7*{MAX_UPDATE_DELAY}={0.7*MAX_UPDATE_DELAY}"
 
 
 @pytest.mark.asyncio
@@ -82,9 +81,7 @@ async def test_silent_below_threshold(
         f_time=f_time,
         max_update_delay=MAX_UPDATE_DELAY,
     )
-    assert sig.tripped is False, (
-        f"Expected tripped=False for age_s={age_s} <= 0.7*{MAX_UPDATE_DELAY}"
-    )
+    assert sig.tripped is False, f"Expected tripped=False for age_s={age_s} <= 0.7*{MAX_UPDATE_DELAY}"
 
 
 @pytest.mark.asyncio
@@ -111,6 +108,4 @@ async def test_boundary_exactly_at_threshold(
         f_time=f_time,
         max_update_delay=MAX_UPDATE_DELAY,
     )
-    assert sig.tripped is False, (
-        f"Boundary at exactly 0.70*max_delay should be silent (strict >); got tripped=True"
-    )
+    assert sig.tripped is False, "Boundary at exactly 0.70*max_delay should be silent (strict >); got tripped=True"

@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import sqlite3
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 DataSource = Literal["live", "fallback_parquet_only"]
 _ALLOWED: frozenset[str] = frozenset({"live", "fallback_parquet_only"})
@@ -62,9 +62,7 @@ def insert_competition_row(
     )
 
 
-def read_competition_history_since(
-    sqlite_path: Path, market_id: str, since_ts: int
-) -> list[dict]:
+def read_competition_history_since(sqlite_path: Path, market_id: str, since_ts: int) -> list[dict[str, Any]]:
     """Return competition_history rows for market_id with chain_ts >= since_ts.
 
     Rows are ordered ASC by chain_ts (oldest first) so breakers can compare
@@ -87,6 +85,7 @@ def read_competition_history_since(
             zip(
                 ["polled_at_utc", "chain_ts", "q_me_pendle", "sigma_others_pendle", "data_source", "run_id"],
                 r,
+                strict=False,
             )
         )
         for r in rows

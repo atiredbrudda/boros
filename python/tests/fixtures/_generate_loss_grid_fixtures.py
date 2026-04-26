@@ -15,6 +15,7 @@ Regenerate with:
     cd /Users/macbookair/boros && \
         uv --directory python run python python/tests/fixtures/_generate_loss_grid_fixtures.py
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -57,15 +58,11 @@ def generate_synthetic_fills(out_path: Path, rng: np.random.Generator) -> None:
                             "fill_size_float": 0.5,
                             # Land squarely in bucket depth_idx for default depth_bucket_edges.
                             # Edges = [0, 1, 2, 4, 8, 16, 32, 10000].
-                            "depth_from_mark_ticks": int(
-                                [0, 1, 2, 4, 8, 16, 32][depth_idx]
-                            )
+                            "depth_from_mark_ticks": int([0, 1, 2, 4, 8, 16, 32][depth_idx])
                             + (0 if depth_idx == 0 else 0),
                             # Land in bucket tau_idx for tau_bucket_edges_days
                             # = [0, 7, 14, 30, 60, 90, 180, 10000].
-                            "tau_days": float(
-                                [3.0, 10.0, 20.0, 45.0, 75.0, 120.0, 200.0][tau_idx]
-                            ),
+                            "tau_days": float([3.0, 10.0, 20.0, 45.0, 75.0, 120.0, 200.0][tau_idx]),
                             "close_rate": close_rate,
                             "close_block_ts": block_ts + 30,
                             "close_latency_s": 30.0,

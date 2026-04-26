@@ -1,6 +1,8 @@
 """Enables ``python -m boros_brain.fill_model``."""
-from .cli import main
+
 import sys
+
+from .cli import main
 
 if __name__ == "__main__":
     sys.exit(main())

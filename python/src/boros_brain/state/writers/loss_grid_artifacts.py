@@ -8,6 +8,7 @@ Any `INSERT INTO loss_grid_artifacts` / `UPDATE loss_grid_artifacts` /
 `DELETE FROM loss_grid_artifacts` outside this module triggers
 scripts/sqlite_writer_lint.py.
 """
+
 from __future__ import annotations
 
 import json
@@ -69,9 +70,7 @@ def insert_loss_grid_artifact(sqlite_path: Path, artifact: LossGridArtifact) -> 
     )
 
 
-def get_latest_loss_grid(
-    sqlite_path: Path, market_id: str, side: str
-) -> LossGridArtifact | None:
+def get_latest_loss_grid(sqlite_path: Path, market_id: str, side: str) -> LossGridArtifact | None:
     """Return the most-recent-by-window_end_ts artifact for (market_id, side)."""
     with open_connection(sqlite_path) as conn:
         row = conn.execute(

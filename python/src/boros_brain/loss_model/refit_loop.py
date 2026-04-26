@@ -9,6 +9,7 @@ fill_model.refit_loop.run_fill_model_refit_loop.
 
 [[empirical-loss-grid-v05]]: window_days = 90 (longer than fill_model — fills are rarer).
 """
+
 from __future__ import annotations
 
 import asyncio

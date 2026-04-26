@@ -10,6 +10,7 @@ using CREATE TABLE IF NOT EXISTS, so on a fresh database the table is created by
 and index if they don't already exist — matching the same pattern used by 0002
 for the reward_budget_history idempotency.
 """
+
 from __future__ import annotations
 
 import sqlalchemy as sa

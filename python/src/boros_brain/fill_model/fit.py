@@ -8,6 +8,7 @@ Note: the wall-clock call is banned in fill_model/ by no_time_time_lint.py (INFR
 The `created_at` field is set to sentinel 0 here; artifact.write_fit_artifact
 stamps the real timestamp via datetime.now(UTC).timestamp() before the SQLite write.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -73,9 +74,9 @@ def fit_market_side(
     """
     whitelist = list(config.fill_model.covariate_whitelist)
 
-    df = features_df.filter(
-        (pl.col("market_id") == market_id) & (pl.col("side") == side)
-    ).drop_nulls(subset=whitelist + ["trade_count", "bin_duration_s"])
+    df = features_df.filter((pl.col("market_id") == market_id) & (pl.col("side") == side)).drop_nulls(
+        subset=whitelist + ["trade_count", "bin_duration_s"]
+    )
 
     # Convert to pandas for statsmodels interop via numpy (pyarrow not in project deps)
     needed_cols = whitelist + ["trade_count", "bin_duration_s"] + (["bin_start"] if "bin_start" in df.columns else [])

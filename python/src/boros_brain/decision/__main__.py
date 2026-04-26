@@ -1,4 +1,5 @@
 """Enables ``python -m boros_brain.decision``."""
+
 import sys
 
 from .cli import main

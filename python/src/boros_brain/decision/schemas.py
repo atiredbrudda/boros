@@ -5,6 +5,7 @@ Single home for all decision shape declarations so architecture.yml has a single
 
 [[ev-cancel-rule]]: EV = R_share * P(no_fill) - E[loss|fill] * P(fill) - cancel_cost * P(purge)
 """
+
 from __future__ import annotations
 
 from typing import Any, Literal

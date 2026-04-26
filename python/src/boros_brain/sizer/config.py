@@ -48,9 +48,7 @@ class SizerConfig(StrictBase):
     optimizer_grid_points: int = Field(50, ge=10, le=500)
     """Grid density for the 1-D optimization over [Q_min, upper]."""
 
-    optimizer_method: Literal["grid_only", "grid_plus_scipy", "scipy_only"] = (
-        "grid_plus_scipy"
-    )
+    optimizer_method: Literal["grid_only", "grid_plus_scipy", "scipy_only"] = "grid_plus_scipy"
     """Dispatch enum:
       grid_only       — deterministic-bit-for-bit grid argmax.
       grid_plus_scipy — grid argmax + scipy.optimize.minimize_scalar polish (default).

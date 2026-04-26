@@ -10,10 +10,11 @@ EV cancel rule is purely forward-looking; punitive branch = dead-code fallback.
 See [[boros-rest-api-margin-endpoint]] and [[phase4-foundation-schema-and-tables]] for Wave-1 foundation.
 See [[ev-cancel-rule-implementation-v05]] for the implementation spec.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -132,21 +133,19 @@ async def test_branches_diverge_on_calibrated_scenario(
     gas_cache = gas_mod.GasHistoryCache()
 
     with patch("boros_brain.fill_model.predict.predict", _mock_predict):
-        out = await engine.evaluate(
-            req, sqlite_path=db, config=config, gas_cache=gas_cache, w3=None
-        )
+        out = await engine.evaluate(req, sqlite_path=db, config=config, gas_cache=gas_cache, w3=None)
 
     if not forfeits:
         # Benign branch — forward-looking EV > 0 → HOLD
-        assert out.decision_kind == "HOLD", (
-            f"benign branch should HOLD but got {out.decision_kind} (ev={out.ev_hold_pendle})"
-        )
+        assert (
+            out.decision_kind == "HOLD"
+        ), f"benign branch should HOLD but got {out.decision_kind} (ev={out.ev_hold_pendle})"
         assert out.voluntary_cancel_branch == "benign"
     else:
         # Punitive branch — sunk rewards included → CANCEL
-        assert out.decision_kind == "CANCEL", (
-            f"punitive branch should CANCEL but got {out.decision_kind} (ev={out.ev_hold_pendle})"
-        )
+        assert (
+            out.decision_kind == "CANCEL"
+        ), f"punitive branch should CANCEL but got {out.decision_kind} (ev={out.ev_hold_pendle})"
         assert out.voluntary_cancel_branch == "punitive"
 
 
@@ -167,9 +166,7 @@ async def test_default_branch_is_benign(
     config = _patch_config_for_engine(default_config)
     req = _build_eval_input()
     gas_cache = gas_mod.GasHistoryCache()
-    out = await engine.evaluate(
-        req, sqlite_path=db, config=config, gas_cache=gas_cache, w3=None
-    )
-    assert out.voluntary_cancel_branch == "benign", (
-        f"default branch must be benign, got {out.voluntary_cancel_branch!r}"
-    )
+    out = await engine.evaluate(req, sqlite_path=db, config=config, gas_cache=gas_cache, w3=None)
+    assert (
+        out.voluntary_cancel_branch == "benign"
+    ), f"default branch must be benign, got {out.voluntary_cancel_branch!r}"

@@ -2,12 +2,14 @@
 
 Test IDs: T-02-P-01 through T-02-P-04.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
 
 import pytest
-from hypothesis import HealthCheck, given, settings, strategies as st
+from hypothesis import HealthCheck, given, settings
+from hypothesis import strategies as st
 
 from boros_brain.config.schema import BotConfig, DataConfig
 from boros_brain.fill_model.predict import (
@@ -175,12 +177,8 @@ def test_predict_monotone_in_depth(tmp_path: Path, depth_a: int, depth_b: int) -
         time_to_epoch_end_s=3600.0,
         current_chain_ts=1_700_000_100,
     )
-    p_a = predict(
-        PredictInput(depth_from_mark_ticks=depth_a, **base), sqlite_path=db, config=cfg
-    ).p_fill_this_epoch
-    p_b = predict(
-        PredictInput(depth_from_mark_ticks=depth_b, **base), sqlite_path=db, config=cfg
-    ).p_fill_this_epoch
+    p_a = predict(PredictInput(depth_from_mark_ticks=depth_a, **base), sqlite_path=db, config=cfg).p_fill_this_epoch
+    p_b = predict(PredictInput(depth_from_mark_ticks=depth_b, **base), sqlite_path=db, config=cfg).p_fill_this_epoch
     if depth_a > depth_b:
         assert p_a <= p_b + 1e-9
     else:
@@ -206,12 +204,8 @@ def test_predict_monotone_in_queue(tmp_path: Path, q_a: int, q_b: int) -> None:
         time_to_epoch_end_s=3600.0,
         current_chain_ts=1_700_000_100,
     )
-    p_a = predict(
-        PredictInput(queue_ahead_wei=q_a, **base), sqlite_path=db, config=cfg
-    ).p_fill_this_epoch
-    p_b = predict(
-        PredictInput(queue_ahead_wei=q_b, **base), sqlite_path=db, config=cfg
-    ).p_fill_this_epoch
+    p_a = predict(PredictInput(queue_ahead_wei=q_a, **base), sqlite_path=db, config=cfg).p_fill_this_epoch
+    p_b = predict(PredictInput(queue_ahead_wei=q_b, **base), sqlite_path=db, config=cfg).p_fill_this_epoch
     if q_a > q_b:
         assert p_a <= p_b + 1e-9
     else:

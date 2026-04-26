@@ -14,7 +14,6 @@ from pydantic import ValidationError
 
 from boros_brain.fill_model.config import FillModelConfig
 
-
 # ── T-02-F-01: covariate whitelist validation ──────────────────────────────
 
 
@@ -27,9 +26,9 @@ def test_covariate_whitelist() -> None:
     """
     with pytest.raises(ValidationError) as exc_info:
         FillModelConfig(covariate_whitelist=["not_a_feature"])
-    assert "non-allowed" in str(exc_info.value), (
-        f"Expected 'non-allowed' in ValidationError message, got: {exc_info.value}"
-    )
+    assert "non-allowed" in str(
+        exc_info.value
+    ), f"Expected 'non-allowed' in ValidationError message, got: {exc_info.value}"
 
 
 def test_covariate_whitelist_accepts_valid_subset() -> None:
@@ -81,6 +80,4 @@ def test_ewma_no_lookahead() -> None:
     vol_cte_start = _FEATURE_SQL.find("vol AS (")
     vol_cte_end = _FEATURE_SQL.find("\n)", vol_cte_start)
     vol_cte = _FEATURE_SQL[vol_cte_start:vol_cte_end]
-    assert "CURRENT ROW" not in vol_cte, (
-        "CURRENT ROW found in vol CTE — this introduces look-ahead bias (T-02-F-02)."
-    )
+    assert "CURRENT ROW" not in vol_cte, "CURRENT ROW found in vol CTE — this introduces look-ahead bias (T-02-F-02)."

@@ -6,6 +6,7 @@ Test IDs:
 - T-03-A-03: T-03-01 path-traversal mitigation
 - T-03-A-04: UPSERT idempotency on (market_id, side, window_end_ts)
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -25,9 +26,7 @@ def _apply_migrations(db: Path) -> None:
     from alembic.config import Config
 
     ROOT = Path(__file__).resolve().parents[2]
-    ALEMBIC_INI = (
-        ROOT / "python" / "src" / "boros_brain" / "state" / "migrations" / "alembic.ini"
-    )
+    ALEMBIC_INI = ROOT / "python" / "src" / "boros_brain" / "state" / "migrations" / "alembic.ini"
     cfg = Config(str(ALEMBIC_INI))
     cfg.set_main_option("script_location", str(ALEMBIC_INI.parent))
     cfg.set_main_option("sqlalchemy.url", f"sqlite:///{db}")
@@ -82,9 +81,7 @@ def test_dual_write_atomicity(tmp_path: Path) -> None:
     artifact = _make_artifact()
     parquet_root = tmp_path / "parquet"
 
-    out_path = write_loss_grid_artifact(
-        artifact, sqlite_path=db, parquet_root=parquet_root
-    )
+    out_path = write_loss_grid_artifact(artifact, sqlite_path=db, parquet_root=parquet_root)
     assert out_path.exists(), f"parquet missing at {out_path}"
     assert out_path.stat().st_size > 0
 
@@ -139,9 +136,7 @@ def test_path_traversal_rejected(tmp_path: Path) -> None:
         created_at=0,
     )
     with pytest.raises(ValueError, match="path traversal blocked"):
-        write_loss_grid_artifact(
-            bad_artifact, sqlite_path=db, parquet_root=parquet_root
-        )
+        write_loss_grid_artifact(bad_artifact, sqlite_path=db, parquet_root=parquet_root)
 
 
 def test_upsert_idempotent(tmp_path: Path) -> None:
@@ -157,9 +152,7 @@ def test_upsert_idempotent(tmp_path: Path) -> None:
     insert_loss_grid_artifact(db, artifact_v1)
 
     # Re-insert with a different run_id but same PK → UPDATE, not duplicate
-    artifact_v2 = artifact_v1.model_copy(
-        update={"run_id": "test-run-002", "created_at": 1_700_000_002}
-    )
+    artifact_v2 = artifact_v1.model_copy(update={"run_id": "test-run-002", "created_at": 1_700_000_002})
     insert_loss_grid_artifact(db, artifact_v2)
 
     conn = sqlite3.connect(db)
