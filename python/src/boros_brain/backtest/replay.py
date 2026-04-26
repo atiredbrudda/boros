@@ -21,8 +21,9 @@ This filter is auditable from the query plan and cannot be bypassed by Python br
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Any, Iterator, Literal
+from typing import Any, Literal
 
 import duckdb
 import polars as pl
@@ -35,7 +36,6 @@ from ..decision.gas_history import GasHistoryCache
 from ..decision.schemas import EvaluateInput
 from ..fill_model.amm_consumption import (
     AMMConsumptionIdentityError,
-    assert_epoch_conservation,
     compute_amm_share_timeseries,
 )
 from ..fill_model.queue_tracker import QueueTracker
@@ -145,13 +145,9 @@ class ReplayEngine:
         # Pre-seed gas cache from config default; w3=None disables live RPC.
         if gas_cache is None:
             gas_cache = GasHistoryCache()
-            try:
-                gas_cache.last_value_pendle = float(
-                    self.config.decision.cancel_cost_default_pendle
-                )
-            except AttributeError:
-                # If the config knob is absent, pass through; engine will use 0.0.
-                pass
+            _default_cancel_cost = getattr(self.config.decision, "cancel_cost_default_pendle", None)
+            if _default_cancel_cost is not None:
+                gas_cache.last_value_pendle = float(_default_cancel_cost)
         self.gas_cache = gas_cache
 
         # BreakerCoordinator is spawned lazily in run().
@@ -190,8 +186,7 @@ class ReplayEngine:
             self.output.event_index_coverage = "degraded"
             log.warning("backtest.event_index.degraded", market_id=self.market_id)
 
-        for row in df.iter_rows(named=True):
-            yield row
+        yield from df.iter_rows(named=True)
 
     async def run(
         self,
@@ -312,9 +307,7 @@ class ReplayEngine:
         conn = duckdb.connect(":memory:")
         conn.install_extension("sqlite_scanner")
         conn.load_extension("sqlite_scanner")
-        conn.execute(
-            f"CALL sqlite_attach('{self.sqlite_path}', overwrite=true)"
-        )
+        conn.execute(f"CALL sqlite_attach('{self.sqlite_path}', overwrite=true)")
 
         # Count synthetic_current rows for this market — surface them as a warning.
         # T-05-06: SQL filter (WHERE data_source = 'operator') is at the SQL layer.
@@ -375,13 +368,16 @@ class ReplayEngine:
             }
 
         cols = [
-            "market_id", "e_liq_per_epoch_pendle", "long_side_split",
-            "short_side_split", "calibrated_at_utc", "source", "data_source",
+            "market_id",
+            "e_liq_per_epoch_pendle",
+            "long_side_split",
+            "short_side_split",
+            "calibrated_at_utc",
+            "source",
+            "data_source",
         ]
-        row = dict(zip(cols, rows[0]))
-        side_split = (
-            row["long_side_split"] if self.side == "long" else row["short_side_split"]
-        )
+        row = dict(zip(cols, rows[0], strict=False))
+        side_split = row["long_side_split"] if self.side == "long" else row["short_side_split"]
 
         # Read sigma_others from competition_history (latest) + apply multiplier (BACK-04).
         sigma_others: float = 0.0
@@ -421,8 +417,7 @@ class ReplayEngine:
             # T-05-05: look-ahead guard — if a future-marker leaked in, abort.
             if getattr(order, "_test_marker_future", False):
                 raise LookAheadError(
-                    f"future event observed at decision_ts={current_ts} "
-                    f"for order={order.order_id}"
+                    f"future event observed at decision_ts={current_ts} " f"for order={order.order_id}"
                 )
             req = self._build_evaluate_input(order, calib, current_ts)
             out = await evaluate_decision(
@@ -631,17 +626,19 @@ class ReplayEngine:
                 notional = order.q_me_pendle if order is not None else 0.0
                 pnl_pendle = sign * (sc.fill_rate - close_rate) * notional
                 self.synthetic_orders.mark_filled(sc.order_id)
-                self.output.decision_log.append({
-                    "run_id": self.run_id,
-                    "current_chain_ts": current_ts,
-                    "order_id": sc.order_id,
-                    "decision_kind": "FILL_REALIZED",
-                    "fill_ts": sc.fill_ts,
-                    "close_at_ts": sc.close_at_ts,
-                    "fill_rate": sc.fill_rate,
-                    "close_rate": close_rate,
-                    "pnl_pendle": pnl_pendle,
-                })
+                self.output.decision_log.append(
+                    {
+                        "run_id": self.run_id,
+                        "current_chain_ts": current_ts,
+                        "order_id": sc.order_id,
+                        "decision_kind": "FILL_REALIZED",
+                        "fill_ts": sc.fill_ts,
+                        "close_at_ts": sc.close_at_ts,
+                        "fill_rate": sc.fill_rate,
+                        "close_rate": close_rate,
+                        "pnl_pendle": pnl_pendle,
+                    }
+                )
                 fired.append(sc)
             else:
                 remaining.append(sc)
@@ -684,12 +681,9 @@ class ReplayEngine:
             git_sha = getattr(self.manifest, "git_sha", "unknown")
             strategy_version = getattr(self.manifest, "strategy_version", "0.5.0")
 
-        n_cancels = sum(
-            1 for d in self.output.decision_log if d.get("decision_kind") == "CANCEL"
-        )
-        predicted_p_fill_mean = (
-            sum(d.get("p_fill", 0.0) for d in self.output.decision_log)
-            / max(1, len(self.output.decision_log))
+        n_cancels = sum(1 for d in self.output.decision_log if d.get("decision_kind") == "CANCEL")
+        predicted_p_fill_mean = sum(d.get("p_fill", 0.0) for d in self.output.decision_log) / max(
+            1, len(self.output.decision_log)
         )
 
         self.output.rows.append(

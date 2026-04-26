@@ -663,6 +663,49 @@ The `architecture.yml` edge `brain.decision.breakers.maturity → brain.decision
 from the Wave 2C edge block. See [[gas-history-ewma-cancel-cost]] and
 [[breaker-maturity-migration]] for specs.
 
+## Phase 5 Wave 1 — Backtest Engine (Plans 05-01 / 05-02 / 05-03)
+
+Plans 05-01..03 land the event-driven replay engine under `backtest/`.
+BACK-01 (replay), BACK-02 (cancel_latency scheduler), BacktestConfig (05-01),
+and supporting schemas/synthetic_orders land in Wave 1.
+
+```mermaid
+flowchart LR
+  subgraph phase5_wave1["Phase 5 Wave 1: Backtest engine (Plans 05-01/02/03)"]
+    bt_config["backtest/config.py<br/>BacktestConfig (PROTO-04 knobs)"]
+    bt_schemas["backtest/schemas.py<br/>BacktestRunOutput, ReplayConfig"]
+    bt_synth["backtest/synthetic_orders.py<br/>SyntheticOrderLedger"]
+    bt_cancel_lat["backtest/cancel_latency.py<br/>LatencyScheduler (BACK-02)"]
+    bt_replay["backtest/replay.py<br/>ReplayEngine (BACK-01)"]
+  end
+
+  bt_replay --> bt_cancel_lat
+  bt_replay --> bt_schemas
+  bt_replay --> bt_synth
+```
+
+[[backtest-replay-engine-v05]] [[backtest-cancel-latency-two-axis]]
+
+## Phase 5 Wave 2 — Sweep Dispatchers (Plan 05-04)
+
+Plan 05-04 lands BACK-03 (cancel-latency sweep) and BACK-04 (competition sweep)
+under `backtest/sweeps/`. Each sweep emits one `BacktestRunOutput` row per grid
+value and a central-finite-difference dP&L/dL or dP&L/dQ curve.
+
+```mermaid
+flowchart LR
+  subgraph phase5_wave2_sweeps["Phase 5 Wave 2: Sweep dispatchers (Plan 05-04)"]
+    bt_sweeps_cancel["backtest/sweeps/cancel_latency.py<br/>run_cancel_latency_sweep (BACK-03)"]
+    bt_sweeps_compete["backtest/sweeps/competition.py<br/>run_competition_sweep (BACK-04)"]
+  end
+
+  %% Phase 5 Wave 2 sweep wiring (Plan 05-04)
+  bt_sweeps_cancel --> bt_replay
+  bt_sweeps_compete --> bt_replay
+```
+
+[[backtest-cancel-latency-sweep]] [[backtest-competition-sweep]]
+
 ## Related protocols
 
 - Engineering Protocol #1 — LLM Wiki. Every research / decision / postmortem

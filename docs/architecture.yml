@@ -1391,6 +1391,61 @@ nodes:
     path: python/src/boros_brain/decision/cli.py
     public_functions: [build_parser, main]
 
+  # ── Phase 5 Wave 1 backtest engine — Plans 05-01 / 05-02 / 05-03 ───────
+  # Note: brain.backtest (__init__.py) is skipped by architecture_lint.py
+  # (lint skips __init__.py), so backtest package marker is not declared here.
+
+  - id: brain.backtest.config
+    type: module
+    process: brain
+    path: python/src/boros_brain/backtest/config.py
+    public_functions: []   # Pydantic model only — BacktestConfig
+
+  - id: brain.backtest.schemas
+    type: module
+    process: brain
+    path: python/src/boros_brain/backtest/schemas.py
+    public_functions: []   # Pydantic + dataclass shapes only
+
+  - id: brain.backtest.synthetic_orders
+    type: module
+    process: brain
+    path: python/src/boros_brain/backtest/synthetic_orders.py
+    public_functions: []
+
+  - id: brain.backtest.cancel_latency
+    type: module
+    process: brain
+    path: python/src/boros_brain/backtest/cancel_latency.py
+    public_functions: []
+
+  - id: brain.backtest.replay
+    type: module
+    process: brain
+    path: python/src/boros_brain/backtest/replay.py
+    public_functions: []
+
+  # ── Phase 5 Wave 2 sweep dispatchers — Plan 05-04 ──────────────────────
+  # Note: brain.backtest.sweeps (__init__.py) is skipped by architecture_lint.py
+  # (lint skips __init__.py), so it is declared as type: external — same pattern
+  # as brain.decision.breakers at L1116-1119.
+  - id: brain.backtest.sweeps
+    type: external
+    notes: "backtest.sweeps package __init__ — documentation marker; lint skips __init__.py"
+    path: python/src/boros_brain/backtest/sweeps/__init__.py
+
+  - id: brain.backtest.sweeps.cancel_latency
+    type: module
+    process: brain
+    path: python/src/boros_brain/backtest/sweeps/cancel_latency.py
+    public_functions: [run_cancel_latency_sweep, compute_dpnl_dl]
+
+  - id: brain.backtest.sweeps.competition
+    type: module
+    process: brain
+    path: python/src/boros_brain/backtest/sweeps/competition.py
+    public_functions: [run_competition_sweep, compute_dpnl_dq]
+
 edges:
   # ── brain internal wiring ──────────────────────────────────────────────
   - from: brain
@@ -2639,3 +2694,20 @@ edges:
   # The DECIDE-03 invariant — cancel_cost flows exclusively through GasHistoryCache —
   # is now enforced by the production code path (no test-only fallback branch).
   - {from: brain.decision.breakers.maturity, to: brain.decision.gas_history, type: calls, notes: "SAFE-07 migration_cost = entrance_fee_pendle + 2 × cancel_cost_pendle; cancel_cost_pendle returned by injected GasHistoryCache (Plan 04-07 made gas_cache mandatory)"}
+
+  # ── Phase 5 Wave 1 backtest engine edges — Plans 05-01 / 05-02 / 05-03 ─
+  - {from: brain.backtest.replay, to: brain.fill_model.queue_tracker, type: calls}
+  - {from: brain.backtest.replay, to: brain.fill_model.amm_consumption, type: calls}
+  - {from: brain.backtest.replay, to: brain.decision.engine, type: calls}
+  - {from: brain.backtest.replay, to: brain.decision.breaker_coordinator, type: calls}
+  - {from: brain.backtest.replay, to: brain.backtest.cancel_latency, type: calls, notes: "LatencyScheduler + ScheduledClose imported from backtest.cancel_latency"}
+  - {from: brain.backtest.replay, to: brain.backtest.schemas, type: calls, notes: "BacktestRunOutput, ReplayOutput, ReplayConfig"}
+  - {from: brain.backtest.replay, to: brain.backtest.synthetic_orders, type: calls, notes: "SyntheticOrder + SyntheticOrderLedger"}
+  - {from: brain.backtest.replay, to: brain.manifest.writer, type: calls, notes: "build_run_manifest for child sweep runs"}
+  - {from: brain.config.schema, to: brain.backtest.config, type: calls, notes: "BotConfig.backtest: BacktestConfig — Plan 05-01"}
+
+  # ── Phase 5 Wave 2 sweep dispatcher edges — Plan 05-04 ─────────────────
+  - {from: brain.backtest.sweeps.cancel_latency, to: brain.backtest.replay, type: calls, notes: "ReplayEngine instantiation per L value"}
+  - {from: brain.backtest.sweeps.competition, to: brain.backtest.replay, type: calls, notes: "ReplayEngine instantiation per multiplier value"}
+  - {from: brain.backtest.sweeps.cancel_latency, to: config.backtest.cancel_latency_grid, type: depends-on-config}
+  - {from: brain.backtest.sweeps.competition, to: config.backtest.competition_multipliers, type: depends-on-config}
