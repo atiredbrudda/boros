@@ -133,7 +133,6 @@ class ReplayEngine:
             config=self.config,
             market_id=self.market_id,
             side=self.side,
-            parquet_root=self.parquet_root,
         )
         self.synthetic_orders = SyntheticOrderLedger()
 
@@ -462,14 +461,27 @@ class ReplayEngine:
         calib: dict[str, Any],
         current_chain_ts: int,
     ) -> EvaluateInput:
-        """Mirror main.py:_decision_loop evaluate input construction."""
+        """Mirror main.py:_decision_loop evaluate input construction.
+
+        current_features is populated from config.fill_model.covariate_whitelist
+        with 0.0 values as a neutral placeholder (Wave 1). The feature builder
+        (Plans 05-05/06) will wire real features here in later waves.
+        """
+        # Build current_features from the config's whitelist — 0.0 is a neutral
+        # placeholder that satisfies predict()'s NaN check without biasing p_fill.
+        whitelist = list(getattr(self.config.fill_model, "covariate_whitelist", []))
+        current_features: dict[str, float] = {name: 0.0 for name in whitelist}
+        if not current_features:
+            # Fallback if whitelist is empty or attribute missing
+            current_features = {"sigma_5min": 0.01}
+
         return EvaluateInput(
             order_id=order.order_id,
             market_id=order.market_id,
             side=order.side,
             depth_from_mark_ticks=order.depth_from_mark_ticks,
             queue_ahead_wei=order.queue_ahead_wei,
-            current_features={"sigma_5min": 0.01},
+            current_features=current_features,
             time_to_epoch_end_s=3600.0,
             time_to_maturity_s=86400 * 30,
             current_chain_ts=current_chain_ts,
