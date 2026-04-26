@@ -1491,6 +1491,23 @@ nodes:
     path: python/src/boros_brain/backtest/contour_2d.py
     public_functions: [run_2d_contour_grid, contour_grid_to_parquet]
 
+  # ── Phase 5 Wave 3 CLI + run-manifest sidecar — Plan 05-09 ─────────────
+  # NOTE: __main__.py is also scanned by architecture_lint.py (lint walks
+  # python/src/ recursively and includes any .py file NOT starting with _).
+  # __main__.py starts with "_" → SKIPPED by lint per architecture_lint.py L38.
+  # So __main__.py does NOT need a yml entry. cli.py and run_manifest.py do.
+  - id: brain.backtest.cli
+    type: module
+    process: brain
+    path: python/src/boros_brain/backtest/cli.py
+    public_functions: [build_parser, main]
+
+  - id: brain.backtest.run_manifest
+    type: module
+    process: brain
+    path: python/src/boros_brain/backtest/run_manifest.py
+    public_functions: [emit_backtest_manifest, assert_manifest_contains_all_botconfig_leaves]
+
 edges:
   # ── brain internal wiring ──────────────────────────────────────────────
   - from: brain
@@ -2782,3 +2799,17 @@ edges:
   - {from: brain.backtest.contour_2d, to: brain.backtest.ship_gate, type: calls}
   - {from: brain.backtest.perturbation, to: config.backtest.perturbation_pct, type: depends-on-config}
   - {from: brain.backtest.contour_2d, to: config.backtest.contour_2d_knobs, type: depends-on-config}
+
+  # ── Phase 5 Wave 3 CLI + run-manifest edges — Plan 05-09 ───────────────
+  - {from: brain.backtest.cli, to: brain.manifest.writer, type: calls, notes: "MANIFEST-FIRST boot (PROTO-01)"}
+  - {from: brain.backtest.cli, to: state.run_manifests, type: writes, notes: "via brain.manifest.writer"}
+  - {from: brain.backtest.cli, to: brain.backtest.replay, type: calls}
+  - {from: brain.backtest.cli, to: brain.backtest.sweeps.cancel_latency, type: calls}
+  - {from: brain.backtest.cli, to: brain.backtest.sweeps.competition, type: calls}
+  - {from: brain.backtest.cli, to: brain.backtest.sweeps.forfeit_branch, type: calls}
+  - {from: brain.backtest.cli, to: brain.backtest.perturbation, type: calls}
+  - {from: brain.backtest.cli, to: brain.backtest.contour_2d, type: calls}
+  - {from: brain.backtest.cli, to: brain.backtest.ship_gate, type: calls}
+  - {from: brain.backtest.cli, to: brain.backtest.report, type: calls}
+  - {from: brain.backtest.cli, to: brain.backtest.run_manifest, type: calls, notes: "PROTOCOL 3 sidecar JSON"}
+  - {from: brain.backtest.run_manifest, to: brain.backtest.perturbation, type: calls, notes: "reflection lockstep — assert_manifest_contains_all_botconfig_leaves reuses enumerate_perturbable_leaves"}

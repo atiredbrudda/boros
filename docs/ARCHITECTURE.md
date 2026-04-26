@@ -765,10 +765,29 @@ flowchart LR
     bt_perturbation --> bt_ship_gate
     bt_contour_2d --> bt_replay
     bt_contour_2d --> bt_ship_gate
+
+    subgraph phase5_wave3_cli["Phase 5 Wave 3: CLI + RUN_MANIFEST sidecar (Plan 05-09)"]
+        bt_cli["backtest/cli.py<br/>build_parser, main<br/>MANIFEST-FIRST boot"]
+        bt_run_manifest["backtest/run_manifest.py<br/>emit_backtest_manifest<br/>assert_manifest_contains_all_botconfig_leaves<br/>(PROTOCOL 3)"]
+    end
+
+    %% Phase 5 Wave 3 CLI wiring (Plan 05-09)
+    bt_cli -- "MANIFEST-FIRST: build_run_manifest + write_manifest" --> brain_manifest_writer
+    bt_cli --> bt_run_manifest
+    bt_cli --> bt_replay
+    bt_cli --> bt_sweeps_cancel
+    bt_cli --> bt_sweeps_compete
+    bt_cli --> bt_sweeps_forfeit
+    bt_cli --> bt_perturbation
+    bt_cli --> bt_contour_2d
+    bt_cli --> bt_ship_gate
+    bt_cli --> bt_report
+    bt_run_manifest --> bt_perturbation
 ```
 
 [[backtest-bootstrap-methodology-v05]] [[backtest-ship-gate-threshold-assembly]] [[backtest-reproducibility-rng-seed-from-manifest]]
 [[backtest-perturbation-grid-pydantic-reflection]] [[backtest-fragility-and-sign-flip-detection]]
+[[backtest-cli-and-run-manifest-emission]] [[backtest-architecture-manifest-delta-phase-5]]
 
 ## Related protocols
 
