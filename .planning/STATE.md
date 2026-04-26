@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: milestone
 status: executing
-stopped_at: Completed 05-06-PLAN.md — forfeit_branch sweep + BACK-06 GREEN (da2c43a)
-last_updated: "2026-04-26T16:47:53.747Z"
+stopped_at: Completed 05-07-PLAN.md — bootstrap.py + ship_gate.py + BACK-07 GREEN (b37944f)
+last_updated: "2026-04-26T16:55:09.923Z"
 last_activity: 2026-04-26 -- Phase --phase execution started
 progress:
   total_phases: 9
   completed_phases: 4
   total_plans: 37
-  completed_plans: 34
-  percent: 92
+  completed_plans: 35
+  percent: 95
 ---
 
 # Project State
@@ -30,7 +30,7 @@ Plan: 1 of --name
 Status: Executing Phase --phase
 Last activity: 2026-04-26 -- Phase --phase execution started
 
-Progress: [█████████░] 92%
+Progress: [██████████] 95%
 
 ## Performance Metrics
 
@@ -69,6 +69,7 @@ Progress: [█████████░] 92%
 | Phase 05-event-driven-backtest-ship-gate P04 | 7 | 4 tasks | 9 files |
 | Phase 05-event-driven-backtest-ship-gate P05 | 5 | 3 tasks | 5 files |
 | Phase 05-event-driven-backtest-ship-gate P06 | 4 | 3 tasks | 4 files |
+| Phase 05-event-driven-backtest-ship-gate P07 | 5 | 4 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -136,6 +137,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - Hive partition layout: parquet_root/run_id=<ulid>/sweep_axis=<...>/[sweep_value=<...>/]results.parquet — base axis omits sweep_value dir (BACK-05)
 - Path-traversal guard test uses white-box _ensure_under_root call — avoids OS-dependent depth counting (how many ../ escape a tmp_path)
 - P0-01 LOCKED: voluntary_cancel_forfeits_accumulated=False by default; BACK-06 sweep is a sanity check (not a blocker); forfeit_branch_load_bearing signals material divergence without auto-failing ship-gate
+- ulid.ULID.from_str() not ulid.from_str() — python-ulid exposes from_str as a class method on ULID, not a module-level function; corrected in bootstrap.py
 
 ### Pending Todos
 
@@ -150,8 +152,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-26T16:47:53.743Z
-Stopped at: Completed 05-06-PLAN.md — forfeit_branch sweep + BACK-06 GREEN (da2c43a)
+Last session: 2026-04-26T16:55:09.919Z
+Stopped at: Completed 05-07-PLAN.md — bootstrap.py + ship_gate.py + BACK-07 GREEN (b37944f)
 Resume file: None
 
 **Completed this session (2026-04-24 second pass):**
