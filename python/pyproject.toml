@@ -24,6 +24,7 @@ dependencies = [
 dev = [
   "pytest>=8,<9",
   "pytest-asyncio>=0.24",
+  "pytest-timeout>=2.3,<3",
   "pytest-testmon>=2",
   "ruff>=0.7",
   "mypy>=1.13",
@@ -43,6 +44,7 @@ packages = ["src/boros_brain"]
 testpaths = ["tests"]
 asyncio_mode = "auto"
 addopts = "-ra --strict-markers"
+timeout = 30
 pythonpath = ["src"]
 markers = [
   "slow: long-running (skipped by quick pass)",

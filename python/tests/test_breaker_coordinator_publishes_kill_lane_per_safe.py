@@ -96,47 +96,52 @@ async def test_coordinator_publishes_kill_lane_per_safe(
     cmd_endpoint = f"ipc://{ipc_dir}/{breaker_name}_cmd"
     kill_endpoint = f"ipc://{ipc_dir}/{breaker_name}_kill"
 
-    ctx = zmq.asyncio.Context.instance()
-    kill_pull = ctx.socket(zmq.PULL)
-    kill_pull.bind(kill_endpoint)
-
-    import asyncio
-
-    await asyncio.sleep(0.05)
-
+    # CmdBus PUSH sockets BIND the endpoints; PULL sockets CONNECT (not bind)
+    # to avoid double-bind hangs — same pattern as test_breaker_coordinator_exclusive.py.
     bus = CmdBus(cmd_endpoint=cmd_endpoint, kill_endpoint=kill_endpoint)
 
-    # Build a stub breaker that returns the expected tripped signal.
-    class _StubBreaker:
-        name = breaker_name
+    ctx = zmq.asyncio.Context()        # NOT Context.instance() — per-test, terminate at end
+    try:
+        kill_pull = ctx.socket(zmq.PULL)
+        kill_pull.connect(kill_endpoint)  # CONNECT, not bind — CmdBus owns the bind
 
-        async def check(self, **kw) -> BreakerSignal:
-            return BreakerSignal(
-                tripped=True,
-                reason=f"{breaker_name}_triggered",
-                kill_command_kind=expected_kill_kind,
-            )
+        import asyncio
 
-    coord = BreakerCoordinator(
-        cmd_bus=bus,
-        config=default_config,
-        run_id=f"test-{breaker_name}",
-        gas_cache=None,
-        breakers=[_StubBreaker()],
-    )
+        await asyncio.sleep(0.05)  # slow-joiner protection
 
-    await coord.tick(
-        sqlite_path=tmp_sqlite_path,
-        w3=None,
-        parquet_root=tmp_path,
-        current_chain_ts=1_700_000_000,
-    )
+        # Build a stub breaker that returns the expected tripped signal.
+        class _StubBreaker:
+            name = breaker_name
 
-    kill_msg = await asyncio.wait_for(kill_pull.recv_json(), timeout=1.0)
-    assert kill_msg.get("kind") == "kill", f"{scenario}: expected kind='kill', got {kill_msg!r}"
-    assert kill_msg.get("kill_command_kind") == expected_kill_kind, (
-        f"{scenario}: expected kill_command_kind={expected_kill_kind!r}, " f"got {kill_msg.get('kill_command_kind')!r}"
-    )
+            async def check(self, **kw) -> BreakerSignal:
+                return BreakerSignal(
+                    tripped=True,
+                    reason=f"{breaker_name}_triggered",
+                    kill_command_kind=expected_kill_kind,
+                )
 
-    kill_pull.close()
+        coord = BreakerCoordinator(
+            cmd_bus=bus,
+            config=default_config,
+            run_id=f"test-{breaker_name}",
+            gas_cache=None,
+            breakers=[_StubBreaker()],
+        )
+
+        await coord.tick(
+            sqlite_path=tmp_sqlite_path,
+            w3=None,
+            parquet_root=tmp_path,
+            current_chain_ts=1_700_000_000,
+        )
+
+        kill_msg = await asyncio.wait_for(kill_pull.recv_json(), timeout=1.0)
+        assert kill_msg.get("kind") == "kill", f"{scenario}: expected kind='kill', got {kill_msg!r}"
+        assert kill_msg.get("kill_command_kind") == expected_kill_kind, (
+            f"{scenario}: expected kill_command_kind={expected_kill_kind!r}, " f"got {kill_msg.get('kill_command_kind')!r}"
+        )
+
+        kill_pull.close()
+    finally:
+        ctx.term()                     # MUST term, not just close — releases routing state
     bus.close()
