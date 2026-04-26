@@ -319,11 +319,10 @@ async def _run_one_perturbation(
         manifest=child_manifest,
         config=perturbed_config,
     )
-    # Persist the perturbed row to parquet (sweep_axis="perturbation")
+    # Persist ALL perturbed rows to parquet (sweep_axis="perturbation")
     parquet_root = Path(perturbed_config.backtest.output_parquet_root)
-    if result.rows:
-        first = result.rows[0]
-        tagged = first.model_copy(
+    for result_row in result.rows:
+        tagged = result_row.model_copy(
             update={
                 "sweep_axis": "perturbation",
                 "sweep_value": f"{knob_path}={sign}",
