@@ -13,11 +13,11 @@ v0.5 delivers a single-user, single-market, $100-collateral real-capital validat
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 0: Prerequisite Resolution & Kill Gate** - Close six empirical open questions; halt on minimum-order-size failure before any engineering. **COMPLETE 2026-04-23** — all 6 questions resolved cheaply via docs + official-team statement + spot probe (no engineering required); halt condition (P0-02) cleared (no protocol minimum); each answer filed as a wiki page with `Status: Current`. Phase 1 schema defaults set per resolutions (`voluntary_cancel_forfeits_accumulated=False`, `socket.io-client` over raw `ws`, `submission_path` knob dropped, Send Txs Bot mandatory).
-- [ ] **Phase 1: Foundation (Infrastructure Spine + Data Pipeline + Economics Gate)** - Install Engineering Protocols, ZMQ/SQLite/manifest/wiki, ingest data, compute economics kill-switch; second cheap-kill gate on empty shortlist.
-- [ ] **Phase 2: Fill Model (NHPP v0.5)** - Calibrated `P(fill | δ, side, queue_ahead, features)` with queue tracker and AMM consumption model.
-- [ ] **Phase 3: Loss & Reward-Share Models + Sizing** - Empirical `E[loss|fill]`, capped pro-rata reward share with live budget polling, sizing optimizer.
-- [ ] **Phase 4: Decision Engine + Predictive Circuit Breakers** - EV cancel rule wired over the three input models; ten predictive breakers with exclusive KILL authority.
-- [ ] **Phase 5: Event-Driven Backtest (Ship-Gate)** - `eventIndex`-ordered, queue-aware, AMM-aware replay with cancel-latency sweep; bootstrap 5th-percentile ship-gate against alt-yield.
+- [x] **Phase 1: Foundation (Infrastructure Spine + Data Pipeline + Economics Gate)** - Install Engineering Protocols, ZMQ/SQLite/manifest/wiki, ingest data, compute economics kill-switch; second cheap-kill gate on empty shortlist. **COMPLETE 2026-04-24** — 12/12 plans, 23/23 must-haves verified; 3 live-network UAT items remain operator-only (carry to Phase 7). DATA-11 ELiqPoller dormant per Phase 3 LOCKED D-01 supersedence.
+- [x] **Phase 2: Fill Model (NHPP v0.5)** - Calibrated `P(fill | δ, side, queue_ahead, features)` with queue tracker and AMM consumption model. **COMPLETE 2026-04-24** — 4/4 plans, 12/12 verified; 1 minor PROTO-01 cosmetic carry (first-log-event field naming).
+- [x] **Phase 3: Loss & Reward-Share Models + Sizing** - Empirical `E[loss|fill]`, capped pro-rata reward share with operator-manual `E_liq_per_epoch` calibration (LOCKED D-01 supersedes live-polling assumption A5), sizing optimizer. **COMPLETE 2026-04-25** — 4/4 plans, 7/7 verified.
+- [x] **Phase 4: Decision Engine + Predictive Circuit Breakers** - EV cancel rule wired over the three input models; ten predictive breakers with exclusive KILL authority. **COMPLETE 2026-04-26** — 8/8 plans (6 original + 2 gap-closure 04-07/04-08), 7/7 verified after re-verification; full Phase-4 pytest greenrun captured (311 passed). One known-flake hang carried to Phase 5 Wave 0 (test-fixture issue, not regression).
+- [ ] **Phase 5: Event-Driven Backtest (Ship-Gate)** - `eventIndex`-ordered, queue-aware, AMM-aware replay with cancel-latency sweep; bootstrap 5th-percentile ship-gate against alt-yield. Wave-0 prerequisite: fix carried ZMQ test-fixture hang + add `pytest-timeout`.
 - [ ] **Phase 6: Execution Layer (TypeScript hands)** - Dual-wallet + pre-signed cancel calldata + WebSocket fill listener + gas monitor; hot path stays in-process.
 - [ ] **Phase 7: Paper Trading (2–4 Weeks)** - Live feeds, no capital; phantom fills logged, backtest reconciled; divergence > 1σ blocks live promotion.
 - [ ] **Phase 8: Live Rollout** - $100 collateral, one market, one side, protocol-minimum order size, 2-week observation window; weekly P&L reconciliation.
@@ -41,7 +41,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. The `voluntary_cancel_forfeits_accumulated` boolean is set to `False` in the Phase 1 config schema per P0-01 resolution 2026-04-23 ([[Voluntary cancel reward behavior]]). Phase 5 backtest still sweeps both branches as a sanity-check row, not as a blocking gate.
   3. ~~The minimum-order-size check has produced a go/no-go decision~~ **RESOLVED** — no protocol minimum ([[Minimum order size]]); project proceeds. Economic sizing is a Phase 1 economics-gate concern (DATA-09), not a Phase 0 halt.
   4. The fee schedule is enumerated with concrete numbers per candidate market such that the EV equation's `fee_cost` term will have real inputs in Phase 4.
-**Plans**: TBD
+**Plans**: N/A — no-engineering phase; resolutions filed as wiki pages instead.
 **UI hint**: no
 
 ### Phase 1: Foundation (Infrastructure Spine + Data Pipeline + Economics Gate)
@@ -70,15 +70,15 @@ Decimal phases appear between their surrounding integers in numeric order.
   - Market screener: trades last 60d, inter-arrival CV using `eventIndex`-ordered intervals, mid-rate realized vol, reversal count, depth at incentivized range, `cloLower`/`cloUpper` non-zero, ≥30d to maturity; outputs shortlist of 2–4 markets (DATA-08, absorbs pitfall B2).
   - Reward-share economics kill-switch: `R_apr_on_collateral = R_share_per_epoch × epochs_per_year / required_collateral`; drops markets below `alternative_yield + estimated_fill_loss_rate`; empty shortlist after filter halts project with a written kill report (DATA-09, cheap-kill gate).
   - Daily automated re-screen reruns DATA-08 + DATA-09, flags new-entrant or dropped markets (DATA-10, absorbs pitfall A5).
-  - Live `E_liq_per_epoch` + Long/Short split polling every cycle (1–5s); writes to `reward_budget_history` (DATA-11, absorbs pitfall A2 data-collection portion).
+  - ~~Live `E_liq_per_epoch` + Long/Short split polling every cycle (1–5s); writes to `reward_budget_history`~~ **SUPERSEDED 2026-04-24 by Phase 3 LOCKED D-01** ([[e-liq-per-epoch-source-decision]]): comprehensive Phase-3 probe confirmed NO live source exists for `E_liq_per_epoch` (fields absent from `/markets`; `liqSettings` is liquidation-incentive params, not LO rewards; distributor emits only `SetMerkleRoot` + per-user `Claimed`; SDK Incentives API endpoints all return 404). Resolution: operator-manual calibration in `state.market_reward_calibration` (Alembic 0006) via `python -m boros_brain.reward_model calibrate` CLI. ELiqPoller is dormant — kept for `reward_budget_history` row-shape semantics only. SAFE-08 (Phase 4) reads the new table for trend detection (DATA-11, absorbs pitfall A2 data-collection portion).
   - Supersedence discipline (PROTO-05): new wiki finding → grep wiki for pages restating old claim → update in same commit with `Status: Historical — superseded by [[new-page]]`.
 **Success Criteria** (what must be TRUE):
   1. A `brain` process can start, emit a `RUN_MANIFEST` as first log line + sidecar JSON, stamp every subsequent log line with the active `run_id`, and crash-restart under `launchd` with no orphan state; `hands` does the same on the TypeScript side.
   2. A commit that modifies source without updating `docs/architecture.yml` is rejected by the pre-commit hook, and a commit that adds a new `research/` or `decisions/` markdown without a `[[wiki-link]]` is rejected by the wiki-cite hook.
-  3. Running the ingester against the confirmed candidate markets produces partitioned parquet with `eventIndex`-ordered trade tape, hourly raw + combined snapshots that pass AMM conservation, underlying APR series, and writes timestamped `clo_history` + `reward_budget_history` rows in SQLite.
+  3. Running the ingester against the confirmed candidate markets produces partitioned parquet with `eventIndex`-ordered trade tape, hourly raw + combined snapshots that pass AMM conservation, underlying APR series, and writes timestamped `clo_history` rows in SQLite. (`reward_budget_history` is dormant per Phase 3 LOCKED D-01 supersedence — operator-manual `market_reward_calibration` is the active source; see [[e-liq-per-epoch-source-decision]].)
   4. Running the market screener + economics kill-switch produces either a non-empty shortlist with per-market `R_apr_on_collateral` above `alternative_yield + estimated_fill_loss_rate` (project continues to Phase 2), or an empty shortlist with a written kill report (project halts).
   5. The LLM Wiki `index.md` lists the seeded pages (Python stack, TS stack, IPC boundary, architecture overview, nonce model, strategy thesis, EV cancel rule, A1/min-order open questions with Status flags) such that a future session can cite `[[page-name]]` instead of re-deriving conclusions.
-**Plans**: TBD
+**Plans**: 12 plans (01-01..01-12), all complete — see `.planning/phases/01-foundation-infrastructure-spine-data-pipeline-economics-gate/`
 **UI hint**: no
 
 ### Phase 2: Fill Model (NHPP v0.5)
@@ -98,7 +98,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. The queue-position tracker's drift-direction bias diagnostic reports consistent sign (pessimistic ≤ realized ≤ optimistic) across 14-day rolling windows on historical data.
   3. The AMM conservation assertion from Phase 1 holds during queue replay — no tick ever shows `AMM_share < 0` after subtracting `raw` from `combined`.
   4. A degraded fit (goodness-of-fit below the configured threshold) emits a warning log line that is grep-able by `run_id` and surfaces in the periodic calibration report.
-**Plans**: TBD
+**Plans**: 4 plans (02-01..02-04), all complete — see `.planning/phases/02-fill-model-nhpp-v0-5/`
 **UI hint**: no
 
 ### Phase 3: Loss & Reward-Share Models + Sizing
@@ -120,7 +120,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. `RewardShareModel.R_capped(Q_me)` at $100 collateral produces the sub-cap-regime curve labeled `sub_cap` (not `cap_binding` or `market_saturated`) across realistic `Q_total_in_range` values, and the cap-binding branch unit test passes at scaled-up collateral inputs.
   3. `Sizer.Q_me_target()` returns `Q_min` deterministically on $100 collateral across the candidate market's competitive conditions, while a scale-up unit test with collateral > $1k confirms `Q_me_target < Q_cap` in cap-binding regime.
   4. The LossModel scaffold's OU-on-basis interface exists with a failing stub test so v1.0 can drop in the parametric implementation without restructuring the decision engine.
-**Plans**: TBD
+**Plans**: 4 plans (03-01..03-04), all complete — see `.planning/phases/03-loss-reward-share-models-sizing/`. **LOCKED D-01 (2026-04-24):** operator-manual `market_reward_calibration` table replaces failed live `E_liq_per_epoch` polling assumption from Phase 1 (DATA-11 dormant). See `[[e-liq-per-epoch-source-decision]]` + `[[market-reward-calibration-operator-workflow]]`.
 **UI hint**: no
 
 ### Phase 4: Decision Engine + Predictive Circuit Breakers
@@ -151,15 +151,15 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Each of the ten circuit breakers (SAFE-01..10) fires under its documented trigger condition in a unit-test scenario and causes the ZMQ `CANCEL_ALL` or `EMERGENCY_CLOSE` message to be published on the priority KILL lane.
   3. When any breaker is tripped, any subsequent PLACE command from `DecisionEngine` is suppressed by the breaker coordinator and the suppression is logged with `run_id` — i.e., kill authority is verifiably exclusive.
   4. `cancel_cost` in the EV equation is measured from the most recent N on-chain gas observations (a stubbed-hardcoded value fails a linter check).
-**Plans**: 8 plans (6 original + 2 gap-closure)
-- [ ] 04-01-PLAN.md — Wave 0: Test scaffolding (17 RED tests + conftest fixtures + 2 lint script skeletons)
-- [ ] 04-02-PLAN.md — Wave 1: Foundation (BotConfig + DecisionEngineConfig schema, alembic 0007 with 4 new tables, 3 state writers, MarginPoller, Breaker ABC, EvaluateInput/Output, OWNER_MAP extension)
-- [ ] 04-03-PLAN.md — Wave 2A: DecisionEngine + GasHistoryCache + 2 lint scripts hardened (DECIDE-01..04 GREEN)
-- [ ] 04-04-PLAN.md — Wave 2B: 6 breakers — margin_trajectory, oracle_stale, clo_removal, clo_shift, fill_rate, loss_fit_degraded (SAFE-01..05 + B5 absorbed GREEN)
-- [ ] 04-05-PLAN.md — Wave 2C: 4 breakers — competition, maturity, side_budget, underlying_stale + CompetitionTracker SQLite write (SAFE-06..09 GREEN)
-- [ ] 04-06-PLAN.md — Wave 3: BreakerCoordinator (SAFE-10) + predeploy_gate CLI (A5) + main.py 1 Hz decision loop + atomic Phase-4 architecture delta + manifest leaf-count test
-- [ ] 04-07-PLAN.md — Gap closure (post-VERIFICATION): MaturityBreaker gas_cache mandatory + DECIDE-03 lint GREEN + architecture.yml maturity→gas_history edge + wiki supersedence
-- [ ] 04-08-PLAN.md — Gap closure (post-VERIFICATION): bound-method identity test fix + full Phase 4 pytest greenrun captured to var/ (operator pivot point for Phase 5)
+**Plans**: 8 plans (6 original + 2 gap-closure) — **all complete 2026-04-26**
+- [x] 04-01-PLAN.md — Wave 0: Test scaffolding (17 RED tests + conftest fixtures + 2 lint script skeletons)
+- [x] 04-02-PLAN.md — Wave 1: Foundation (BotConfig + DecisionEngineConfig schema, alembic 0007 with 4 new tables, 3 state writers, MarginPoller, Breaker ABC, EvaluateInput/Output, OWNER_MAP extension)
+- [x] 04-03-PLAN.md — Wave 2A: DecisionEngine + GasHistoryCache + 2 lint scripts hardened (DECIDE-01..04 GREEN)
+- [x] 04-04-PLAN.md — Wave 2B: 6 breakers — margin_trajectory, oracle_stale, clo_removal, clo_shift, fill_rate, loss_fit_degraded (SAFE-01..05 + B5 absorbed GREEN)
+- [x] 04-05-PLAN.md — Wave 2C: 4 breakers — competition, maturity, side_budget, underlying_stale + CompetitionTracker SQLite write (SAFE-06..09 GREEN)
+- [x] 04-06-PLAN.md — Wave 3: BreakerCoordinator (SAFE-10) + predeploy_gate CLI (A5) + main.py 1 Hz decision loop + atomic Phase-4 architecture delta + manifest leaf-count test
+- [x] 04-07-PLAN.md — Gap closure (post-VERIFICATION): MaturityBreaker gas_cache mandatory + DECIDE-03 lint GREEN + architecture.yml maturity→gas_history edge + wiki supersedence
+- [x] 04-08-PLAN.md — Gap closure (post-VERIFICATION): bound-method identity test fix + full Phase 4 pytest greenrun captured to var/ (operator pivot point for Phase 5)
 **UI hint**: no
 
 ### Phase 5: Event-Driven Backtest (Ship-Gate)
@@ -175,7 +175,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   - Voluntary-cancel sensitivity: runs both branches of `voluntary_cancel_forfeits_accumulated` as a sanity-check row; P0-01 resolved 2026-04-23 with flag = `False` ([[Voluntary cancel reward behavior]]), so divergence no longer blocks paper trading — but material divergence flags the EV formula as sensitive to a still-official-only (not contract-traced) finding, warranting opportunistic contract verification (BACK-06).
   - Bootstrap ship-gate: Phase 5 passes only if 5th percentile of bootstrapped annualized P&L exceeds `alternative_yield + all_fees` (BACK-07, absorbs pitfall B7 fragile-P&L-false-positive).
   - Perturbation grid: ±20% individual knob perturbations; sign-flipping on any knob is a fragility flag in the ship-gate report (BACK-08).
-  - Historical-vs-current-budget A/B row in backtest outputs (absorbs pitfall B6 look-ahead on reward budget): pre-pipeline data marked as "current-budget synthetic" if historical budget reconstruction is infeasible.
+  - Reward-budget lineage discipline (absorbs pitfall B6 look-ahead): backtest replay reads `e_liq_per_epoch_pendle` from `state.market_reward_calibration` (operator-vintage rows, lineage marker `data_source='operator'`) for the prospective period. Historical-budget reconstruction was ruled infeasible per Phase 3 LOCKED D-01; pre-calibration synthetic rows in legacy `reward_budget_history` carry `data_source='synthetic_current'` and MUST NOT contaminate ship-gate calculations. The backtest emits an A/B summary row showing pessimistic-vs-realistic reward-budget assumptions at the operator's calibration point.
   - 2D sensitivity contour on two most-uncertain knobs reported in ship-gate report.
   - Nautilus-adapter vs hand-rolled ~1500 LoC bailout decision made day-1 of Phase 5; no pre-phase research needed, but the decision is explicit and wiki-filed.
   - Engineering Protocols 1/2/3 apply: cite `[[Architecture overview v0.5]]`; update `architecture.yml` with `BacktestEngine` node; every backtest run emits RUN_MANIFEST.
@@ -275,7 +275,7 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 →
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 0. Prerequisite Resolution & Kill Gate | N/A (no-engineering phase) | **Complete** | 2026-04-23 |
-| 1. Foundation (Infra + Data + Economics Gate) | 12/12 | **Complete** (`human_needed` on 3 live-network UAT items + DATA-11 known-broken; see Hole #1) | 2026-04-24 |
+| 1. Foundation (Infra + Data + Economics Gate) | 12/12 | **Complete** (3 live-network UAT items deferred to Phase 7 paper trading; DATA-11 ELiqPoller dormant per Phase 3 LOCKED D-01 supersedence) | 2026-04-24 |
 | 2. Fill Model (NHPP v0.5) | 4/4 | **Complete** (verified 12/12, 1 minor PROTO-01 violation on first-log-event) | 2026-04-24 |
 | 3. Loss & Reward-Share Models + Sizing | 4/4 | **Complete** (verified 7/7) | 2026-04-25 |
 | 4. Decision Engine + Predictive Circuit Breakers | 8/8 (6 original + 2 gap-closure) | **Complete** (re-verified 7/7 after 04-07/04-08) | 2026-04-26 |
