@@ -120,7 +120,8 @@ Requirements for the v0.5 release. Every requirement is testable (either automat
 
 ### Phase 7 — Event-Driven Backtest
 
-- [ ] **BACK-01**: **Event-driven replay engine** processes the trade tape in `eventIndex` order, maintains per-tick resting-size state from hourly snapshot anchors, simulates AMM consumption via `combined − raw`, and records every decision the live bot would have made.
+- [x] **BACK-01
+**: **Event-driven replay engine** processes the trade tape in `eventIndex` order, maintains per-tick resting-size state from hourly snapshot anchors, simulates AMM consumption via `combined − raw`, and records every decision the live bot would have made.
 - [ ] **BACK-02**: **Cancel latency simulation** — operator-configurable latency (2–5s default) is injected into fill-response decisions; both order-of-event and time-since-event are modeled.
 - [x] **BACK-03
 **: **Cancel-latency sensitivity sweep** — backtest runs across L ∈ {0.5s, 1s, 2s, 3s, 5s, 10s} and reports `dP&L/dL` as a concrete "is colocation / VPS worth it?" answer.

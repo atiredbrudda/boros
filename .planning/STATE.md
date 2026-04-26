@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: milestone
 status: executing
-stopped_at: Completed 05-07-PLAN.md — bootstrap.py + ship_gate.py + BACK-07 GREEN (b37944f)
-last_updated: "2026-04-26T16:55:09.923Z"
+stopped_at: Completed 05-09-PLAN.md — CLI + RUN_MANIFEST + architecture diagram — Phase 5 COMPLETE (00cac33)
+last_updated: "2026-04-26T17:32:59.221Z"
 last_activity: 2026-04-26 -- Phase --phase execution started
 progress:
   total_phases: 9
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 37
-  completed_plans: 35
-  percent: 95
+  completed_plans: 37
+  percent: 100
 ---
 
 # Project State
@@ -30,7 +30,7 @@ Plan: 1 of --name
 Status: Executing Phase --phase
 Last activity: 2026-04-26 -- Phase --phase execution started
 
-Progress: [██████████] 95%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -70,6 +70,7 @@ Progress: [██████████] 95%
 | Phase 05-event-driven-backtest-ship-gate P05 | 5 | 3 tasks | 5 files |
 | Phase 05-event-driven-backtest-ship-gate P06 | 4 | 3 tasks | 4 files |
 | Phase 05-event-driven-backtest-ship-gate P07 | 5 | 4 tasks | 5 files |
+| Phase 05-event-driven-backtest-ship-gate P09 | 35 | 7 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -138,6 +139,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - Path-traversal guard test uses white-box _ensure_under_root call — avoids OS-dependent depth counting (how many ../ escape a tmp_path)
 - P0-01 LOCKED: voluntary_cancel_forfeits_accumulated=False by default; BACK-06 sweep is a sanity check (not a blocker); forfeit_branch_load_bearing signals material divergence without auto-failing ship-gate
 - ulid.ULID.from_str() not ulid.from_str() — python-ulid exposes from_str as a class method on ULID, not a module-level function; corrected in bootstrap.py
+- BotConfig + RunManifest imported at module top of cli.py — enables mypy type-checking without type:ignore on attribute accesses
+- config.backtest.* knobs appear as depends-on-config edge targets in architecture.yml but not as explicit config_knob node declarations — architecture tests check edges, not nodes
+- Path traversal guard in emit_backtest_manifest uses CWD-relative Path(var/backtest).resolve() — tests must use same root pattern
 
 ### Pending Todos
 
@@ -152,8 +156,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-26T16:55:09.919Z
-Stopped at: Completed 05-07-PLAN.md — bootstrap.py + ship_gate.py + BACK-07 GREEN (b37944f)
+Last session: 2026-04-26T17:32:59.217Z
+Stopped at: Completed 05-09-PLAN.md — CLI + RUN_MANIFEST + architecture diagram — Phase 5 COMPLETE (00cac33)
 Resume file: None
 
 **Completed this session (2026-04-24 second pass):**
