@@ -39,6 +39,7 @@ from ..fill_model.amm_consumption import (
     compute_amm_share_timeseries,
 )
 from ..fill_model.queue_tracker import QueueTracker
+from .cancel_latency import LatencyScheduler, ScheduledClose
 from .schemas import BacktestRunOutput, ReplayOutput
 from .synthetic_orders import SyntheticOrder, SyntheticOrderLedger
 
@@ -135,6 +136,11 @@ class ReplayEngine:
             side=self.side,
         )
         self.synthetic_orders = SyntheticOrderLedger()
+        self.latency_scheduler = LatencyScheduler(
+            L_seconds=float(cancel_latency_s),
+            decision_period_s=float(getattr(self.config.decision, "decision_loop_interval_s", 1.0)),
+        )
+        self._scheduled_closes: list[ScheduledClose] = []
 
         # Pre-seed gas cache from config default; w3=None disables live RPC.
         if gas_cache is None:
@@ -573,15 +579,94 @@ class ReplayEngine:
         _ = amm_share  # consumed by Plan 05-03+
 
     def _handle_trade_event(self, evt: dict[str, Any], current_ts: int) -> None:
-        """Update queue tracker + check for synthetic-order fills.
+        """Detect fills against in-flight synthetic orders; schedule close-at-market.
 
-        For Wave 1: stub — Plan 05-03 lands LatencyScheduler and fill-detection logic.
+        v0.5 fill detection: a synthetic order is hit when the trade's size_wei
+        is >= the order's queue_ahead_wei (queue-in-front fully consumed).
+        Production-grade detection lives in queue_tracker; this is the backtest-side
+        approximation matching Phase 2 fit semantics.
+
+        T-05-07: NEVER calls time.time() — current_ts is blockTimestamp from replay.
         """
-        pass
+        evt_rate = float(evt.get("rate", 0.0))
+        evt_size = int(evt.get("size_wei", 0))
+        for order in list(self.synthetic_orders.in_flight()):
+            if self._trade_consumes_order(order, evt_rate, evt_size):
+                sc = self.latency_scheduler.schedule(
+                    fill_ts=float(current_ts),
+                    fill_rate=evt_rate,
+                    order_id=order.order_id,
+                    fill_event_index=int(evt.get("eventIndex") or 0),
+                )
+                self._scheduled_closes.append(sc)
+                # Mark queue_ahead as 0 — order is hit; remaining fills are scheduled.
+                self.synthetic_orders.update_queue_ahead(order.order_id, 0)
+
+    def _trade_consumes_order(self, order: SyntheticOrder, evt_rate: float, evt_size: int) -> bool:
+        """v0.5 fill detection: trade consumes the order's queue-in-front.
+
+        Production-grade detection is in queue_tracker; this is the backtest-side
+        approximation. The order is filled when:
+          - The trade's size_wei >= order's queue_ahead_wei (queue fully consumed).
+        Rate-crossing check is deferred to Plan 05-04+ (sweep/fill-model integration).
+        """
+        return order.queue_ahead_wei <= evt_size
 
     def _fire_scheduled_closes(self, current_ts: int) -> None:
-        """Empty in Wave 1 — Plan 05-03 lands the scheduled-close handler."""
-        pass
+        """Fire scheduled closes whose close_at_ts has been reached.
+
+        Realized close uses underlying APR at close_at_ts — NOT fill_ts.
+        The L-second window IS the inventory-at-risk period (BACK-02 load-bearing semantic).
+        T-05-10: _underlying_at(sc.close_at_ts) must be called, never _underlying_at(sc.fill_ts).
+        """
+        fired: list[ScheduledClose] = []
+        remaining: list[ScheduledClose] = []
+        for sc in self._scheduled_closes:
+            if current_ts >= sc.close_at_ts:
+                # Realized close uses underlying APR at close_at_ts — NOT fill_ts.
+                close_rate = self._underlying_at(sc.close_at_ts)
+                # P&L: (fill_rate - close_rate) for long; sign-flipped for short.
+                sign = 1.0 if self.side == "long" else -1.0
+                order = self.synthetic_orders.get(sc.order_id)
+                notional = order.q_me_pendle if order is not None else 0.0
+                pnl_pendle = sign * (sc.fill_rate - close_rate) * notional
+                self.synthetic_orders.mark_filled(sc.order_id)
+                self.output.decision_log.append({
+                    "run_id": self.run_id,
+                    "current_chain_ts": current_ts,
+                    "order_id": sc.order_id,
+                    "decision_kind": "FILL_REALIZED",
+                    "fill_ts": sc.fill_ts,
+                    "close_at_ts": sc.close_at_ts,
+                    "fill_rate": sc.fill_rate,
+                    "close_rate": close_rate,
+                    "pnl_pendle": pnl_pendle,
+                })
+                fired.append(sc)
+            else:
+                remaining.append(sc)
+        self._scheduled_closes = remaining
+
+    def _underlying_at(self, ts: float) -> float:
+        """Read latest underlying_apr row with snapshot_ts <= ts.
+
+        Returns float rate. Falls back to 0.05 (default) if no matching row or on error.
+        Used by _fire_scheduled_closes to get the realized close basis at close_at_ts.
+        T-05-10: callers MUST pass close_at_ts, never fill_ts.
+        """
+        try:
+            df = (
+                pl.scan_parquet(str(self.parquet_root / "underlying_apr" / "**" / "*.parquet"))
+                .filter(pl.col("snapshot_ts") <= int(ts))
+                .sort("snapshot_ts")
+                .tail(1)
+                .collect()
+            )
+            if df.height == 0:
+                return 0.05  # default — no row at or before ts
+            return float(df.select("rate").item())
+        except Exception:  # noqa: BLE001
+            return 0.05  # default — parquet not seeded in this test scenario
 
     def _finalize_output(self, calib: dict[str, Any]) -> None:
         """Aggregate decision_log into a base BacktestRunOutput row.
