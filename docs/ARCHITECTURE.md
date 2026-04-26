@@ -694,17 +694,21 @@ value and a central-finite-difference dP&L/dL or dP&L/dQ curve.
 
 ```mermaid
 flowchart LR
-  subgraph phase5_wave2_sweeps["Phase 5 Wave 2: Sweep dispatchers (Plan 05-04)"]
+  subgraph phase5_wave2_sweeps["Phase 5 Wave 2: Sweep dispatchers (Plans 05-04/05-06)"]
     bt_sweeps_cancel["backtest/sweeps/cancel_latency.py<br/>run_cancel_latency_sweep (BACK-03)"]
     bt_sweeps_compete["backtest/sweeps/competition.py<br/>run_competition_sweep (BACK-04)"]
+    bt_sweeps_forfeit["backtest/sweeps/forfeit_branch.py<br/>run_forfeit_branch_sweep (BACK-06)<br/>P0-01 sanity check"]
   end
 
   %% Phase 5 Wave 2 sweep wiring (Plan 05-04)
   bt_sweeps_cancel --> bt_replay
   bt_sweeps_compete --> bt_replay
+
+  %% Phase 5 Wave 2 forfeit-branch wiring (Plan 05-06)
+  bt_sweeps_forfeit --> bt_replay
 ```
 
-[[backtest-cancel-latency-sweep]] [[backtest-competition-sweep]]
+[[backtest-cancel-latency-sweep]] [[backtest-competition-sweep]] [[backtest-voluntary-cancel-sensitivity-row]]
 
 ## Phase 5 Wave 2 — Output Schema + Parquet Writer + Plot Generators (Plan 05-05)
 

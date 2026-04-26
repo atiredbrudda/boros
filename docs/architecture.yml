@@ -1458,6 +1458,13 @@ nodes:
     path: data/parquet/backtest_results
     notes: "Hive-partitioned by run_id / sweep_axis / sweep_value (BACK-05)"
 
+  # ── Phase 5 Wave 2 voluntary-cancel sensitivity — Plan 05-06 ───────────
+  - id: brain.backtest.sweeps.forfeit_branch
+    type: module
+    process: brain
+    path: python/src/boros_brain/backtest/sweeps/forfeit_branch.py
+    public_functions: [run_forfeit_branch_sweep]
+
 edges:
   # ── brain internal wiring ──────────────────────────────────────────────
   - from: brain
@@ -2727,3 +2734,8 @@ edges:
   # ── Phase 5 Wave 2 report edges — Plan 05-05 ───────────────────────────
   - {from: brain.backtest.report, to: parquet.backtest_results, type: writes, notes: "Hive-partitioned writes via polars; path-traversal guard"}
   - {from: brain.backtest.report, to: config.backtest.output_parquet_root, type: depends-on-config}
+
+  # ── Phase 5 Wave 2 forfeit-branch edges — Plan 05-06 ───────────────────
+  - {from: brain.backtest.sweeps.forfeit_branch, to: brain.backtest.replay, type: calls, notes: "ReplayEngine instantiation per voluntary_cancel_forfeits_accumulated branch"}
+  - {from: brain.backtest.sweeps.forfeit_branch, to: config.backtest.budget_haircut_pessimistic, type: depends-on-config}
+  - {from: brain.backtest.sweeps.forfeit_branch, to: config.strategy.voluntary_cancel_forfeits_accumulated, type: depends-on-config, notes: "P0-01 RESOLVED — flag default False; sweep tests both branches as sanity check"}
