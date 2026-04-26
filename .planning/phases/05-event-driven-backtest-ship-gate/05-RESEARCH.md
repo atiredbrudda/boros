@@ -1338,7 +1338,9 @@ These six assumptions are flagged for `/gsd-discuss-phase` consumption (skipped 
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+> **All six items resolved or absorbed into plans (no Phase 5 blockers)** — see per-plan dispositions: Q1 → Plan 05-07 ship-gate threshold breakdown; Q2 → naming `ship-gate-report-template.md`; Q3 → Plan 05-08 perturbation exclude prefixes; Q4 → Plan 05-02 replay engine refuses to auto-fit; Q5 → daily re-screen cadence; Q6 → 10% divergence threshold codified in Plan 05-06.
 
 > Resolution discipline: each question carries explicit "what was tried" and "why it's open" so a future session can pick up without re-deriving.
 
