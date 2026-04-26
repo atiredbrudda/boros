@@ -110,7 +110,7 @@ def test_2d_contour_default_knobs_present_in_dumped_config(
     """BACK-08: default contour_2d_knobs verified against RESEARCH L1049-1053."""
     expected = [
         "execution.cancel_latency_budget_s",
-        "decision.p_purge_default",
+        "screener.alt_yield",
     ]
     assert default_config.backtest.contour_2d_knobs == expected, (
         f"Default contour_2d_knobs mismatch: " f"got {default_config.backtest.contour_2d_knobs}, expected {expected}"
@@ -126,9 +126,9 @@ async def test_2d_contour_operator_override(
     """BACK-08: operator can override contour_2d_knobs to any two numeric leaves."""
     _install_replay_stub(monkeypatch)
 
-    # Override to screener.alt_yield × decision.p_purge_default
+    # Override to screener.alt_yield × execution.cancel_latency_budget_s
     new_backtest = default_config.backtest.model_copy(
-        update={"contour_2d_knobs": ["screener.alt_yield", "decision.p_purge_default"]}
+        update={"contour_2d_knobs": ["screener.alt_yield", "execution.cancel_latency_budget_s"]}
     )
     override_config = default_config.model_copy(update={"backtest": new_backtest})
 

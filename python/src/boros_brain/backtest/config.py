@@ -24,9 +24,7 @@ class BacktestConfig(StrictBase):
 
     bootstrap_n_resamples: int = Field(2000, ge=100, le=100_000)
     bootstrap_block_seconds: int = Field(86400, ge=3600, le=604800)
-    cancel_latency_grid: list[float] = Field(
-        default_factory=lambda: [0.5, 1.0, 2.0, 3.0, 5.0, 10.0]
-    )
+    cancel_latency_grid: list[float] = Field(default_factory=lambda: [0.5, 1.0, 2.0, 3.0, 5.0, 10.0])
 
     @field_validator("cancel_latency_grid")
     @classmethod
@@ -37,16 +35,14 @@ class BacktestConfig(StrictBase):
             raise ValueError("cancel_latency_grid elements must be in [0.001, 60.0]")
         return v
 
-    competition_multipliers: list[float] = Field(
-        default_factory=lambda: [0.5, 0.75, 1.0, 1.5, 2.0, 3.0]
-    )
+    competition_multipliers: list[float] = Field(default_factory=lambda: [0.5, 0.75, 1.0, 1.5, 2.0, 3.0])
     all_fees_threshold: float = Field(0.01, ge=0.0, le=1.0)
     budget_haircut_pessimistic: float = Field(0.5, ge=0.0, le=1.0)
     perturbation_pct: float = Field(0.20, ge=0.01, le=1.0)
     contour_2d_knobs: list[str] = Field(
         default_factory=lambda: [
             "execution.cancel_latency_budget_s",
-            "decision.p_purge_default",
+            "screener.alt_yield",
         ],
         min_length=2,
         max_length=2,

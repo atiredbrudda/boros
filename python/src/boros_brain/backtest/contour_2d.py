@@ -1,11 +1,11 @@
 """BACK-08: 5×5 2D contour grid on the two operator-chosen knobs.
 
 Default knobs per BotConfig.backtest.contour_2d_knobs (RESEARCH L1049-1053):
-  ("execution.cancel_latency_budget_s", "decision.p_purge_default")
+  ("execution.cancel_latency_budget_s", "screener.alt_yield")
 
 Rationale:
   - cancel_latency: directly tied to BACK-03; primary VPS-or-not decision.
-  - p_purge_default: Phase-4 placeholder with no empirical anchor; sensitivity matters.
+  - alt_yield: opportunity-cost benchmark; directly enters the ship-gate threshold.
 
 The grid catches cliffs / plateaus / saddle points that simple ±20% perturbation
 ignores. Output is a 5×5 list-of-lists; downstream plots (Plan 05-09) render it
@@ -68,7 +68,7 @@ async def run_2d_contour_grid(
 ) -> list[list[ContourCell]]:
     """Per BACK-08: 5×5 grid on `base_config.backtest.contour_2d_knobs`.
 
-    Default knobs: (execution.cancel_latency_budget_s, decision.p_purge_default).
+    Default knobs: (execution.cancel_latency_budget_s, screener.alt_yield).
     No NaN cells permitted — raises RuntimeError if a child run produces NaN p5.
 
     Each cell run gets a FRESH RUN_MANIFEST with parent_run_id (D2 anti-pattern
