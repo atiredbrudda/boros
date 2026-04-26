@@ -12,7 +12,7 @@ v0.5 delivers a single-user, single-market, $100-collateral real-capital validat
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 0: Prerequisite Resolution & Kill Gate** - Close six empirical open questions; halt on minimum-order-size failure before any engineering.
+- [x] **Phase 0: Prerequisite Resolution & Kill Gate** - Close six empirical open questions; halt on minimum-order-size failure before any engineering. **COMPLETE 2026-04-23** — all 6 questions resolved cheaply via docs + official-team statement + spot probe (no engineering required); halt condition (P0-02) cleared (no protocol minimum); each answer filed as a wiki page with `Status: Current`. Phase 1 schema defaults set per resolutions (`voluntary_cancel_forfeits_accumulated=False`, `socket.io-client` over raw `ws`, `submission_path` knob dropped, Send Txs Bot mandatory).
 - [ ] **Phase 1: Foundation (Infrastructure Spine + Data Pipeline + Economics Gate)** - Install Engineering Protocols, ZMQ/SQLite/manifest/wiki, ingest data, compute economics kill-switch; second cheap-kill gate on empty shortlist.
 - [ ] **Phase 2: Fill Model (NHPP v0.5)** - Calibrated `P(fill | δ, side, queue_ahead, features)` with queue tracker and AMM consumption model.
 - [ ] **Phase 3: Loss & Reward-Share Models + Sizing** - Empirical `E[loss|fill]`, capped pro-rata reward share with live budget polling, sizing optimizer.
@@ -272,11 +272,11 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 →
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 0. Prerequisite Resolution & Kill Gate | 0/TBD | Not started | - |
-| 1. Foundation (Infra + Data + Economics Gate) | 10/12 | In progress | - |
-| 2. Fill Model (NHPP v0.5) | 0/TBD | Not started | - |
-| 3. Loss & Reward-Share Models + Sizing | 0/TBD | Not started | - |
-| 4. Decision Engine + Predictive Circuit Breakers | 0/6 | Ready to execute | - |
+| 0. Prerequisite Resolution & Kill Gate | N/A (no-engineering phase) | **Complete** | 2026-04-23 |
+| 1. Foundation (Infra + Data + Economics Gate) | 12/12 | **Complete** (`human_needed` on 3 live-network UAT items + DATA-11 known-broken; see Hole #1) | 2026-04-24 |
+| 2. Fill Model (NHPP v0.5) | 4/4 | **Complete** (verified 12/12, 1 minor PROTO-01 violation on first-log-event) | 2026-04-24 |
+| 3. Loss & Reward-Share Models + Sizing | 4/4 | **Complete** (verified 7/7) | 2026-04-25 |
+| 4. Decision Engine + Predictive Circuit Breakers | 8/8 (6 original + 2 gap-closure) | **Complete** (re-verified 7/7 after 04-07/04-08) | 2026-04-26 |
 | 5. Event-Driven Backtest (Ship-Gate) | 0/TBD | Not started | - |
 | 6. Execution Layer (TypeScript hands) | 0/TBD | Not started | - |
 | 7. Paper Trading (2–4 Weeks) | 0/TBD | Not started | - |
