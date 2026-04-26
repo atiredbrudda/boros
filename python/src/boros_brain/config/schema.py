@@ -16,6 +16,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from ..backtest.config import BacktestConfig
 from ..decision.config import DecisionEngineConfig
 from ..fill_model.config import FillModelConfig
 from ..loss_model.config import LossModelConfig
@@ -225,4 +226,6 @@ class BotConfig(StrictBase):
     sizer: SizerConfig = Field(default_factory=SizerConfig)  # type: ignore
     # Plan 04-02 — DecisionEngineConfig attachment (~25 new knob leaves).
     decision: DecisionEngineConfig = Field(default_factory=DecisionEngineConfig)  # type: ignore
+    # Plan 05-01 — BacktestConfig attachment (PROTO-04 SSoT for Phase-5 knobs).
+    backtest: BacktestConfig = Field(default_factory=BacktestConfig)  # type: ignore
     markets: list[MarketCalibration] = Field(default_factory=list, max_length=1)
