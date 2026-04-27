@@ -558,6 +558,12 @@ nodes:
     process: brain
     path: python/src/boros_brain/data/ingester/cli.py
     public_functions: [main]
+    config_knobs:
+      - name: --raw-src
+        type: Path
+        optional: true
+        applies_to: "--kind order_book_combined"
+        notes: "Path to corresponding order_book_raw NDJSON; activates DATA-05 AMM conservation gate when provided"
 
   # ── Parquet storage nodes (written by 01-08 ingesters) ─────────────────
   - id: parquet.market_trades
@@ -1908,7 +1914,7 @@ edges:
   - from: brain.data.ingester.cli
     to: brain.data.ingester.order_book
     type: calls
-    notes: "--kind order_book_raw / order_book_combined"
+    notes: "--kind order_book_raw / order_book_combined; --raw-src activates DATA-05 AMM conservation gate for combined"
 
   - from: brain.data.ingester.cli
     to: brain.data.ingester.underlying_apr
@@ -2134,9 +2140,9 @@ edges:
     notes: "reads clo_lower_thresh/clo_upper_thresh for CLO bounds filters"
 
   - from: brain.screener.filter
-    to: state.reward_budget_history
+    to: state.market_reward_calibration
     type: reads
-    notes: "reads e_liq_per_epoch for r_apr_potential ranking (T-01-11-03)"
+    notes: "reads e_liq_per_epoch_pendle for r_apr_potential ranking (T-01-11-03, LOCKED D-01)"
 
   - from: brain.screener.filter
     to: config.screener
@@ -2838,3 +2844,13 @@ edges:
   - {from: scripts.fetch_historical_data, to: brain.manifest.writer, type: calls, notes: "build_run_manifest + write_manifest at CLI entry"}
   - {from: scripts.fetch_historical_data, to: brain.config.loader, type: calls, notes: "load_config(args.config) for the manifest preamble"}
   - {from: scripts.fetch_historical_data, to: brain.logging.structlog_setup, type: calls, notes: "configure_logging(tier='historical_fetcher')"}
+
+
+  # ── reward_budget_history backfill — Wave-1 unblock (debug session reward-budget-history-empty 2026-04-27) ──
+  - id: scripts.backfill_reward_budget_history
+    type: external
+    path: scripts/backfill_reward_budget_history.py
+    notes: "One-shot operator script: writes synthetic_current rows to reward_budget_history so the screener's r_apr_potential ranking has input. Bridges the gap left when ELiqPoller (DATA-11) was superseded by LOCKED D-01 ([[e-liq-per-epoch-source-decision]]) but the screener still queries reward_budget_history. Uses operator anchor values (e_liq_per_epoch_pendle=273.0, long/short=0.14/0.86 per [[market-reward-calibration-operator-workflow]]). Idempotent — skips markets that already have a synthetic_current row."
+
+  - {from: scripts.backfill_reward_budget_history, to: brain.state.writers.reward_budget_history, type: calls, notes: "insert_reward_budget_row(data_source='synthetic_current') — preserves PROTO-02 single-writer discipline"}
+  - {from: scripts.backfill_reward_budget_history, to: state.reward_budget_history, type: writes, notes: "One synthetic_current row per market discovered in data/parquet/market_trades/. Idempotent via existence pre-check."}

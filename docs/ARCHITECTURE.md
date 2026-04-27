@@ -135,7 +135,7 @@ flowchart TB
     brain_duckdb_setup -- "reads views.sql DDL at runtime" --> brain_duckdb_setup
 
     %% DATA-01..04 NDJSON ingesters (01-08)
-    ingester_cli["data/ingester/cli.py<br/>main (--kind dispatch, RUN_MANIFEST)"]
+    ingester_cli["data/ingester/cli.py<br/>main (--kind dispatch, RUN_MANIFEST)<br/>--raw-src activates DATA-05 gate for order_book_combined"]
     ingester_base["data/ingester/base.py<br/>write_partitioned_parquet, IngestResult"]
     ingester_schemas["data/ingester/schemas.py<br/>MARKET_TRADES_SCHEMA etc."]
     ingester_mt["data/ingester/market_trades.py<br/>ingest_market_trades (DATA-01)"]
@@ -152,7 +152,7 @@ flowchart TB
     parquet_md[("parquet/market_data<br/>market_id / year_month")]
 
     ingester_cli --> ingester_mt
-    ingester_cli --> ingester_ob
+    ingester_cli -- "--raw-src → DATA-05 gate" --> ingester_ob
     ingester_cli --> ingester_apr
     ingester_cli --> ingester_smd
     ingester_cli -- "write_manifest RUN_MANIFEST" --> brain_manifest_writer
@@ -204,7 +204,7 @@ flowchart TB
     screener_filter -- "calls all 6 compute_* fns" --> screener_metrics
     screener_filter -- "get_calibration_pairs + calibrate_scale (non-blocking)" --> screener_scale_cal
     screener_filter -- "reads clo_lower_thresh/clo_upper_thresh" --> state_clo
-    screener_filter -- "reads e_liq_per_epoch for r_apr_potential ranking" --> state_budget
+    screener_filter -- "reads e_liq_per_epoch_pendle for r_apr_potential ranking (LOCKED D-01)" --> state_cal
     screener_report -- writes --> screener_out
     screener_cli -- "apply_screener_filters" --> screener_filter
     screener_cli -- "write_screener_metrics_report" --> screener_report
@@ -795,6 +795,11 @@ flowchart LR
     fetch_script -- "writes" --> fetcher_manifest
     fetch_script -- "RUN_MANIFEST row" --> state_run_manifests[state.run_manifests]
     fetch_script -- "calls" --> brain_manifest_writer
+
+    %% Phase 5.1 reward_budget_history backfill (debug session reward-budget-history-empty 2026-04-27)
+    backfill_rb["scripts/backfill_reward_budget_history.py<br/>writes synthetic_current rows<br/>operator anchor (E_liq=273.0, splits 0.14/0.86)<br/>idempotent (existence pre-check)"]
+    backfill_rb -- "calls insert_reward_budget_row" --> brain_state_writers_reward_budget_history[brain.state.writers.reward_budget_history]
+    backfill_rb -- "writes synthetic_current" --> state_reward_budget_history[state.reward_budget_history]
 ```
 
 [[backtest-bootstrap-methodology-v05]] [[backtest-ship-gate-threshold-assembly]] [[backtest-reproducibility-rng-seed-from-manifest]]
