@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-04-24)
 ## Current Position
 
 Phase: 05.1 — EXECUTING
-Plan: 05.1-01 complete
+Plan: 05.1-02 complete
 Status: Executing Phase 05.1
-Last activity: 2026-04-27 -- Phase 05.1-01 Wave 0 complete
+Last activity: 2026-04-27 -- Phase 05.1-02 Wave 1 complete (bulk fetch + ingest + AMM conservation)
 
 Progress: [██████████] 100%
 
@@ -148,6 +148,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [2026-04-27 05.1-W0 probe] **Market-ID format DIVERGENCE flagged**: archive uses `{N}-{EXCHANGE}-{ASSET}-{MATURITY}` (numeric on-chain ID prefix); local `clo_history.market_id` uses just `{EXCHANGE}-{ASSET}-{MATURITY}`. Same human name maps to multiple numeric IDs (re-deployments, e.g. `108-` and `109-HYPERLIQUID-BTC-29MAY2026` are distinct on-chain markets). Phase 5.1 Wave 1 must resolve via `Boros GET /markets` cross-reference and persist a `{symbol→marketId}` mapping (`var/fetcher/market_id_mapping.json`) before bulk fetch. Recommendation: backtest the highest-numeric-ID variant (most recent deployment) per human name; emit a wiki note when multiple variants exist.
 - [2026-04-27 05.1-W0 probe] **Estimated Wave 1 fetch budget**: ~70 MB compressed for 25 pre-filtered markets × 60d × 6 kinds. Trivial; fetch completes in minutes at modest bandwidth. Whole-archive fetch is bounded at ~169 MB.
 - [2026-04-27 05.1-01] Wave 0 complete: alembic head 0007; fetcher scaffold + 7 tests GREEN; URL pattern locked to Branch A (files.json master manifest + per-file static GET) per [[boros-historical-data-archive-url-pattern]]; pre-filter list at [[markets-pre-filter-2026-04-26]] (25 markets); test-residue docs/kill-report-20260426.md deleted; architecture delta committed (PROTO-02).
+- [2026-04-27 05.1-02] Wave 1 complete: fetcher _run_fetch_loop GREEN (Branch A URL template, ThreadPoolExecutor concurrency=6, --resolve DNS workaround for broken local resolver); bulk fetch produced 172 NDJSON files (61 MB on disk, 172 manifest entries) across 25 markets × 6 kinds × up to 3 months; bulk ingest produced parquet for 75 surviving market_id= partitions (141/141 jobs OK, 0 AMM violations, 0 IngesterSchemaViolation); 419 pytest PASS. Deviations: local DNS broken (socket.getaddrinfo fails for historical-data.boros.finance) — resolved via --resolve IP override; underlying-apr archive uses Binance-ETH format (not BINANCE-ETHUSDT), xyz-prefix markets mapped via alias table; settlement parquet has null market_id (schema mismatch between archive format and ingester SETTLEMENT_SCHEMA — tracked as known issue). See [[phase-05-1-bulk-fetch-runbook]] + [[phase-05-1-bulk-ingest-runbook]].
 - URL pattern Branch A: files.json master manifest + per-file static GET (no server-side folder ZIP); market-ID numeric-prefix divergence requires Wave 1 GET /markets cross-reference
 - data.ndjson declared as new storage node in architecture.yml; Wave 1 plan adds reads edges from ingester
 - scripts/__init__.py + pythonpath='..' added so python/tests can import scripts.fetch_historical_data as a package

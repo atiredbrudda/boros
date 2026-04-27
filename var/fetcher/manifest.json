@@ -1,0 +1,1380 @@
+{
+  "fetched": [
+    {
+      "url": "https://historical-data.boros.finance/market-trades/112-BINANCE-ETHUSDT-29MAY2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-trades/112-BINANCE-ETHUSDT-29MAY2026/2026-04.ndjson",
+      "content_length_bytes": 237427,
+      "sha256": "dbe4ade83e7d712d1bee0be534e0cfece2dc3a1f48d0044c9ee485398b7b6db3",
+      "fetched_at_utc": "2026-04-26T23:59:20.042331+00:00",
+      "run_id": "01KQ63QE9W62WNGQ0V4Z09DA11"
+    },
+    {
+      "url": "https://historical-data.boros.finance/settlement/112-BINANCE-ETHUSDT-29MAY2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/settlement/112-BINANCE-ETHUSDT-29MAY2026/2026-04.ndjson",
+      "content_length_bytes": 6521,
+      "sha256": "122c13f88f99455e15e3fe8ddf43352c2a3bf1c8c3212ffcb40798fcf32f5d1f",
+      "fetched_at_utc": "2026-04-26T23:59:43.055738+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/112-BINANCE-ETHUSDT-29MAY2026/raw/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/112-BINANCE-ETHUSDT-29MAY2026/raw/2026-04.ndjson",
+      "content_length_bytes": 817098,
+      "sha256": "73cbc1149238776e471d7685f53eb0a5420d4fd881a361934532c1468440c1d0",
+      "fetched_at_utc": "2026-04-26T23:59:43.059632+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-data/112-BINANCE-ETHUSDT-29MAY2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-data/112-BINANCE-ETHUSDT-29MAY2026/2026-04.ndjson",
+      "content_length_bytes": 89455,
+      "sha256": "5ded74f36131a93fe9c97a3a9934f356c744e2295c6089f7e8eb49868c01d497",
+      "fetched_at_utc": "2026-04-26T23:59:43.081333+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/112-BINANCE-ETHUSDT-29MAY2026/combined_0.01/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/112-BINANCE-ETHUSDT-29MAY2026/combined_0.01/2026-04.ndjson",
+      "content_length_bytes": 97334,
+      "sha256": "b8867205edc7cb41c4f18952cebd2a571c405e2709f164f86321d1f2d28aaf6c",
+      "fetched_at_utc": "2026-04-26T23:59:43.086288+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-data/107-BINANCE-BTCUSDT-29MAY2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-data/107-BINANCE-BTCUSDT-29MAY2026/2026-04.ndjson",
+      "content_length_bytes": 89763,
+      "sha256": "d5a108db88ef97b4967bdc1d2f4a18226a25beafadc9269ee75f708a7f03bfb9",
+      "fetched_at_utc": "2026-04-26T23:59:43.135237+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-trades/107-BINANCE-BTCUSDT-29MAY2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-trades/107-BINANCE-BTCUSDT-29MAY2026/2026-04.ndjson",
+      "content_length_bytes": 136709,
+      "sha256": "657a3393f08c472b9d557d4ca1b00c4dd5f5f76669bbb867a3483fad7b2299e9",
+      "fetched_at_utc": "2026-04-26T23:59:43.243934+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/settlement/107-BINANCE-BTCUSDT-29MAY2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/settlement/107-BINANCE-BTCUSDT-29MAY2026/2026-04.ndjson",
+      "content_length_bytes": 6534,
+      "sha256": "31169254bef68e76afc39bbfc4031fea83d5a5c8050a1232c4be6a7a6dba2a9b",
+      "fetched_at_utc": "2026-04-26T23:59:43.961677+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-trades/78-BINANCE-BTCUSDT-26JUN2026/2026-03.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-trades/78-BINANCE-BTCUSDT-26JUN2026/2026-03.ndjson",
+      "content_length_bytes": 123884,
+      "sha256": "4f7359386376ce01e46fdb5b2f2e6e85a872c65c65c4c50b6a265325c09eddd3",
+      "fetched_at_utc": "2026-04-26T23:59:44.004658+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/107-BINANCE-BTCUSDT-29MAY2026/combined_0.01/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/107-BINANCE-BTCUSDT-29MAY2026/combined_0.01/2026-04.ndjson",
+      "content_length_bytes": 92747,
+      "sha256": "3254dff92ee5f8b13ae13f4787f16ea09c2f3d414a6e3db1e419f380f92a5eaf",
+      "fetched_at_utc": "2026-04-26T23:59:44.100000+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-trades/78-BINANCE-BTCUSDT-26JUN2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-trades/78-BINANCE-BTCUSDT-26JUN2026/2026-04.ndjson",
+      "content_length_bytes": 94183,
+      "sha256": "aeea21caec32a3e1e5063b3299accd19a6de037b4945e4317d1ac6f4472e1d7a",
+      "fetched_at_utc": "2026-04-26T23:59:44.149661+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-data/78-BINANCE-BTCUSDT-26JUN2026/2026-03.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-data/78-BINANCE-BTCUSDT-26JUN2026/2026-03.ndjson",
+      "content_length_bytes": 180163,
+      "sha256": "ba1bc552f98dc6ce50a4ae59696cf25c212a9b034a3cab1d167c635b86ebb8c4",
+      "fetched_at_utc": "2026-04-26T23:59:44.152523+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/107-BINANCE-BTCUSDT-29MAY2026/raw/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/107-BINANCE-BTCUSDT-29MAY2026/raw/2026-04.ndjson",
+      "content_length_bytes": 622107,
+      "sha256": "cbf2aae384e6f1de4c489dcb0f681a4bb105ed5e856a6a2711c855cfcb5ffdb7",
+      "fetched_at_utc": "2026-04-26T23:59:44.484575+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/settlement/78-BINANCE-BTCUSDT-26JUN2026/2026-03.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/settlement/78-BINANCE-BTCUSDT-26JUN2026/2026-03.ndjson",
+      "content_length_bytes": 12666,
+      "sha256": "446be216cc85f4b6efb903fcf9577fd68eb50f130d6aaea2b4398f7abf6fdff4",
+      "fetched_at_utc": "2026-04-26T23:59:44.869440+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/settlement/78-BINANCE-BTCUSDT-26JUN2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/settlement/78-BINANCE-BTCUSDT-26JUN2026/2026-04.ndjson",
+      "content_length_bytes": 14807,
+      "sha256": "e9fdeebf6ec7bbfe58e558e9780fca0a5da64f73643bf8d029ebbbcbcab1d536",
+      "fetched_at_utc": "2026-04-26T23:59:44.886905+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/78-BINANCE-BTCUSDT-26JUN2026/raw/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/78-BINANCE-BTCUSDT-26JUN2026/raw/2026-04.ndjson",
+      "content_length_bytes": 2378627,
+      "sha256": "bec57b4a989f6bc14944d04335e061c1beab1a32f36ae8b9a7fede2c43bd1ac4",
+      "fetched_at_utc": "2026-04-26T23:59:45.036890+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/78-BINANCE-BTCUSDT-26JUN2026/raw/2026-03.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/78-BINANCE-BTCUSDT-26JUN2026/raw/2026-03.ndjson",
+      "content_length_bytes": 2036403,
+      "sha256": "c52f581f75d0ad0a9f59f993aac74792d21fccd216cf2b9e6df94ebc0b6cff56",
+      "fetched_at_utc": "2026-04-26T23:59:45.153475+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-data/78-BINANCE-BTCUSDT-26JUN2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-data/78-BINANCE-BTCUSDT-26JUN2026/2026-04.ndjson",
+      "content_length_bytes": 213555,
+      "sha256": "a63ec823a51b01b68fe02cfdd0ab736e8dc5fa9b3deba1859442f1bc814a4df9",
+      "fetched_at_utc": "2026-04-26T23:59:45.330530+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/78-BINANCE-BTCUSDT-26JUN2026/combined_0.01/2026-03.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/78-BINANCE-BTCUSDT-26JUN2026/combined_0.01/2026-03.ndjson",
+      "content_length_bytes": 1195335,
+      "sha256": "eac5998b15d4285af9fabef5deab486ec3da7e05b37c1ff2854789edf7241208",
+      "fetched_at_utc": "2026-04-26T23:59:45.678593+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/78-BINANCE-BTCUSDT-26JUN2026/combined_0.01/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/78-BINANCE-BTCUSDT-26JUN2026/combined_0.01/2026-04.ndjson",
+      "content_length_bytes": 1028023,
+      "sha256": "234fd3be2b92d9086402b73d9ec067027e1f6b22a8532f5d79fe0be408cdda88",
+      "fetched_at_utc": "2026-04-26T23:59:45.688596+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-trades/76-BINANCE-ETHUSDT-26JUN2026/2026-03.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-trades/76-BINANCE-ETHUSDT-26JUN2026/2026-03.ndjson",
+      "content_length_bytes": 180889,
+      "sha256": "ab44365b14cab7ceb6a6cf3e5010cbd0f52bc4252eb941c8004698056c5df9e0",
+      "fetched_at_utc": "2026-04-26T23:59:45.704852+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-trades/76-BINANCE-ETHUSDT-26JUN2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-trades/76-BINANCE-ETHUSDT-26JUN2026/2026-04.ndjson",
+      "content_length_bytes": 137437,
+      "sha256": "dd1e021495983c4172c53865ddfe7ab0098b45696a663051772195154192b452",
+      "fetched_at_utc": "2026-04-26T23:59:45.997819+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-data/76-BINANCE-ETHUSDT-26JUN2026/2026-03.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-data/76-BINANCE-ETHUSDT-26JUN2026/2026-03.ndjson",
+      "content_length_bytes": 179463,
+      "sha256": "f7210dfe254f87a0e34ff97a2f14b2eb72225fe13329f943f4d89cc15ed57ba1",
+      "fetched_at_utc": "2026-04-26T23:59:46.194712+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-data/76-BINANCE-ETHUSDT-26JUN2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-data/76-BINANCE-ETHUSDT-26JUN2026/2026-04.ndjson",
+      "content_length_bytes": 212822,
+      "sha256": "2bcf41b101ad7ae95f921cd8bf4d3b9770cca86201c77f0d266d173cd2ba99c2",
+      "fetched_at_utc": "2026-04-26T23:59:46.253579+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/settlement/76-BINANCE-ETHUSDT-26JUN2026/2026-03.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/settlement/76-BINANCE-ETHUSDT-26JUN2026/2026-03.ndjson",
+      "content_length_bytes": 12650,
+      "sha256": "6a214667f086e3b82ed9920d2e931dc295551739dc2586f1310cf1b5b9c7285c",
+      "fetched_at_utc": "2026-04-26T23:59:46.475493+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/settlement/76-BINANCE-ETHUSDT-26JUN2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/settlement/76-BINANCE-ETHUSDT-26JUN2026/2026-04.ndjson",
+      "content_length_bytes": 14767,
+      "sha256": "3901011e99b1b4f35d7ef6e4fadda9c33b0b3f8ec21507406490d7ef6c016d44",
+      "fetched_at_utc": "2026-04-26T23:59:46.602983+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/76-BINANCE-ETHUSDT-26JUN2026/raw/2026-03.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/76-BINANCE-ETHUSDT-26JUN2026/raw/2026-03.ndjson",
+      "content_length_bytes": 2136559,
+      "sha256": "81715bcb56f9e5a4fc4b3667a26ab1e87224b3170f224205dd400833413e9c58",
+      "fetched_at_utc": "2026-04-26T23:59:46.630755+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/76-BINANCE-ETHUSDT-26JUN2026/raw/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/76-BINANCE-ETHUSDT-26JUN2026/raw/2026-04.ndjson",
+      "content_length_bytes": 2576358,
+      "sha256": "e0b51dd0841e1ade0d0d46eb8bf2d346f5931edae3935f8caf94347ff7a04ea9",
+      "fetched_at_utc": "2026-04-26T23:59:47.063557+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/76-BINANCE-ETHUSDT-26JUN2026/combined_0.01/2026-03.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/76-BINANCE-ETHUSDT-26JUN2026/combined_0.01/2026-03.ndjson",
+      "content_length_bytes": 1143799,
+      "sha256": "8331239f6adee901bd9b94cdeb94dac43c60b744d66d32073299a781a35c68cf",
+      "fetched_at_utc": "2026-04-26T23:59:47.099405+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/76-BINANCE-ETHUSDT-26JUN2026/combined_0.01/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/76-BINANCE-ETHUSDT-26JUN2026/combined_0.01/2026-04.ndjson",
+      "content_length_bytes": 984968,
+      "sha256": "eed598841837a4c9a30ac6da933d31d38ccc65fea51b7c49020149b111ae6b6f",
+      "fetched_at_utc": "2026-04-26T23:59:47.250093+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-trades/101-BINANCE-ETHUSDT-25SEP2026/2026-03.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-trades/101-BINANCE-ETHUSDT-25SEP2026/2026-03.ndjson",
+      "content_length_bytes": 458,
+      "sha256": "e437967c9ef9e3c47a703f6d3fd935e799319df5318f85f36efcee1b5d38cac8",
+      "fetched_at_utc": "2026-04-26T23:59:47.258932+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-trades/101-BINANCE-ETHUSDT-25SEP2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-trades/101-BINANCE-ETHUSDT-25SEP2026/2026-04.ndjson",
+      "content_length_bytes": 56521,
+      "sha256": "89237952eb0257e07437e08ea4b416dc10a2b094ccfa41770ac3678db17b9742",
+      "fetched_at_utc": "2026-04-26T23:59:47.362527+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/settlement/101-BINANCE-ETHUSDT-25SEP2026/2026-03.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/settlement/101-BINANCE-ETHUSDT-25SEP2026/2026-03.ndjson",
+      "content_length_bytes": 566,
+      "sha256": "8f06f1a7d7b00b3988006746c01ed010724b59d16992ce10618a5f287fca47c7",
+      "fetched_at_utc": "2026-04-26T23:59:47.971512+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-data/101-BINANCE-ETHUSDT-25SEP2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-data/101-BINANCE-ETHUSDT-25SEP2026/2026-04.ndjson",
+      "content_length_bytes": 201822,
+      "sha256": "b643b880b700ffb13db38a7d6404a334f25702f17ed3324361a8001b93fc59da",
+      "fetched_at_utc": "2026-04-26T23:59:48.002433+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/101-BINANCE-ETHUSDT-25SEP2026/raw/2026-03.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/101-BINANCE-ETHUSDT-25SEP2026/raw/2026-03.ndjson",
+      "content_length_bytes": 15673,
+      "sha256": "7d2abc57d523b362d379caba15bc8ba2eb4bff1cf2b3ab278b42df2575893108",
+      "fetched_at_utc": "2026-04-26T23:59:48.021172+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-data/101-BINANCE-ETHUSDT-25SEP2026/2026-03.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-data/101-BINANCE-ETHUSDT-25SEP2026/2026-03.ndjson",
+      "content_length_bytes": 5050,
+      "sha256": "c504d4446e159798e0dda87bd386bdd99fcc2c56d94b23a040eba507c29df135",
+      "fetched_at_utc": "2026-04-26T23:59:48.077535+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/101-BINANCE-ETHUSDT-25SEP2026/raw/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/101-BINANCE-ETHUSDT-25SEP2026/raw/2026-04.ndjson",
+      "content_length_bytes": 1359028,
+      "sha256": "8155f85ecd0c44234473fc7b06f6905081d3a53f9d98d944397f2c25b99d43d5",
+      "fetched_at_utc": "2026-04-26T23:59:48.131552+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/settlement/101-BINANCE-ETHUSDT-25SEP2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/settlement/101-BINANCE-ETHUSDT-25SEP2026/2026-04.ndjson",
+      "content_length_bytes": 14767,
+      "sha256": "0107bae05fe0dc5b5e9ffd1f0ea35adbc43a4e8faef1bbf57a61bbe114df6134",
+      "fetched_at_utc": "2026-04-26T23:59:48.177332+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/101-BINANCE-ETHUSDT-25SEP2026/combined_0.01/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/101-BINANCE-ETHUSDT-25SEP2026/combined_0.01/2026-04.ndjson",
+      "content_length_bytes": 170747,
+      "sha256": "5aa18f8fe0ba9eacdcfbb81201c1afbaaa0d996ea3ca42c6f128e4de08a3344c",
+      "fetched_at_utc": "2026-04-26T23:59:48.890087+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/settlement/124-BINANCE-XAGUSDT-29MAY2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/settlement/124-BINANCE-XAGUSDT-29MAY2026/2026-04.ndjson",
+      "content_length_bytes": 6195,
+      "sha256": "f6a3cbced1be4fe75c4bb69273a5af69054f77e2bc1e992157b2f59784f942a2",
+      "fetched_at_utc": "2026-04-26T23:59:48.895996+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/101-BINANCE-ETHUSDT-25SEP2026/combined_0.01/2026-03.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/101-BINANCE-ETHUSDT-25SEP2026/combined_0.01/2026-03.ndjson",
+      "content_length_bytes": 3371,
+      "sha256": "ad26acf81bd44f937a81e4965c10fdc028ea5c8cb90a69f01b1303b94be409cc",
+      "fetched_at_utc": "2026-04-26T23:59:48.919793+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-data/124-BINANCE-XAGUSDT-29MAY2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-data/124-BINANCE-XAGUSDT-29MAY2026/2026-04.ndjson",
+      "content_length_bytes": 40957,
+      "sha256": "32db59ce2423da89586cea6b8bdb0bf4141fb60ccc0075f736e453df50566e6b",
+      "fetched_at_utc": "2026-04-26T23:59:48.992075+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/124-BINANCE-XAGUSDT-29MAY2026/raw/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/124-BINANCE-XAGUSDT-29MAY2026/raw/2026-04.ndjson",
+      "content_length_bytes": 149633,
+      "sha256": "e252d958f1907f25cfcec69a5aa2f0a9a566031a625d7b2f14b8b20f8bb061ac",
+      "fetched_at_utc": "2026-04-26T23:59:49.084115+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-trades/124-BINANCE-XAGUSDT-29MAY2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-trades/124-BINANCE-XAGUSDT-29MAY2026/2026-04.ndjson",
+      "content_length_bytes": 6803,
+      "sha256": "a2baa14a0b00cede0a4d17a10c5a13d0e4d064c8944ede35f8564eb429982838",
+      "fetched_at_utc": "2026-04-26T23:59:49.421369+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/settlement/122-BINANCE-XAUUSDT-29MAY2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/settlement/122-BINANCE-XAUUSDT-29MAY2026/2026-04.ndjson",
+      "content_length_bytes": 6184,
+      "sha256": "e6fd291c68cb262d436c95af636323531014350fd79c1fb81f7f05d08dbb0d47",
+      "fetched_at_utc": "2026-04-26T23:59:49.751157+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-data/122-BINANCE-XAUUSDT-29MAY2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-data/122-BINANCE-XAUUSDT-29MAY2026/2026-04.ndjson",
+      "content_length_bytes": 39587,
+      "sha256": "ed2c8b0b87b846e3638fe42f596d2409c5665beab3f3623a16c531268c64fdfe",
+      "fetched_at_utc": "2026-04-26T23:59:49.769209+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-trades/122-BINANCE-XAUUSDT-29MAY2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-trades/122-BINANCE-XAUUSDT-29MAY2026/2026-04.ndjson",
+      "content_length_bytes": 4445,
+      "sha256": "5fb175d86eb9fba546778afbae790b3f62ae8abe2975fad2cd8a42e1a34e4e5c",
+      "fetched_at_utc": "2026-04-26T23:59:49.865444+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/124-BINANCE-XAGUSDT-29MAY2026/combined_0.01/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/124-BINANCE-XAGUSDT-29MAY2026/combined_0.01/2026-04.ndjson",
+      "content_length_bytes": 113893,
+      "sha256": "d94a6751b64e049725ef421a39469ccbd40f35fdb6c64e81f1866736f79b4a8b",
+      "fetched_at_utc": "2026-04-26T23:59:49.877442+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/122-BINANCE-XAUUSDT-29MAY2026/raw/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/122-BINANCE-XAUUSDT-29MAY2026/raw/2026-04.ndjson",
+      "content_length_bytes": 153464,
+      "sha256": "5435c2b4df1b7c30f25c42ca782040929fb3d4c30bc2d04fe71aa8b9bd47ba72",
+      "fetched_at_utc": "2026-04-26T23:59:49.927556+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/122-BINANCE-XAUUSDT-29MAY2026/combined_0.01/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/122-BINANCE-XAUUSDT-29MAY2026/combined_0.01/2026-04.ndjson",
+      "content_length_bytes": 123682,
+      "sha256": "5c994f10a9fcde02108fbbb1d87389fe7a85ad5fe928141ff7e2565c0b82e80a",
+      "fetched_at_utc": "2026-04-26T23:59:50.197448+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-trades/120-BINANCE-XRPUSDT-29MAY2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-trades/120-BINANCE-XRPUSDT-29MAY2026/2026-04.ndjson",
+      "content_length_bytes": 8125,
+      "sha256": "5b7eb385a772d48eb117daf02e1f94c75bff778c658e6ae4d7464e216961b867",
+      "fetched_at_utc": "2026-04-26T23:59:50.668651+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/120-BINANCE-XRPUSDT-29MAY2026/combined_0.01/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/120-BINANCE-XRPUSDT-29MAY2026/combined_0.01/2026-04.ndjson",
+      "content_length_bytes": 51341,
+      "sha256": "145b05b834001c0e091b723c44e674d6e39b5cf5811568905997fbde0c445bc2",
+      "fetched_at_utc": "2026-04-26T23:59:50.690044+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/settlement/120-BINANCE-XRPUSDT-29MAY2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/settlement/120-BINANCE-XRPUSDT-29MAY2026/2026-04.ndjson",
+      "content_length_bytes": 3253,
+      "sha256": "7a8dfebf5687a6d83cb0509f3b5a49cfd5acdcbece5e6114d4bf1c36030d9058",
+      "fetched_at_utc": "2026-04-26T23:59:50.703512+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-data/120-BINANCE-XRPUSDT-29MAY2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-data/120-BINANCE-XRPUSDT-29MAY2026/2026-04.ndjson",
+      "content_length_bytes": 41735,
+      "sha256": "da194d64ab6524b3e48aa7816ecd7331d10e2780def35220e4554e62ed9ae00e",
+      "fetched_at_utc": "2026-04-26T23:59:50.815615+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/120-BINANCE-XRPUSDT-29MAY2026/raw/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/120-BINANCE-XRPUSDT-29MAY2026/raw/2026-04.ndjson",
+      "content_length_bytes": 244448,
+      "sha256": "fa0ff4018ba02667ae2005801725b2e11b6e13396dbd837c7658fbe12e1c7bef",
+      "fetched_at_utc": "2026-04-26T23:59:50.916288+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-trades/116-BYBIT-HYPEUSDT-29MAY2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-trades/116-BYBIT-HYPEUSDT-29MAY2026/2026-04.ndjson",
+      "content_length_bytes": 14829,
+      "sha256": "1baddc1d740b87f727e7cdae0fa77e56d64fafe27885dc85a24ff18bb16c736c",
+      "fetched_at_utc": "2026-04-26T23:59:51.119794+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/settlement/116-BYBIT-HYPEUSDT-29MAY2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/settlement/116-BYBIT-HYPEUSDT-29MAY2026/2026-04.ndjson",
+      "content_length_bytes": 3230,
+      "sha256": "e416084a9fe8ff18737feb0a432a85b321a3fac5a91f71340e7d0014964f3639",
+      "fetched_at_utc": "2026-04-26T23:59:51.461187+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-data/116-BYBIT-HYPEUSDT-29MAY2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-data/116-BYBIT-HYPEUSDT-29MAY2026/2026-04.ndjson",
+      "content_length_bytes": 42165,
+      "sha256": "f2f1a0ccf08f63b55fa6db659c724618144eea7f7ca13494af1fb1e23e6e5226",
+      "fetched_at_utc": "2026-04-26T23:59:51.513723+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/116-BYBIT-HYPEUSDT-29MAY2026/raw/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/116-BYBIT-HYPEUSDT-29MAY2026/raw/2026-04.ndjson",
+      "content_length_bytes": 250070,
+      "sha256": "acf6f40d4dd70cb17b186e1dac4d829694f0bbc823e66268f2ca0717d9f35fe7",
+      "fetched_at_utc": "2026-04-26T23:59:51.649558+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-trades/111-HYPERLIQUID-BTC-26JUN2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-trades/111-HYPERLIQUID-BTC-26JUN2026/2026-04.ndjson",
+      "content_length_bytes": 118854,
+      "sha256": "3957daf14ff077a4c3fa8463a0056db23494eedbde96d86057987166b7c905d0",
+      "fetched_at_utc": "2026-04-26T23:59:51.800775+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/116-BYBIT-HYPEUSDT-29MAY2026/combined_0.01/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/116-BYBIT-HYPEUSDT-29MAY2026/combined_0.01/2026-04.ndjson",
+      "content_length_bytes": 49447,
+      "sha256": "7b1709f591fa1816f698692037450de8f25a2476c0b1c80b0bad14e339accd45",
+      "fetched_at_utc": "2026-04-26T23:59:51.963623+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/111-HYPERLIQUID-BTC-26JUN2026/raw/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/111-HYPERLIQUID-BTC-26JUN2026/raw/2026-04.ndjson",
+      "content_length_bytes": 631087,
+      "sha256": "2443f85fc3fe7fb520a985b81563ae390735939efa470e959582c0f0078a975e",
+      "fetched_at_utc": "2026-04-26T23:59:52.324798+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/settlement/111-HYPERLIQUID-BTC-26JUN2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/settlement/111-HYPERLIQUID-BTC-26JUN2026/2026-04.ndjson",
+      "content_length_bytes": 52439,
+      "sha256": "b9407b0ba69acd2c7919751d90a64dd87a7c8e404b1dad54e987e864f4864bee",
+      "fetched_at_utc": "2026-04-26T23:59:52.327985+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-data/111-HYPERLIQUID-BTC-26JUN2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-data/111-HYPERLIQUID-BTC-26JUN2026/2026-04.ndjson",
+      "content_length_bytes": 92528,
+      "sha256": "e17b3c0b8a6cf472f043289eb90154d0ef0b3baf2b8eb3b7479fdeb0c5417bfb",
+      "fetched_at_utc": "2026-04-26T23:59:52.490348+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-trades/109-HYPERLIQUID-BTC-29MAY2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-trades/109-HYPERLIQUID-BTC-29MAY2026/2026-04.ndjson",
+      "content_length_bytes": 143182,
+      "sha256": "75b32b3dd2aa762d525b2e6815acb4639c468eb022009d47389f096cf3577081",
+      "fetched_at_utc": "2026-04-26T23:59:52.766261+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-data/109-HYPERLIQUID-BTC-29MAY2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-data/109-HYPERLIQUID-BTC-29MAY2026/2026-04.ndjson",
+      "content_length_bytes": 92842,
+      "sha256": "e101bf59960c2500c53b3666dd5900462792a4f4232380e45fff6424977f4cba",
+      "fetched_at_utc": "2026-04-26T23:59:52.824707+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/111-HYPERLIQUID-BTC-26JUN2026/combined_0.01/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/111-HYPERLIQUID-BTC-26JUN2026/combined_0.01/2026-04.ndjson",
+      "content_length_bytes": 262629,
+      "sha256": "3039cc88ebeaa94e0da413dea7b345ce0255146d888200f992f71563a3c57b60",
+      "fetched_at_utc": "2026-04-26T23:59:53.084557+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/settlement/109-HYPERLIQUID-BTC-29MAY2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/settlement/109-HYPERLIQUID-BTC-29MAY2026/2026-04.ndjson",
+      "content_length_bytes": 52439,
+      "sha256": "a07c479091e42979d268185793e8ef2b7e1d1ef9ee3443d75a003098f7f79989",
+      "fetched_at_utc": "2026-04-26T23:59:53.121335+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/109-HYPERLIQUID-BTC-29MAY2026/raw/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/109-HYPERLIQUID-BTC-29MAY2026/raw/2026-04.ndjson",
+      "content_length_bytes": 736319,
+      "sha256": "fc7d91b789060772650f51c3c240d7b91af298655f50ad873953e3b8efda03eb",
+      "fetched_at_utc": "2026-04-26T23:59:53.176201+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/109-HYPERLIQUID-BTC-29MAY2026/combined_0.01/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/109-HYPERLIQUID-BTC-29MAY2026/combined_0.01/2026-04.ndjson",
+      "content_length_bytes": 251559,
+      "sha256": "f67a2fb12304b25b64491588f04eab54c364c9a45046171b506b5393d7fb0ba9",
+      "fetched_at_utc": "2026-04-26T23:59:53.338869+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-trades/102-HYPERLIQUID-ETH-25SEP2026/2026-03.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-trades/102-HYPERLIQUID-ETH-25SEP2026/2026-03.ndjson",
+      "content_length_bytes": 1434,
+      "sha256": "3cd2b0c947372c69574b440c5ea6f3672f591683fa707ed06dfb404c564752bc",
+      "fetched_at_utc": "2026-04-26T23:59:53.688844+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-trades/102-HYPERLIQUID-ETH-25SEP2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-trades/102-HYPERLIQUID-ETH-25SEP2026/2026-04.ndjson",
+      "content_length_bytes": 165934,
+      "sha256": "fdc85580c7dfbbe7954e9c762c549ad3f4f6a8c42a604a1fb34ec12867e86b6b",
+      "fetched_at_utc": "2026-04-26T23:59:53.792483+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-data/102-HYPERLIQUID-ETH-25SEP2026/2026-03.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-data/102-HYPERLIQUID-ETH-25SEP2026/2026-03.ndjson",
+      "content_length_bytes": 5112,
+      "sha256": "55c2379743eb5174b53fda1b67f6f7de875935c10a41cde2ddb0508bd0942773",
+      "fetched_at_utc": "2026-04-26T23:59:54.060878+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-data/102-HYPERLIQUID-ETH-25SEP2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-data/102-HYPERLIQUID-ETH-25SEP2026/2026-04.ndjson",
+      "content_length_bytes": 212398,
+      "sha256": "8e279b07d0b4bd07b4f33064b07ea1356b26b41499a758925a2e02150e9f905b",
+      "fetched_at_utc": "2026-04-26T23:59:54.062923+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/settlement/102-HYPERLIQUID-ETH-25SEP2026/2026-03.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/settlement/102-HYPERLIQUID-ETH-25SEP2026/2026-03.ndjson",
+      "content_length_bytes": 3275,
+      "sha256": "e780e03c5f0f9f03011c6077756f42262a06ec734cc31ac15f5735618991b341",
+      "fetched_at_utc": "2026-04-26T23:59:54.117498+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/settlement/102-HYPERLIQUID-ETH-25SEP2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/settlement/102-HYPERLIQUID-ETH-25SEP2026/2026-04.ndjson",
+      "content_length_bytes": 118655,
+      "sha256": "975135a31a05cfed4d4d9f59c4187f0e9040aaa3f20fd6baf60fbe5a6d75d286",
+      "fetched_at_utc": "2026-04-26T23:59:54.205229+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/102-HYPERLIQUID-ETH-25SEP2026/raw/2026-03.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/102-HYPERLIQUID-ETH-25SEP2026/raw/2026-03.ndjson",
+      "content_length_bytes": 20091,
+      "sha256": "5df8240ec82ea810e4326566bf0e4842889fc4ed7c2bd9262b27158673933212",
+      "fetched_at_utc": "2026-04-26T23:59:54.657572+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/102-HYPERLIQUID-ETH-25SEP2026/raw/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/102-HYPERLIQUID-ETH-25SEP2026/raw/2026-04.ndjson",
+      "content_length_bytes": 1518481,
+      "sha256": "7f44b8d842c25f47cd971756a73c8bb1d3f69755d706232c05966a9130a4b0f8",
+      "fetched_at_utc": "2026-04-26T23:59:54.778994+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/102-HYPERLIQUID-ETH-25SEP2026/combined_0.01/2026-03.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/102-HYPERLIQUID-ETH-25SEP2026/combined_0.01/2026-03.ndjson",
+      "content_length_bytes": 33173,
+      "sha256": "a2ac9c9bd4c9f3f3d1c4e9757f4c32a84c4ca2bcac700f78502d12e3b84a7f0d",
+      "fetched_at_utc": "2026-04-26T23:59:54.833455+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-trades/74-HYPERLIQUID-ETH-26JUN2026/2026-03.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-trades/74-HYPERLIQUID-ETH-26JUN2026/2026-03.ndjson",
+      "content_length_bytes": 175475,
+      "sha256": "b24bdfedef7dc0f766c8b53ef66fb7d0794bdbe439802c7097920e2bd7d495e1",
+      "fetched_at_utc": "2026-04-26T23:59:54.959582+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-trades/74-HYPERLIQUID-ETH-26JUN2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-trades/74-HYPERLIQUID-ETH-26JUN2026/2026-04.ndjson",
+      "content_length_bytes": 182832,
+      "sha256": "49c68345312dd7de8650b10779705d7dc3a8c9c48990031f1ce9499abed7175f",
+      "fetched_at_utc": "2026-04-26T23:59:55.113752+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-data/74-HYPERLIQUID-ETH-26JUN2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-data/74-HYPERLIQUID-ETH-26JUN2026/2026-04.ndjson",
+      "content_length_bytes": 213087,
+      "sha256": "9fd6e21b7b7d660e6fdbea6ac26c619ab65df9d9fa561a47792bb0dcd5cbbb5b",
+      "fetched_at_utc": "2026-04-26T23:59:55.755416+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/settlement/74-HYPERLIQUID-ETH-26JUN2026/2026-03.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/settlement/74-HYPERLIQUID-ETH-26JUN2026/2026-03.ndjson",
+      "content_length_bytes": 100109,
+      "sha256": "1375b2cd0cffa9f47033a3d2d43aed6ebeeeb069f46b261d9c8f4fc2196695ef",
+      "fetched_at_utc": "2026-04-26T23:59:55.760914+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-data/74-HYPERLIQUID-ETH-26JUN2026/2026-03.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-data/74-HYPERLIQUID-ETH-26JUN2026/2026-03.ndjson",
+      "content_length_bytes": 177988,
+      "sha256": "0c1219c63128cea5de37fc66c4f8c6b39da1d3efcd66b8e045cbaddd44f69b76",
+      "fetched_at_utc": "2026-04-26T23:59:55.800678+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/settlement/74-HYPERLIQUID-ETH-26JUN2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/settlement/74-HYPERLIQUID-ETH-26JUN2026/2026-04.ndjson",
+      "content_length_bytes": 118655,
+      "sha256": "1f1012e98ab21db01e153ceeb711f66c131607f4895725d240043eb84acdf566",
+      "fetched_at_utc": "2026-04-26T23:59:55.889405+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/102-HYPERLIQUID-ETH-25SEP2026/combined_0.01/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/102-HYPERLIQUID-ETH-25SEP2026/combined_0.01/2026-04.ndjson",
+      "content_length_bytes": 936005,
+      "sha256": "e92916dd112f971064f4a97e5f5a26ebebb759623767abd1361f7524ac103509",
+      "fetched_at_utc": "2026-04-26T23:59:56.167416+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/74-HYPERLIQUID-ETH-26JUN2026/raw/2026-03.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/74-HYPERLIQUID-ETH-26JUN2026/raw/2026-03.ndjson",
+      "content_length_bytes": 2021439,
+      "sha256": "26d8ec36860b1081139a278caf74355b8a73eaea5c31623a3fc92cb389fcea39",
+      "fetched_at_utc": "2026-04-26T23:59:56.169430+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/74-HYPERLIQUID-ETH-26JUN2026/raw/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/74-HYPERLIQUID-ETH-26JUN2026/raw/2026-04.ndjson",
+      "content_length_bytes": 2461285,
+      "sha256": "89792eb39fdfecd80f231d369a91f6e1b69699eea90e2bfd5770942fefb38dae",
+      "fetched_at_utc": "2026-04-26T23:59:56.729021+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-trades/113-HYPERLIQUID-ETH-29MAY2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-trades/113-HYPERLIQUID-ETH-29MAY2026/2026-04.ndjson",
+      "content_length_bytes": 219664,
+      "sha256": "51ea8f732ff237ab061c87dda3114fb1a922bd5a09caec932408b6a58bc8fd87",
+      "fetched_at_utc": "2026-04-26T23:59:56.729299+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/74-HYPERLIQUID-ETH-26JUN2026/combined_0.01/2026-03.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/74-HYPERLIQUID-ETH-26JUN2026/combined_0.01/2026-03.ndjson",
+      "content_length_bytes": 1125925,
+      "sha256": "15c9ce31b7178988480f8cd5689aff492c7d8d58faf6edbbaae1d1f5da0272de",
+      "fetched_at_utc": "2026-04-26T23:59:56.881276+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/74-HYPERLIQUID-ETH-26JUN2026/combined_0.01/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/74-HYPERLIQUID-ETH-26JUN2026/combined_0.01/2026-04.ndjson",
+      "content_length_bytes": 970621,
+      "sha256": "d9d09edb8128969f66960ac05248bd8db8d411e810ad227785f4dfe9555d5c2f",
+      "fetched_at_utc": "2026-04-26T23:59:56.977060+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/settlement/113-HYPERLIQUID-ETH-29MAY2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/settlement/113-HYPERLIQUID-ETH-29MAY2026/2026-04.ndjson",
+      "content_length_bytes": 52596,
+      "sha256": "9c4b956ed0174ae66c6ff0ade4c0cf029de6b16d45d2abc3bd606932133a046b",
+      "fetched_at_utc": "2026-04-26T23:59:57.091749+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-data/113-HYPERLIQUID-ETH-29MAY2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-data/113-HYPERLIQUID-ETH-29MAY2026/2026-04.ndjson",
+      "content_length_bytes": 92909,
+      "sha256": "274f5bc44e19299baa2b88825d0ba255404fe27d65eb9635cf3037057b772008",
+      "fetched_at_utc": "2026-04-26T23:59:57.104954+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/113-HYPERLIQUID-ETH-29MAY2026/combined_0.01/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/113-HYPERLIQUID-ETH-29MAY2026/combined_0.01/2026-04.ndjson",
+      "content_length_bytes": 253427,
+      "sha256": "c55caea05e89e49538559a61c4b138a8794c8c91365ab34760930adeaa0bd19b",
+      "fetched_at_utc": "2026-04-26T23:59:57.542854+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/113-HYPERLIQUID-ETH-29MAY2026/raw/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/113-HYPERLIQUID-ETH-29MAY2026/raw/2026-04.ndjson",
+      "content_length_bytes": 851867,
+      "sha256": "3d88508e9b326a04543e37a45f021dd30c8c90dac1d84a63824007bb83e27b3a",
+      "fetched_at_utc": "2026-04-26T23:59:57.734832+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-trades/115-HYPERLIQUID-HYPE-29MAY2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-trades/115-HYPERLIQUID-HYPE-29MAY2026/2026-04.ndjson",
+      "content_length_bytes": 45244,
+      "sha256": "ef8a8fd0e688f030620042f2f1637d941ed99f5cb25e3e43488149dd7e6566c0",
+      "fetched_at_utc": "2026-04-26T23:59:57.752332+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-data/115-HYPERLIQUID-HYPE-29MAY2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-data/115-HYPERLIQUID-HYPE-29MAY2026/2026-04.ndjson",
+      "content_length_bytes": 43705,
+      "sha256": "cb9c373001d1c00a29a498a17996d934fb7473483e6657510f6afc9416124e8e",
+      "fetched_at_utc": "2026-04-26T23:59:57.945597+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/settlement/115-HYPERLIQUID-HYPE-29MAY2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/settlement/115-HYPERLIQUID-HYPE-29MAY2026/2026-04.ndjson",
+      "content_length_bytes": 24820,
+      "sha256": "fb20d0b01beb762ddc91268317f831c92b6c2fb8ee092cec196da0fa1f4889fc",
+      "fetched_at_utc": "2026-04-26T23:59:58.019919+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/115-HYPERLIQUID-HYPE-29MAY2026/raw/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/115-HYPERLIQUID-HYPE-29MAY2026/raw/2026-04.ndjson",
+      "content_length_bytes": 298305,
+      "sha256": "5a1c93a42b284e7eb8c58eb81251e25c069658aa62600643f630621af2fde23f",
+      "fetched_at_utc": "2026-04-26T23:59:58.020165+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/115-HYPERLIQUID-HYPE-29MAY2026/combined_0.01/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/115-HYPERLIQUID-HYPE-29MAY2026/combined_0.01/2026-04.ndjson",
+      "content_length_bytes": 188359,
+      "sha256": "6fb3ed12cea5c55c89112aa86997626631d7703fa8446a1d3b795654a1cdc364",
+      "fetched_at_utc": "2026-04-26T23:59:58.474762+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-trades/117-HYPERLIQUID-SOL-29MAY2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-trades/117-HYPERLIQUID-SOL-29MAY2026/2026-04.ndjson",
+      "content_length_bytes": 42747,
+      "sha256": "340ff417631765433b41cd083f8a3caadab7d008619cf1e704a55e5e654d1c70",
+      "fetched_at_utc": "2026-04-26T23:59:58.530355+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-data/117-HYPERLIQUID-SOL-29MAY2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-data/117-HYPERLIQUID-SOL-29MAY2026/2026-04.ndjson",
+      "content_length_bytes": 43021,
+      "sha256": "df3f14af27a834dab73455781981c04906f86e6cbc9a0a41f2b52fc9596ebb1d",
+      "fetched_at_utc": "2026-04-26T23:59:58.775795+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/settlement/117-HYPERLIQUID-SOL-29MAY2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/settlement/117-HYPERLIQUID-SOL-29MAY2026/2026-04.ndjson",
+      "content_length_bytes": 25186,
+      "sha256": "60cff82850e77a9b711f18aa67e6a3dbe721ef4ec0720968e008d7392505c500",
+      "fetched_at_utc": "2026-04-26T23:59:58.916553+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/117-HYPERLIQUID-SOL-29MAY2026/combined_0.01/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/117-HYPERLIQUID-SOL-29MAY2026/combined_0.01/2026-04.ndjson",
+      "content_length_bytes": 58812,
+      "sha256": "67b550ecf0d8c135810e9e2c5fd407724738740b2554f335b5f6a84ff61e6fa4",
+      "fetched_at_utc": "2026-04-26T23:59:58.949309+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/117-HYPERLIQUID-SOL-29MAY2026/raw/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/117-HYPERLIQUID-SOL-29MAY2026/raw/2026-04.ndjson",
+      "content_length_bytes": 253916,
+      "sha256": "5e71299b97c8581efec37e12d7dd26f28ac7ee338c249e20242a6d95ec9f7932",
+      "fetched_at_utc": "2026-04-26T23:59:58.955819+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-trades/119-HYPERLIQUID-XRP-29MAY2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-trades/119-HYPERLIQUID-XRP-29MAY2026/2026-04.ndjson",
+      "content_length_bytes": 10124,
+      "sha256": "1c377b7523fbe63111efdcee9d621f1fc0664e464110b83f375ce1111e13b196",
+      "fetched_at_utc": "2026-04-26T23:59:59.303217+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-data/119-HYPERLIQUID-XRP-29MAY2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-data/119-HYPERLIQUID-XRP-29MAY2026/2026-04.ndjson",
+      "content_length_bytes": 41979,
+      "sha256": "e87220f8cec1c09fdaa2fb69500dd81e5c0d5ccad8130f8161f3672f795f31ec",
+      "fetched_at_utc": "2026-04-26T23:59:59.445288+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/settlement/119-HYPERLIQUID-XRP-29MAY2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/settlement/119-HYPERLIQUID-XRP-29MAY2026/2026-04.ndjson",
+      "content_length_bytes": 25203,
+      "sha256": "0463eb5566434469bf91c049121dc21d810666bbf4b05464e450483c4ca16047",
+      "fetched_at_utc": "2026-04-26T23:59:59.637472+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-trades/121-HYPERLIQUID-xyzGOLD-29MAY2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-trades/121-HYPERLIQUID-xyzGOLD-29MAY2026/2026-04.ndjson",
+      "content_length_bytes": 3723,
+      "sha256": "768b5cda728bdf22a300127c6da6f5badee31edeb8a127dc5c4f5fe06c5cecca",
+      "fetched_at_utc": "2026-04-26T23:59:59.824825+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/119-HYPERLIQUID-XRP-29MAY2026/raw/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/119-HYPERLIQUID-XRP-29MAY2026/raw/2026-04.ndjson",
+      "content_length_bytes": 245563,
+      "sha256": "38559d5feb4084749a9a45f22f48724e5c8af2e283ea0577c50cfd7fbfab2bef",
+      "fetched_at_utc": "2026-04-26T23:59:59.849048+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/settlement/121-HYPERLIQUID-xyzGOLD-29MAY2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/settlement/121-HYPERLIQUID-xyzGOLD-29MAY2026/2026-04.ndjson",
+      "content_length_bytes": 24995,
+      "sha256": "6d2198abcc302ef83fe21b566e124c95bb9882bd95e6893c5d97d6924106551f",
+      "fetched_at_utc": "2026-04-27T00:00:00.204463+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/119-HYPERLIQUID-XRP-29MAY2026/combined_0.01/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/119-HYPERLIQUID-XRP-29MAY2026/combined_0.01/2026-04.ndjson",
+      "content_length_bytes": 50121,
+      "sha256": "8cd6bcf1c7e2f8c4dec5dfa70242d9eb210f22cab61670d1f629290dac788d88",
+      "fetched_at_utc": "2026-04-27T00:00:00.354386+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/121-HYPERLIQUID-xyzGOLD-29MAY2026/raw/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/121-HYPERLIQUID-xyzGOLD-29MAY2026/raw/2026-04.ndjson",
+      "content_length_bytes": 211709,
+      "sha256": "439b441e66134ed6950df5247a29edee1b8b6e5f5405c4fa817035ce8918e58b",
+      "fetched_at_utc": "2026-04-27T00:00:00.576227+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-data/121-HYPERLIQUID-xyzGOLD-29MAY2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-data/121-HYPERLIQUID-xyzGOLD-29MAY2026/2026-04.ndjson",
+      "content_length_bytes": 41176,
+      "sha256": "6f93e035a4cb00b5d6d52465fab716c4cc90b53925d24c367a5ee28a9ec4eade",
+      "fetched_at_utc": "2026-04-27T00:00:00.692614+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/121-HYPERLIQUID-xyzGOLD-29MAY2026/combined_0.01/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/121-HYPERLIQUID-xyzGOLD-29MAY2026/combined_0.01/2026-04.ndjson",
+      "content_length_bytes": 163572,
+      "sha256": "66d4a9a06d0a26093d22ec64d09482428c1f7abaec19ff76e94c2dbaa36955e7",
+      "fetched_at_utc": "2026-04-27T00:00:00.759560+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-trades/123-HYPERLIQUID-xyzSILVER-29MAY2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-trades/123-HYPERLIQUID-xyzSILVER-29MAY2026/2026-04.ndjson",
+      "content_length_bytes": 1875,
+      "sha256": "de2ef0d9839d68fb12150dd50dcbf4f20acc68ad4add7cb64757a5fee7d56a9b",
+      "fetched_at_utc": "2026-04-27T00:00:00.877731+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-data/123-HYPERLIQUID-xyzSILVER-29MAY2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-data/123-HYPERLIQUID-xyzSILVER-29MAY2026/2026-04.ndjson",
+      "content_length_bytes": 41248,
+      "sha256": "89fa9981f4b5b9f73786a4260be16b072ef062d14a2010b2b6370c132d3cdde5",
+      "fetched_at_utc": "2026-04-27T00:00:01.109202+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/settlement/123-HYPERLIQUID-xyzSILVER-29MAY2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/settlement/123-HYPERLIQUID-xyzSILVER-29MAY2026/2026-04.ndjson",
+      "content_length_bytes": 24898,
+      "sha256": "d11f0f8838ce2bd29565f85392f88107bde015f9aff9fcf41b4751f223e92017",
+      "fetched_at_utc": "2026-04-27T00:00:01.136702+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/123-HYPERLIQUID-xyzSILVER-29MAY2026/raw/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/123-HYPERLIQUID-xyzSILVER-29MAY2026/raw/2026-04.ndjson",
+      "content_length_bytes": 187760,
+      "sha256": "6bd00f9216ba7629e49a11bfb058e9f22c3ec930f4f490b9dae61797f39b35ae",
+      "fetched_at_utc": "2026-04-27T00:00:01.445915+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/123-HYPERLIQUID-xyzSILVER-29MAY2026/combined_0.01/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/123-HYPERLIQUID-xyzSILVER-29MAY2026/combined_0.01/2026-04.ndjson",
+      "content_length_bytes": 159162,
+      "sha256": "97595b78d8303b12d136eb8d9b526f56abc51d49bbfa5a133e674eab97d9c3cf",
+      "fetched_at_utc": "2026-04-27T00:00:01.473959+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-trades/126-HYPERLIQUID-xyzSP500-29MAY2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-trades/126-HYPERLIQUID-xyzSP500-29MAY2026/2026-04.ndjson",
+      "content_length_bytes": 5928,
+      "sha256": "ec4a0f5bec736a1a0a9cad70cdcfdaa4f05f28267725069df542604fbd7ca47b",
+      "fetched_at_utc": "2026-04-27T00:00:01.524609+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-data/126-HYPERLIQUID-xyzSP500-29MAY2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-data/126-HYPERLIQUID-xyzSP500-29MAY2026/2026-04.ndjson",
+      "content_length_bytes": 42911,
+      "sha256": "0143e150b5970ea0f7face2fde8b7a82ffd37e32dcb5d6d3335ea41345f84676",
+      "fetched_at_utc": "2026-04-27T00:00:01.781298+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/settlement/126-HYPERLIQUID-xyzSP500-29MAY2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/settlement/126-HYPERLIQUID-xyzSP500-29MAY2026/2026-04.ndjson",
+      "content_length_bytes": 25223,
+      "sha256": "492390e44c7761d9487c55da32765acb9a2de5c053efc0386baaa39f1426c14d",
+      "fetched_at_utc": "2026-04-27T00:00:02.054479+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/126-HYPERLIQUID-xyzSP500-29MAY2026/raw/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/126-HYPERLIQUID-xyzSP500-29MAY2026/raw/2026-04.ndjson",
+      "content_length_bytes": 269322,
+      "sha256": "65ed6c135da7f04fe5b51f33dade336be561ec52b6c3b98a8a1e8fb8b365ca71",
+      "fetched_at_utc": "2026-04-27T00:00:02.075230+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-trades/125-HYPERLIQUID-xyzXYZ100-29MAY2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-trades/125-HYPERLIQUID-xyzXYZ100-29MAY2026/2026-04.ndjson",
+      "content_length_bytes": 4938,
+      "sha256": "e6fb046c05645f3a48cc6e6212dd55a34c45e10b1b5545af6dd7300fc56d95a5",
+      "fetched_at_utc": "2026-04-27T00:00:02.446764+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/settlement/125-HYPERLIQUID-xyzXYZ100-29MAY2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/settlement/125-HYPERLIQUID-xyzXYZ100-29MAY2026/2026-04.ndjson",
+      "content_length_bytes": 25182,
+      "sha256": "1726d9015e7b832240138a5081d186fca980424518bd47b2221dfbd11a617063",
+      "fetched_at_utc": "2026-04-27T00:00:02.662570+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-data/125-HYPERLIQUID-xyzXYZ100-29MAY2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-data/125-HYPERLIQUID-xyzXYZ100-29MAY2026/2026-04.ndjson",
+      "content_length_bytes": 41815,
+      "sha256": "80e343384db9cdce4f0e92b05a6da7ad97a0450fe987b390c4ff6b9bee0ae2b1",
+      "fetched_at_utc": "2026-04-27T00:00:02.971808+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/125-HYPERLIQUID-xyzXYZ100-29MAY2026/raw/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/125-HYPERLIQUID-xyzXYZ100-29MAY2026/raw/2026-04.ndjson",
+      "content_length_bytes": 244218,
+      "sha256": "10722b88e289fbe7e44c6b881a6bacb26cf302f39dbf30fbb3c8833559570c30",
+      "fetched_at_utc": "2026-04-27T00:00:02.978419+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/125-HYPERLIQUID-xyzXYZ100-29MAY2026/combined_0.01/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/125-HYPERLIQUID-xyzXYZ100-29MAY2026/combined_0.01/2026-04.ndjson",
+      "content_length_bytes": 210948,
+      "sha256": "c5d3cf8148695d2215400de1b3a6093dff5e1d8920dd1feef6861dfd2fa8d603",
+      "fetched_at_utc": "2026-04-27T00:00:03.003546+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/126-HYPERLIQUID-xyzSP500-29MAY2026/combined_0.01/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/126-HYPERLIQUID-xyzSP500-29MAY2026/combined_0.01/2026-04.ndjson",
+      "content_length_bytes": 224612,
+      "sha256": "926fd4a772e93139ed31d84554178128770bfe3939cefb6ab264455217d30f0d",
+      "fetched_at_utc": "2026-04-27T00:00:03.165306+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-trades/118-LIGHTER-SOL-29MAY2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-trades/118-LIGHTER-SOL-29MAY2026/2026-04.ndjson",
+      "content_length_bytes": 34805,
+      "sha256": "170f415c6b53809aa6f924576d9c181c6552c38e71fd949ee07ccbff8a1f2de8",
+      "fetched_at_utc": "2026-04-27T00:00:03.366848+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-data/118-LIGHTER-SOL-29MAY2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-data/118-LIGHTER-SOL-29MAY2026/2026-04.ndjson",
+      "content_length_bytes": 41997,
+      "sha256": "f708a7f6341282e4ac42b14d4bd0ae89ef43d4fcd4b05c8592f61a8a5a5033fc",
+      "fetched_at_utc": "2026-04-27T00:00:03.530321+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/settlement/118-LIGHTER-SOL-29MAY2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/settlement/118-LIGHTER-SOL-29MAY2026/2026-04.ndjson",
+      "content_length_bytes": 24727,
+      "sha256": "efbc992884dda37254fd18a13ebd90309b339af966d6468354695cf155026769",
+      "fetched_at_utc": "2026-04-27T00:00:03.729649+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/118-LIGHTER-SOL-29MAY2026/raw/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/118-LIGHTER-SOL-29MAY2026/raw/2026-04.ndjson",
+      "content_length_bytes": 244829,
+      "sha256": "5c7217cf301956e497195bcf06eea8607dac81e58b27caf529ac574ea4c98c5e",
+      "fetched_at_utc": "2026-04-27T00:00:03.901234+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/118-LIGHTER-SOL-29MAY2026/combined_0.01/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/118-LIGHTER-SOL-29MAY2026/combined_0.01/2026-04.ndjson",
+      "content_length_bytes": 49715,
+      "sha256": "874115b668a4de6ab9df06dfb34198630c1b6f4f8dd53dee018eb93f5b7d7a8c",
+      "fetched_at_utc": "2026-04-27T00:00:03.929415+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-trades/110-OKX-BTCUSDT-29MAY2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-trades/110-OKX-BTCUSDT-29MAY2026/2026-04.ndjson",
+      "content_length_bytes": 44300,
+      "sha256": "19dc6ebe46329752a5963349f9c535431ec920264495fca041711355f9c30798",
+      "fetched_at_utc": "2026-04-27T00:00:04.133873+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-data/110-OKX-BTCUSDT-29MAY2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-data/110-OKX-BTCUSDT-29MAY2026/2026-04.ndjson",
+      "content_length_bytes": 93900,
+      "sha256": "e9e9a76de58ddad664ed116c28e429cd38ec2a49eca52af4c1c8cd0ae8521d84",
+      "fetched_at_utc": "2026-04-27T00:00:04.165134+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/settlement/110-OKX-BTCUSDT-29MAY2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/settlement/110-OKX-BTCUSDT-29MAY2026/2026-04.ndjson",
+      "content_length_bytes": 6787,
+      "sha256": "34840e7ec2d3d2a8dd49ebc60f3ca6e8d96322cfc32691ed145e84446afdce1a",
+      "fetched_at_utc": "2026-04-27T00:00:04.377207+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-trades/75-OKX-ETHUSDT-26JUN2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-trades/75-OKX-ETHUSDT-26JUN2026/2026-04.ndjson",
+      "content_length_bytes": 31289,
+      "sha256": "f4118462b330d46ac6a6ad91991151c0e23ddc99b5503517bc2b0c46e6baff59",
+      "fetched_at_utc": "2026-04-27T00:00:05.073153+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-data/75-OKX-ETHUSDT-26JUN2026/2026-03.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-data/75-OKX-ETHUSDT-26JUN2026/2026-03.ndjson",
+      "content_length_bytes": 175836,
+      "sha256": "f9d73bafcb80af4aa0dea2b3a42e297ec087648289c8e877ba6c063647c951f7",
+      "fetched_at_utc": "2026-04-27T00:00:05.073498+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/110-OKX-BTCUSDT-29MAY2026/raw/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/110-OKX-BTCUSDT-29MAY2026/raw/2026-04.ndjson",
+      "content_length_bytes": 594129,
+      "sha256": "88e883f1d53a5bd5e39344a7223f725d01620a0524f3cd5a45316cf91aea59f7",
+      "fetched_at_utc": "2026-04-27T00:00:05.139261+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-data/75-OKX-ETHUSDT-26JUN2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-data/75-OKX-ETHUSDT-26JUN2026/2026-04.ndjson",
+      "content_length_bytes": 208022,
+      "sha256": "b2354d86d319f83393fad9f2b46b028aba278b73bac5a49be9cee2b234176706",
+      "fetched_at_utc": "2026-04-27T00:00:05.237619+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/110-OKX-BTCUSDT-29MAY2026/combined_0.01/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/110-OKX-BTCUSDT-29MAY2026/combined_0.01/2026-04.ndjson",
+      "content_length_bytes": 249972,
+      "sha256": "a02d8907e22f8ce71f690624149759e34275b313dbf4872d115d45015987f0ec",
+      "fetched_at_utc": "2026-04-27T00:00:05.304546+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-trades/75-OKX-ETHUSDT-26JUN2026/2026-03.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-trades/75-OKX-ETHUSDT-26JUN2026/2026-03.ndjson",
+      "content_length_bytes": 80267,
+      "sha256": "63a5472f5ed6438b0bdce2f02b80064e9cd56abacdc32b9c4b4349407b170e04",
+      "fetched_at_utc": "2026-04-27T00:00:05.424881+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/settlement/75-OKX-ETHUSDT-26JUN2026/2026-03.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/settlement/75-OKX-ETHUSDT-26JUN2026/2026-03.ndjson",
+      "content_length_bytes": 13157,
+      "sha256": "d97c74b543a228e460d2cdca0c38d5a0f7147983aa6d67ade42c8761bb7abc27",
+      "fetched_at_utc": "2026-04-27T00:00:05.875949+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/settlement/75-OKX-ETHUSDT-26JUN2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/settlement/75-OKX-ETHUSDT-26JUN2026/2026-04.ndjson",
+      "content_length_bytes": 15335,
+      "sha256": "363e377e91ca86279b79e011c21146c431e4513f8cea99c3d11937af50407980",
+      "fetched_at_utc": "2026-04-27T00:00:05.965457+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/75-OKX-ETHUSDT-26JUN2026/raw/2026-03.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/75-OKX-ETHUSDT-26JUN2026/raw/2026-03.ndjson",
+      "content_length_bytes": 1851132,
+      "sha256": "a4e33d35687177eef537d29f2b5eef3aed5a9cce88c6289321b85eb5437c9bf1",
+      "fetched_at_utc": "2026-04-27T00:00:06.012991+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/75-OKX-ETHUSDT-26JUN2026/combined_0.01/2026-03.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/75-OKX-ETHUSDT-26JUN2026/combined_0.01/2026-03.ndjson",
+      "content_length_bytes": 174793,
+      "sha256": "987bf840b0930a85b7f1ff72e991c596e28c5df615a86b63f897860c362eb554",
+      "fetched_at_utc": "2026-04-27T00:00:06.156804+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/75-OKX-ETHUSDT-26JUN2026/raw/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/75-OKX-ETHUSDT-26JUN2026/raw/2026-04.ndjson",
+      "content_length_bytes": 2113457,
+      "sha256": "cd1869b8186da2857ef5c468c350605cd5121cf11e9c09983e8daceaa9330b37",
+      "fetched_at_utc": "2026-04-27T00:00:06.213497+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/75-OKX-ETHUSDT-26JUN2026/combined_0.01/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/75-OKX-ETHUSDT-26JUN2026/combined_0.01/2026-04.ndjson",
+      "content_length_bytes": 207993,
+      "sha256": "8769a43675e9f18ef3b18067e8194d6b4b96f80936bfe6c5c7354a58cf865f16",
+      "fetched_at_utc": "2026-04-27T00:00:06.301724+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-trades/114-OKX-ETHUSDT-29MAY2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-trades/114-OKX-ETHUSDT-29MAY2026/2026-04.ndjson",
+      "content_length_bytes": 69580,
+      "sha256": "754ca06ed2ce900ed254b248e3d83cc9616bcb9b390b03272a4100b3ad9763a6",
+      "fetched_at_utc": "2026-04-27T00:00:06.813615+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/settlement/114-OKX-ETHUSDT-29MAY2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/settlement/114-OKX-ETHUSDT-29MAY2026/2026-04.ndjson",
+      "content_length_bytes": 6774,
+      "sha256": "0de3a6f45526b81a339ceadfb170f8a3ed14e66baf95d11814759875136199e7",
+      "fetched_at_utc": "2026-04-27T00:00:06.945009+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/market-data/114-OKX-ETHUSDT-29MAY2026/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/market-data/114-OKX-ETHUSDT-29MAY2026/2026-04.ndjson",
+      "content_length_bytes": 90724,
+      "sha256": "ecb076fcd75cd48b4704a7fec5b63080a5b492bce1d7ba2af8d4ef2dec77ef7b",
+      "fetched_at_utc": "2026-04-27T00:00:06.954191+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/114-OKX-ETHUSDT-29MAY2026/raw/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/114-OKX-ETHUSDT-29MAY2026/raw/2026-04.ndjson",
+      "content_length_bytes": 639292,
+      "sha256": "a729e25845873b756c156fbabeb844b20e80203afc47943a610bee3f0c9251c1",
+      "fetched_at_utc": "2026-04-27T00:00:06.982805+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/order-book/114-OKX-ETHUSDT-29MAY2026/combined_0.01/2026-04.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/order-book/114-OKX-ETHUSDT-29MAY2026/combined_0.01/2026-04.ndjson",
+      "content_length_bytes": 85445,
+      "sha256": "8fdef7c9d10b06e22eafc824204d6c40b6956c9ce199366e064eecb1fcc5b78f",
+      "fetched_at_utc": "2026-04-27T00:00:07.181991+00:00",
+      "run_id": "01KQ63R3XVAFP20F4HAXXJMK0R"
+    },
+    {
+      "url": "https://historical-data.boros.finance/underlying-apr/Binance-XAG.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/underlying-apr/Binance-XAG.ndjson",
+      "content_length_bytes": 62184,
+      "sha256": "9bdbb0e43b079a2e40f66e62cc4147c4557ac724e7ed569dfd2469ef89c72096",
+      "fetched_at_utc": "2026-04-27T00:01:33.913560+00:00",
+      "run_id": "01KQ63VFZTW8FNA2A5G26YXTK2"
+    },
+    {
+      "url": "https://historical-data.boros.finance/underlying-apr/Binance-XAU.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/underlying-apr/Binance-XAU.ndjson",
+      "content_length_bytes": 77304,
+      "sha256": "c275d11f51da7c701b09a1c274e01ec1b9e96bad38322c8197ffee91e835a32e",
+      "fetched_at_utc": "2026-04-27T00:01:33.913826+00:00",
+      "run_id": "01KQ63VFZTW8FNA2A5G26YXTK2"
+    },
+    {
+      "url": "https://historical-data.boros.finance/underlying-apr/Bybit-HYPE.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/underlying-apr/Bybit-HYPE.ndjson",
+      "content_length_bytes": 147081,
+      "sha256": "db2db18cb1fb437743a980e1860106e1324bf33c28f927f038db3ab35a632fb1",
+      "fetched_at_utc": "2026-04-27T00:01:33.949208+00:00",
+      "run_id": "01KQ63VFZTW8FNA2A5G26YXTK2"
+    },
+    {
+      "url": "https://historical-data.boros.finance/underlying-apr/Binance-ETH.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/underlying-apr/Binance-ETH.ndjson",
+      "content_length_bytes": 1947119,
+      "sha256": "3ccf2f60d14c068b9881f24feef4db4c0fac458776a7c612e15a764aa8f26bb2",
+      "fetched_at_utc": "2026-04-27T00:01:34.082744+00:00",
+      "run_id": "01KQ63VFZTW8FNA2A5G26YXTK2"
+    },
+    {
+      "url": "https://historical-data.boros.finance/underlying-apr/Binance-XRP.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/underlying-apr/Binance-XRP.ndjson",
+      "content_length_bytes": 563839,
+      "sha256": "aa08c78f11cb4dfe1d4551418022f9c5904ec04fe2602863798d235fc90c76da",
+      "fetched_at_utc": "2026-04-27T00:01:34.394089+00:00",
+      "run_id": "01KQ63VFZTW8FNA2A5G26YXTK2"
+    },
+    {
+      "url": "https://historical-data.boros.finance/underlying-apr/Binance-BTC.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/underlying-apr/Binance-BTC.ndjson",
+      "content_length_bytes": 1946431,
+      "sha256": "afab1059cb1754c46c38fe43a267d14fbc6f24bedea8e76fa8d67dd912dc68fc",
+      "fetched_at_utc": "2026-04-27T00:01:34.622919+00:00",
+      "run_id": "01KQ63VFZTW8FNA2A5G26YXTK2"
+    },
+    {
+      "url": "https://historical-data.boros.finance/underlying-apr/Hyperliquid-BTC.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/underlying-apr/Hyperliquid-BTC.ndjson",
+      "content_length_bytes": 2349103,
+      "sha256": "ccad42c218a4749518264e60e8a7b7aeb343328e40985da29f507e2e05d8dcc4",
+      "fetched_at_utc": "2026-04-27T00:01:34.806770+00:00",
+      "run_id": "01KQ63VFZTW8FNA2A5G26YXTK2"
+    },
+    {
+      "url": "https://historical-data.boros.finance/underlying-apr/Hyperliquid-ETH.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/underlying-apr/Hyperliquid-ETH.ndjson",
+      "content_length_bytes": 2341169,
+      "sha256": "5503f0e2d12f061217e8d570bf5453677dd0cd99e06b9c391ce666d4246afb29",
+      "fetched_at_utc": "2026-04-27T00:01:34.944325+00:00",
+      "run_id": "01KQ63VFZTW8FNA2A5G26YXTK2"
+    },
+    {
+      "url": "https://historical-data.boros.finance/underlying-apr/Hyperliquid-HYPE.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/underlying-apr/Hyperliquid-HYPE.ndjson",
+      "content_length_bytes": 1209596,
+      "sha256": "c6dc609bf7321523285d98bc1cadd0130bd85954b3a45fcdf38a96bd27f6e18f",
+      "fetched_at_utc": "2026-04-27T00:01:35.056308+00:00",
+      "run_id": "01KQ63VFZTW8FNA2A5G26YXTK2"
+    },
+    {
+      "url": "https://historical-data.boros.finance/underlying-apr/Hyperliquid-SOL.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/underlying-apr/Hyperliquid-SOL.ndjson",
+      "content_length_bytes": 2916081,
+      "sha256": "da4e5edac348e31b89a1e8c465a63639a857466ea22705c62cd74a9b4eb52b9e",
+      "fetched_at_utc": "2026-04-27T00:01:35.110944+00:00",
+      "run_id": "01KQ63VFZTW8FNA2A5G26YXTK2"
+    },
+    {
+      "url": "https://historical-data.boros.finance/underlying-apr/Hyperliquid-XRP.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/underlying-apr/Hyperliquid-XRP.ndjson",
+      "content_length_bytes": 2445338,
+      "sha256": "2a3e7a0aad14c9a3e731f3ddf11ecbfaf6e904a453aa4f6e53684b7845551829",
+      "fetched_at_utc": "2026-04-27T00:01:35.407267+00:00",
+      "run_id": "01KQ63VFZTW8FNA2A5G26YXTK2"
+    },
+    {
+      "url": "https://historical-data.boros.finance/underlying-apr/OKX-BTC.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/underlying-apr/OKX-BTC.ndjson",
+      "content_length_bytes": 72913,
+      "sha256": "14c4533e74ee6817f1285199ccb1aea537c25209a91b0ad3006ff3f99cb7212b",
+      "fetched_at_utc": "2026-04-27T00:01:35.772116+00:00",
+      "run_id": "01KQ63VFZTW8FNA2A5G26YXTK2"
+    },
+    {
+      "url": "https://historical-data.boros.finance/underlying-apr/Lighter-SOL.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/underlying-apr/Lighter-SOL.ndjson",
+      "content_length_bytes": 1146149,
+      "sha256": "b1612091a4c2ef897c7b603cb0cdc3c23d8c4ee0d90412e47707c3f9801b869a",
+      "fetched_at_utc": "2026-04-27T00:01:35.846480+00:00",
+      "run_id": "01KQ63VFZTW8FNA2A5G26YXTK2"
+    },
+    {
+      "url": "https://historical-data.boros.finance/underlying-apr/OKX-ETH.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/underlying-apr/OKX-ETH.ndjson",
+      "content_length_bytes": 72867,
+      "sha256": "7ff1300d96eb01d1180dc2282ff2af843be628c9421f6a220789a20967deb30e",
+      "fetched_at_utc": "2026-04-27T00:01:35.872081+00:00",
+      "run_id": "01KQ63VFZTW8FNA2A5G26YXTK2"
+    },
+    {
+      "url": "https://historical-data.boros.finance/underlying-apr/Hyperliquid-XAG.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/underlying-apr/Hyperliquid-XAG.ndjson",
+      "content_length_bytes": 286177,
+      "sha256": "70fead36f446c6a44e163c6fab757492a6c4b261bc832ae8970b7c4e3a12f5da",
+      "fetched_at_utc": "2026-04-27T00:03:26.971999+00:00",
+      "run_id": "01KQ63YYP04MP57E70FXAN02HG"
+    },
+    {
+      "url": "https://historical-data.boros.finance/underlying-apr/Hyperliquid-XYZ100.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/underlying-apr/Hyperliquid-XYZ100.ndjson",
+      "content_length_bytes": 458163,
+      "sha256": "fc7182beaee177b8f11ee5390bb0a545defe3fc561ecb18486812d97edfa3eec",
+      "fetched_at_utc": "2026-04-27T00:03:27.095242+00:00",
+      "run_id": "01KQ63YYP04MP57E70FXAN02HG"
+    },
+    {
+      "url": "https://historical-data.boros.finance/underlying-apr/Hyperliquid-XAU.ndjson.zip",
+      "local_path": "/Users/macbookair/boros/data/ndjson/underlying-apr/Hyperliquid-XAU.ndjson",
+      "content_length_bytes": 294782,
+      "sha256": "e08bfff208ad193cde405bd3a2e665317f5d19324bde11003e1131a99e7abe65",
+      "fetched_at_utc": "2026-04-27T00:03:27.435465+00:00",
+      "run_id": "01KQ63YYP04MP57E70FXAN02HG"
+    }
+  ]
+}

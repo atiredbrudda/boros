@@ -1,0 +1,159 @@
+{
+  "mapping": {
+    "BINANCE-ETHUSDT-29MAY2026": {
+      "recommended": "112-BINANCE-ETHUSDT-29MAY2026",
+      "all_variants": [
+        "112-BINANCE-ETHUSDT-29MAY2026"
+      ]
+    },
+    "BINANCE-BTCUSDT-29MAY2026": {
+      "recommended": "107-BINANCE-BTCUSDT-29MAY2026",
+      "all_variants": [
+        "107-BINANCE-BTCUSDT-29MAY2026"
+      ]
+    },
+    "BINANCE-BTCUSDT-26JUN2026": {
+      "recommended": "78-BINANCE-BTCUSDT-26JUN2026",
+      "all_variants": [
+        "78-BINANCE-BTCUSDT-26JUN2026"
+      ]
+    },
+    "BINANCE-ETHUSDT-26JUN2026": {
+      "recommended": "76-BINANCE-ETHUSDT-26JUN2026",
+      "all_variants": [
+        "76-BINANCE-ETHUSDT-26JUN2026"
+      ]
+    },
+    "BINANCE-ETHUSDT-25SEP2026": {
+      "recommended": "101-BINANCE-ETHUSDT-25SEP2026",
+      "all_variants": [
+        "101-BINANCE-ETHUSDT-25SEP2026"
+      ]
+    },
+    "BINANCE-XAGUSDT-29MAY2026": {
+      "recommended": "124-BINANCE-XAGUSDT-29MAY2026",
+      "all_variants": [
+        "124-BINANCE-XAGUSDT-29MAY2026"
+      ]
+    },
+    "BINANCE-XAUUSDT-29MAY2026": {
+      "recommended": "122-BINANCE-XAUUSDT-29MAY2026",
+      "all_variants": [
+        "122-BINANCE-XAUUSDT-29MAY2026"
+      ]
+    },
+    "BINANCE-XRPUSDT-29MAY2026": {
+      "recommended": "120-BINANCE-XRPUSDT-29MAY2026",
+      "all_variants": [
+        "120-BINANCE-XRPUSDT-29MAY2026"
+      ]
+    },
+    "BYBIT-HYPEUSDT-29MAY2026": {
+      "recommended": "116-BYBIT-HYPEUSDT-29MAY2026",
+      "all_variants": [
+        "116-BYBIT-HYPEUSDT-29MAY2026"
+      ]
+    },
+    "HYPERLIQUID-BTC-26JUN2026": {
+      "recommended": "111-HYPERLIQUID-BTC-26JUN2026",
+      "all_variants": [
+        "111-HYPERLIQUID-BTC-26JUN2026"
+      ]
+    },
+    "HYPERLIQUID-BTC-29MAY2026": {
+      "recommended": "109-HYPERLIQUID-BTC-29MAY2026",
+      "all_variants": [
+        "109-HYPERLIQUID-BTC-29MAY2026",
+        "108-HYPERLIQUID-BTC-29MAY2026"
+      ]
+    },
+    "HYPERLIQUID-ETH-25SEP2026": {
+      "recommended": "102-HYPERLIQUID-ETH-25SEP2026",
+      "all_variants": [
+        "102-HYPERLIQUID-ETH-25SEP2026"
+      ]
+    },
+    "HYPERLIQUID-ETH-26JUN2026": {
+      "recommended": "74-HYPERLIQUID-ETH-26JUN2026",
+      "all_variants": [
+        "74-HYPERLIQUID-ETH-26JUN2026"
+      ]
+    },
+    "HYPERLIQUID-ETH-29MAY2026": {
+      "recommended": "113-HYPERLIQUID-ETH-29MAY2026",
+      "all_variants": [
+        "113-HYPERLIQUID-ETH-29MAY2026"
+      ]
+    },
+    "HYPERLIQUID-HYPE-29MAY2026": {
+      "recommended": "115-HYPERLIQUID-HYPE-29MAY2026",
+      "all_variants": [
+        "115-HYPERLIQUID-HYPE-29MAY2026"
+      ]
+    },
+    "HYPERLIQUID-SOL-29MAY2026": {
+      "recommended": "117-HYPERLIQUID-SOL-29MAY2026",
+      "all_variants": [
+        "117-HYPERLIQUID-SOL-29MAY2026"
+      ]
+    },
+    "HYPERLIQUID-XRP-29MAY2026": {
+      "recommended": "119-HYPERLIQUID-XRP-29MAY2026",
+      "all_variants": [
+        "119-HYPERLIQUID-XRP-29MAY2026"
+      ]
+    },
+    "HYPERLIQUID-xyzGOLD-29MAY2026": {
+      "recommended": "121-HYPERLIQUID-xyzGOLD-29MAY2026",
+      "all_variants": [
+        "121-HYPERLIQUID-xyzGOLD-29MAY2026"
+      ]
+    },
+    "HYPERLIQUID-xyzSILVER-29MAY2026": {
+      "recommended": "123-HYPERLIQUID-xyzSILVER-29MAY2026",
+      "all_variants": [
+        "123-HYPERLIQUID-xyzSILVER-29MAY2026"
+      ]
+    },
+    "HYPERLIQUID-xyzSP500-29MAY2026": {
+      "recommended": "126-HYPERLIQUID-xyzSP500-29MAY2026",
+      "all_variants": [
+        "126-HYPERLIQUID-xyzSP500-29MAY2026"
+      ]
+    },
+    "HYPERLIQUID-xyzXYZ100-29MAY2026": {
+      "recommended": "125-HYPERLIQUID-xyzXYZ100-29MAY2026",
+      "all_variants": [
+        "125-HYPERLIQUID-xyzXYZ100-29MAY2026"
+      ]
+    },
+    "LIGHTER-SOL-29MAY2026": {
+      "recommended": "118-LIGHTER-SOL-29MAY2026",
+      "all_variants": [
+        "118-LIGHTER-SOL-29MAY2026"
+      ]
+    },
+    "OKX-BTCUSDT-29MAY2026": {
+      "recommended": "110-OKX-BTCUSDT-29MAY2026",
+      "all_variants": [
+        "110-OKX-BTCUSDT-29MAY2026"
+      ]
+    },
+    "OKX-ETHUSDT-26JUN2026": {
+      "recommended": "75-OKX-ETHUSDT-26JUN2026",
+      "all_variants": [
+        "75-OKX-ETHUSDT-26JUN2026"
+      ]
+    },
+    "OKX-ETHUSDT-29MAY2026": {
+      "recommended": "114-OKX-ETHUSDT-29MAY2026",
+      "all_variants": [
+        "114-OKX-ETHUSDT-29MAY2026"
+      ]
+    }
+  },
+  "unresolved": [],
+  "manifest_etag": "W/\"67db4367597a595f97307c73468bc80f",
+  "resolved_at_utc": "2026-04-26T23:51:01.704450+00:00",
+  "run_id": "01KQ6387M2FP76JF35PAY9Y8D9"
+}

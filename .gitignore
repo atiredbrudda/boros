@@ -18,11 +18,15 @@ state/*.sqlite-wal
 state/*.sqlite-shm
 logs/
 data/raw/
+data/ndjson/
 data/parquet/*.parquet
 data/parquet/**/*.parquet
 # Per-tier runtime dirs (var/ for reports, python/{state,data,var,docs} for brain runtime)
 # python/docs/ holds runtime-generated kill-reports — canonical reports live at docs/.
-var/
+# Note: var/fetcher/manifest.json and var/fetcher/market_id_mapping.json are NOT
+# gitignored — they are small reproducibility-critical files committed to the repo.
+var/backtest/
+var/reports/
 python/state/
 python/data/
 python/var/
