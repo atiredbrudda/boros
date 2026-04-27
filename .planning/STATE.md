@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: milestone
 status: executing
-stopped_at: Completed 05.1-01-PLAN.md — Wave 0 schema + URL probe + fetcher scaffold + architecture delta (ebe197a)
-last_updated: "2026-04-26T23:39:13.063Z"
-last_activity: 2026-04-27 -- Phase 05.1-01 Wave 0 complete
+stopped_at: Completed 05.1-03-PLAN.md — Wave 2 DATA-08 screener + DATA-09 (soft PASS via deviation); 4-market shortlist; ready for Wave 3
+last_updated: "2026-04-27T05:35:00.000Z"
+last_activity: 2026-04-27 — Phase 05.1 Wave 2 complete (PASS via deviation)
 progress:
   total_phases: 10
   completed_phases: 5
   total_plans: 42
-  completed_plans: 38
-  percent: 90
+  completed_plans: 40
+  percent: 95
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-24)
 
 **Core value:** Earn net-positive yield on $100 collateral from the Boros Limit Order Liquidity Rewards pool that beats stablecoin alternatives, after gas and fill-loss — on a live, single-market deployment. If -EV, detect cheaply and kill; do not limp.
-**Current focus:** Phase 05.1 — Wave 0 complete; ready for Wave 1
+**Current focus:** Phase 05.1 — Ship-Gate Execution (Wave 3 next)
 
 ## Current Position
 
-Phase: 05.1 — EXECUTING
-Plan: 05.1-02 complete
-Status: Executing Phase 05.1
-Last activity: 2026-04-27 -- Phase 05.1-02 Wave 1 complete (bulk fetch + ingest + AMM conservation)
+Phase: 05.1 (Ship-Gate Execution) — EXECUTING
+Plan: 05.1-03 complete; ready for Wave 3 (Plan 05.1-04 operator calibration)
+Status: Wave 2 PASS via deviation; binding economics check deferred to Wave 4 backtest
+Last activity: 2026-04-27 — Phase 05.1 Wave 2 complete (4-market shortlist; DATA-09 soft-PASS via plan-defect deviation)
 
 Progress: [██████████] 100%
 
@@ -148,7 +148,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [2026-04-27 05.1-W0 probe] **Market-ID format DIVERGENCE flagged**: archive uses `{N}-{EXCHANGE}-{ASSET}-{MATURITY}` (numeric on-chain ID prefix); local `clo_history.market_id` uses just `{EXCHANGE}-{ASSET}-{MATURITY}`. Same human name maps to multiple numeric IDs (re-deployments, e.g. `108-` and `109-HYPERLIQUID-BTC-29MAY2026` are distinct on-chain markets). Phase 5.1 Wave 1 must resolve via `Boros GET /markets` cross-reference and persist a `{symbol→marketId}` mapping (`var/fetcher/market_id_mapping.json`) before bulk fetch. Recommendation: backtest the highest-numeric-ID variant (most recent deployment) per human name; emit a wiki note when multiple variants exist.
 - [2026-04-27 05.1-W0 probe] **Estimated Wave 1 fetch budget**: ~70 MB compressed for 25 pre-filtered markets × 60d × 6 kinds. Trivial; fetch completes in minutes at modest bandwidth. Whole-archive fetch is bounded at ~169 MB.
 - [2026-04-27 05.1-01] Wave 0 complete: alembic head 0007; fetcher scaffold + 7 tests GREEN; URL pattern locked to Branch A (files.json master manifest + per-file static GET) per [[boros-historical-data-archive-url-pattern]]; pre-filter list at [[markets-pre-filter-2026-04-26]] (25 markets); test-residue docs/kill-report-20260426.md deleted; architecture delta committed (PROTO-02).
-- [2026-04-27 05.1-02] Wave 1 complete: fetcher _run_fetch_loop GREEN (Branch A URL template, ThreadPoolExecutor concurrency=6, --resolve DNS workaround for broken local resolver); bulk fetch produced 172 NDJSON files (61 MB on disk, 172 manifest entries) across 25 markets × 6 kinds × up to 3 months; bulk ingest produced parquet for 75 surviving market_id= partitions (141/141 jobs OK, 0 AMM violations, 0 IngesterSchemaViolation); 419 pytest PASS. Deviations: local DNS broken (socket.getaddrinfo fails for historical-data.boros.finance) — resolved via --resolve IP override; underlying-apr archive uses Binance-ETH format (not BINANCE-ETHUSDT), xyz-prefix markets mapped via alias table; settlement parquet has null market_id (schema mismatch between archive format and ingester SETTLEMENT_SCHEMA — tracked as known issue). See [[phase-05-1-bulk-fetch-runbook]] + [[phase-05-1-bulk-ingest-runbook]].
+- [2026-04-27 05.1-02] Wave 1 complete: fetcher _run_fetch_loop GREEN (Branch A URL template, ThreadPoolExecutor concurrency=6, --resolve DNS workaround for broken local resolver); bulk fetch produced 172 NDJSON files (61 MB on disk, 172 manifest entries) across 25 markets × 6 kinds × up to 3 months; bulk ingest produced parquet for 75 surviving market_id= partitions (141/141 jobs OK, 0 AMM violations, 0 IngesterSchemaViolation); 419 pytest PASS.
+- [2026-04-27 05.1-W1.5 hardening] Wave 1.5 hardening pass landed (commit 7a6e689) before Wave 2 could run: order_book schemas described flat per-tick rows but real archive NDJSON is nested per-snapshot arrays — polars silently produced 271 rows × all-null per market. Fixed schemas + ingester (_explode_raw, _explode_combined) + 6 fixtures + 9 tests; re-ingested 25 markets (240k combined + 695k raw rows of valid data). screener/metrics.py: replaced log-return realized_vol with rate-difference std (APR oscillates through zero → log undefined). screener/filter.py: added CLO scale-defaults (SCALE/S/TICK_SIZE) for two-point calibration fallback on single-observation markets. backfill_reward_budget_history.py: synthetic_current backfill (25 rows) bridging the LOCKED D-01 r_apr_potential migration gap. 4 debug sessions filed under .planning/debug/ — order-book-combined-null, realized-vol-on-boros-rates, reward-budget-history-empty, screener-marketid-maturity.
+- [2026-04-27 05.1-03] Wave 2 PASS via deviation: DATA-08 screener over 25 real-data markets passed 6 (top-4 shortlist = BINANCE-ETHUSDT-{25SEP,26JUN,29MAY}2026 + HYPERLIQUID-ETH-29MAY2026; 19 fail zero_depth_at_clo, 1 fail insufficient_reversals). DATA-09 economics gate raised ProjectHalt with empty Per-Market Evaluation table — false positive caused by LOCKED D-01 plan defect (gate expects r_apr_potential from market_reward_calibration which Wave 3 populates; Wave 2 has no calibration rows so every passer's r_apr_potential is null and the gate skip-branch fires for all). Soft-PASS branch taken: kill report deleted (empty rows = self-evidently a non-event), shortlist.json + shortlist_previous.json overwritten with the 4 DATA-08 passers (DATA-10 baseline seeded), economics_gate.json kept as informational audit trail (`{threshold:0.07, rows:[], shortlist:[]}`). Binding economics check deferred to Wave 4 backtest (BACK-07 ship-gate threshold = alt_yield + all_fees, same intent as DATA-09). Plan defect documented in [[phase-05-1-economics-gate-verdict]] for future plan revision. See [[phase-05-1-screener-verdict]] + [[phase-05-1-economics-gate-verdict]]. Deviations: local DNS broken (socket.getaddrinfo fails for historical-data.boros.finance) — resolved via --resolve IP override; underlying-apr archive uses Binance-ETH format (not BINANCE-ETHUSDT), xyz-prefix markets mapped via alias table; settlement parquet has null market_id (schema mismatch between archive format and ingester SETTLEMENT_SCHEMA — tracked as known issue). See [[phase-05-1-bulk-fetch-runbook]] + [[phase-05-1-bulk-ingest-runbook]].
 - URL pattern Branch A: files.json master manifest + per-file static GET (no server-side folder ZIP); market-ID numeric-prefix divergence requires Wave 1 GET /markets cross-reference
 - data.ndjson declared as new storage node in architecture.yml; Wave 1 plan adds reads edges from ingester
 - scripts/__init__.py + pythonpath='..' added so python/tests can import scripts.fetch_historical_data as a package
@@ -170,8 +172,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-26T23:39:13.059Z
-Stopped at: Completed 05.1-01-PLAN.md — Wave 0 schema + URL probe + fetcher scaffold + architecture delta (ebe197a)
+Last session: 2026-04-27T05:35:00.000Z
+Stopped at: Completed 05.1-03-PLAN.md — Wave 2 DATA-08 screener + DATA-09 (soft PASS via deviation); 4-market shortlist + Wave-1.5 hardening commit (7a6e689) landed
 Resume file: None
 
 **Completed this session (2026-04-24 second pass):**
@@ -189,6 +191,6 @@ Resume file: None
 - ELiqPoller (DATA-11): fields liquidityRewardPerEpoch/longBudget/shortBudget NOT in GET /markets. Real source of E_liq_per_epoch unknown — candidates: config.liqSettings.{base,slope}, on-chain distributor contract, or separate endpoint. Investigate before Phase 3.
 
 **Next action:**
-/clear then `/gsd-plan-phase 2` — Phase 02: Fill Model (NHPP v0.5)
+Wave 3 — Plan 05.1-04 operator-driven reward calibration (`human-verify` checkpoint at Task 1; operator must look up `e_liq_per_epoch_pendle` + per-side splits per shortlist market from Pendle dApp / team statements / docs).
 
 **Planned Phase:** 05.1 (Ship-Gate Execution: Historical Data Fetch + Ingest + Screener + Economics Gate + Backtest Run) — 5 plans — 2026-04-26T22:49:30.154Z
