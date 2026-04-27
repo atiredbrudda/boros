@@ -81,7 +81,8 @@ def _make_duck_conn(
       and 7 direction reversals in the last 3 days — unless overridden.
     - order_book_combined: snapshot with depth at CLO edge and outside ratio < 2.
     - clo_history: non-zero CLO bounds.
-    - reward_budget_history: one row per market with a configurable e_liq_per_epoch.
+    - market_reward_calibration: one row per market with a configurable
+      e_liq_per_epoch_pendle (canonical source per LOCKED D-01).
     """
     import random
     import time
@@ -184,24 +185,27 @@ def _make_duck_conn(
             (now - 3600, mid, clo_lower, clo_upper, 5031900000000000),
         )
 
-    # ── reward_budget_history table ──────────────────────────────────────────
+    # ── market_reward_calibration table (LOCKED D-01 canonical source) ──────
     conn.execute("""
-        CREATE TABLE reward_budget_history (
-            snapshot_ts BIGINT,
+        CREATE TABLE market_reward_calibration (
+            id INTEGER,
             market_id VARCHAR,
-            e_liq_per_epoch DOUBLE,
-            long_budget DOUBLE,
-            short_budget DOUBLE,
-            data_source VARCHAR
+            e_liq_per_epoch_pendle DOUBLE,
+            long_side_split DOUBLE,
+            short_side_split DOUBLE,
+            calibrated_at_utc VARCHAR,
+            data_source VARCHAR,
+            source VARCHAR,
+            run_id VARCHAR
         )
     """)
 
     e_liq_map = e_liq_per_market or {}
-    for mid in market_ids:
+    for i, mid in enumerate(market_ids):
         e_liq = e_liq_map.get(mid, 100.0)
         conn.execute(
-            "INSERT INTO reward_budget_history VALUES (?,?,?,?,?,?)",
-            (now - 3600, mid, e_liq, e_liq / 2, e_liq / 2, "polled"),
+            "INSERT INTO market_reward_calibration VALUES (?,?,?,?,?,?,?,?,?)",
+            (i, mid, e_liq, 0.14, 0.86, "2026-04-27T00:00:00Z", "operator", "dapp_ui", f"test-run-{i}"),
         )
 
     return conn
@@ -331,11 +335,11 @@ def test_shortlist_capped_at_four():
     assert len(shortlist) == 4, f"Shortlist must be capped at 4; got {len(shortlist)}"
 
 
-# ── Test 3: R_apr ranking uses reward_budget_history ─────────────────────────
+# ── Test 3: R_apr ranking uses market_reward_calibration (LOCKED D-01) ───────
 
 
 def test_r_apr_potential_ranking():
-    """Markets ranked by r_apr_potential = e_liq_per_epoch * 52 / 100."""
+    """Markets ranked by r_apr_potential = e_liq_per_epoch_pendle * 52 / 100."""
     import time
 
     now = int(time.time())
