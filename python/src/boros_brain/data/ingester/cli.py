@@ -50,6 +50,17 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--exchange", help="Exchange name for underlying_apr (e.g. binance)")
     p.add_argument("--tick-size", dest="tick_size", help="Tick size string for order_book_combined (e.g. 0.01)")
     p.add_argument(
+        "--raw-src",
+        dest="raw_src",
+        type=Path,
+        default=None,
+        help=(
+            "For --kind order_book_combined: path to the corresponding order_book_raw NDJSON. "
+            "When provided, the DATA-05 AMM conservation gate runs before parquet write. "
+            "Optional — omit to skip the gate (preserves backward compatibility)."
+        ),
+    )
+    p.add_argument(
         "--market-data-src",
         dest="market_data_src",
         type=Path,
@@ -106,6 +117,7 @@ def main(argv: list[str] | None = None) -> int:
             p.error("--market-id and --tick-size are required for --kind order_book_combined")
         result = ingest_order_book_combined(
             args.src,
+            args.raw_src,
             market_id=args.market_id,
             tick_size=args.tick_size,
             out_root=out_root,

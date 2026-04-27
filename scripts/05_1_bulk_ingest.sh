@@ -108,8 +108,14 @@ for f in "$BOROS_ROOT"/data/ndjson/order-book/*/combined_*/*.ndjson; do
     tickdir=$(basename "$(dirname "$f")")
     tick=${tickdir#combined_}
     market=$(basename "$(dirname "$(dirname "$f")")")
+    # DATA-05 AMM conservation gate: pass corresponding raw NDJSON if it exists
+    raw_src="$(dirname "$(dirname "$f")")/raw/$(basename "$f")"
+    extra_args=("--market-id" "$market" "--tick-size" "$tick")
+    if [ -f "$raw_src" ]; then
+        extra_args+=("--raw-src" "$raw_src")
+    fi
     wait_for_slot
-    run_ingest order_book_combined "$f" --market-id "$market" --tick-size "$tick" &
+    run_ingest order_book_combined "$f" "${extra_args[@]}" &
     PIDS+=($!)
     TOTAL=$(( TOTAL + 1 ))
 done
