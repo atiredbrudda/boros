@@ -58,6 +58,7 @@ r_apr_potential source (LOCKED D-01 migration):
 from __future__ import annotations
 
 import json
+import math
 import re
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -92,6 +93,25 @@ _SHORTLIST_MAX = 4
 # Do NOT replace 100.0 with a USD value without also fixing the unit mismatch.
 # TODO(Phase-3): replace COLLATERAL_PHASE1_PROXY with config.screener.required_collateral_pendle
 COLLATERAL_PHASE1_PROXY = 100.0  # noqa: N816 — intentional placeholder, not a constant
+
+# ── CLO fIndex→APR→tick conversion defaults ──────────────────────────────────
+# cloLowerThresh / cloUpperThresh in clo_history are in fIndex display units
+# (NOT integer tick indices). Converting to the order-book tick grid requires:
+#   fIndex_display = 10000 + f_index_raw / SCALE
+#   APR = (cloThresh - fIndex_display) / timeToMaturity_years / S
+#   tick = round(APR / TICK_SIZE)
+#
+# SCALE and S are calibrated per market (boros_bot_guide.md §ETHUSDT calibration:
+#   SCALE ≈ 5.591e12, S ≈ 402648 for ETHUSDT Binance).  When only one
+# clo_history observation is available (Wave-1 single UAT snapshot) the two-point
+# calibration in scale_calibration.py raises InsufficientCalibrationData, so we
+# fall back to the ETHUSDT-derived defaults.  These defaults are coarse for
+# non-ETHUSDT markets but are better than always returning None from Filter 4.
+# TODO(Phase-7): replace defaults with per-market SCALE/S sourced from operator
+#     calibration CLI once two or more clo_history observations per market exist.
+_CLO_SCALE_DEFAULT: float = 5.591e12  # boros_bot_guide.md §L508: SCALE for ETHUSDT
+_CLO_S_DEFAULT: float = 402_648.0  # boros_bot_guide.md §L509: S for ETHUSDT APR formula
+_CLO_TICK_SIZE_DEFAULT: float = 0.01  # All Wave-1 markets use 0.01 tick_size
 
 # ── Identifier resolution (canonical ↔ archive) ─────────────────────────────
 # Wave-1 fetcher writes ``var/fetcher/market_id_mapping.json`` with shape:
@@ -194,6 +214,38 @@ def _derive_maturity_ts_from_name(mid: str) -> int:
         # invalid calendar date (e.g. 31FEB) — treat as unparseable
         return 0
     return int(dt.timestamp())
+
+
+def _clo_findex_to_tick(
+    clo_thresh: float,
+    f_index_raw: int | None,
+    ttm_days: float,
+) -> int | None:
+    """Convert a CLO threshold (fIndex display units) to an order-book tick integer.
+
+    Formula (boros_bot_guide.md §"Converting CLO Values to APR")::
+
+        fIndex_display = 10000 + f_index_raw / SCALE
+        APR = (clo_thresh - fIndex_display) / timeToMaturity_years / S
+        tick = round(APR / TICK_SIZE)
+
+    Falls back to ``_CLO_SCALE_DEFAULT`` / ``_CLO_S_DEFAULT`` when SCALE
+    calibration is unavailable (single-observation clo_history — Phase 5.1
+    Wave-1 UAT snapshot has exactly one row per market).
+
+    Returns ``None`` when:
+    - ``f_index_raw`` is None (column missing or null in old schema rows).
+    - ``ttm_days`` <= 0 (market already expired or no TTM data).
+    - Computed APR is non-finite (overflow / NaN guard).
+    """
+    if f_index_raw is None or ttm_days <= 0:
+        return None
+    ttm_years = ttm_days / 365.0
+    findex_display = 10000.0 + f_index_raw / _CLO_SCALE_DEFAULT
+    apr = (clo_thresh - findex_display) / ttm_years / _CLO_S_DEFAULT
+    if not math.isfinite(apr):
+        return None
+    return round(apr / _CLO_TICK_SIZE_DEFAULT)
 
 
 @dataclass
@@ -299,9 +351,10 @@ def apply_screener_filters(
             fails.append("insufficient_reversals")
 
         # ── Fetch CLO bounds from clo_history (SQLite → canonical ID) ─────
+        # Also fetch f_index_raw for CLO→tick conversion (Filter 4 fix).
         clo_row = duck_conn.execute(
             """
-            SELECT clo_lower_thresh, clo_upper_thresh
+            SELECT clo_lower_thresh, clo_upper_thresh, f_index_raw
             FROM clo_history
             WHERE market_id = ?
             ORDER BY snapshot_ts DESC
@@ -312,9 +365,10 @@ def apply_screener_filters(
 
         if clo_row is None:
             fails.append("no_clo_history")
-            clo_lower, clo_upper = 0.0, 0.0
+            clo_lower, clo_upper, f_index_raw = 0.0, 0.0, None
         else:
             clo_lower, clo_upper = float(clo_row[0]), float(clo_row[1])
+            f_index_raw = int(clo_row[2]) if clo_row[2] is not None else None
 
         # ── Fetch order book for depth / wall ratio (parquet → prefixed) ──
         _book_q = duck_conn.execute(
@@ -332,15 +386,37 @@ def apply_screener_filters(
         book = pl.DataFrame([dict(zip(_bcols, row, strict=False)) for row in _brows]) if _brows else pl.DataFrame()
 
         # ── Filter 4: depth at CLO edge > 0 ──────────────────────────────
+        # CLO thresholds are in fIndex display units; order-book ticks are
+        # integer indices on a rate/tick_size grid. Convert before comparing.
+        # ttm for conversion is computed at Filter 6; we need a preliminary
+        # ttm estimate here using the same name-parser fallback.
+        _ttm_prelim = compute_days_to_maturity(
+            next((m.maturity_ts for m in config.markets if m.market_id == mid), 0)
+            or _derive_maturity_ts_from_name(mid),
+            now=now,
+        )
+        tick_lower = _clo_findex_to_tick(clo_lower, f_index_raw, _ttm_prelim)
+        tick_upper = _clo_findex_to_tick(clo_upper, f_index_raw, _ttm_prelim)
+        log.debug(
+            "screener.clo_tick_conversion",
+            market_id=mid,
+            clo_lower_findex=clo_lower,
+            clo_upper_findex=clo_upper,
+            tick_lower=tick_lower,
+            tick_upper=tick_upper,
+            f_index_raw=f_index_raw,
+            ttm_days=_ttm_prelim,
+        )
+
         depth: float | None = None
-        if book.height > 0 and clo_lower != 0:
-            depth = compute_depth_at_clo_edge(book, clo_lower, clo_upper)
+        if book.height > 0 and clo_lower != 0 and tick_lower is not None and tick_upper is not None:
+            depth = compute_depth_at_clo_edge(book, tick_lower, tick_upper)
         if depth is None or depth <= 0:
             fails.append("zero_depth_at_clo")
 
         wall_ratio: float | None = None
-        if book.height > 0 and clo_lower != 0:
-            wall_ratio = compute_outside_range_wall_ratio(book, clo_lower, clo_upper)
+        if book.height > 0 and clo_lower != 0 and tick_lower is not None and tick_upper is not None:
+            wall_ratio = compute_outside_range_wall_ratio(book, tick_lower, tick_upper)
 
         # ── Filter 5: CLO bounds non-zero ─────────────────────────────────
         if clo_lower == 0 or clo_upper == 0:

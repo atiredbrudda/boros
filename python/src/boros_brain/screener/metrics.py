@@ -78,10 +78,21 @@ def compute_realized_vol(
 ) -> float | None:
     """Compute realized volatility of the ``rate`` column over ``window_days``.
 
-    Uses log-returns of consecutive ``rate`` observations sorted by
-    ``(blockTimestamp, eventIndex)``. Returns the standard deviation of
-    log-returns (a common realized-vol proxy). Uses the ``datetime``-column
-    only for window cutoff (not for interval spacing).
+    Uses the standard deviation of first differences of consecutive ``rate``
+    observations sorted by ``(blockTimestamp, eventIndex)``. Returns the std
+    of rate differences in native units (e.g. APR units). Uses the
+    ``blockTimestamp`` column only for window cutoff (not for interval
+    spacing).
+
+    Why differences (not log-returns): Boros implied APR rates oscillate
+    around zero (observed range -0.013 to +0.011 with ~600/360 neg/pos
+    split on ETHUSDT-29MAY). A log-return formula ``log(r_t / r_{t-1})``
+    is undefined when the ratio is non-positive — every sign change or
+    zero-crossing produces NaN, and the resulting ``std()`` collapses to
+    NaN, which propagates as ``None`` from this function. Rate
+    differences are sign-agnostic and well-defined for a series that
+    crosses zero, which is the actual data-generating process for Boros
+    implied APR.
     """
     if trades.is_empty():
         return None
@@ -100,13 +111,14 @@ def compute_realized_vol(
         return None
 
     rates = window_df["rate"].cast(pl.Float64)
-    # Log returns
-    log_returns = (rates / rates.shift(1)).log().drop_nulls()
+    # First differences in native rate units — sign-agnostic, defined for
+    # rate series that cross zero (real Boros implied APR behaviour).
+    diffs = rates.diff().drop_nulls()
 
-    if log_returns.is_empty():
+    if diffs.is_empty():
         return None
 
-    rv = float(log_returns.std())
+    rv = float(diffs.std())
     if not math.isfinite(rv) or rv <= 0:
         return None
 

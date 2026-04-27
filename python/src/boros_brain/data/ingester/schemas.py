@@ -4,8 +4,12 @@ Sources:
 - market_trades:   {eventIndex, blockTimestamp, datetime, rate, side, size, txHash}
                    per PROJECT.md L70 + LLM Wiki [[eventindex-coverage]] sample.
                    size may be wei-string OR JSON-number — both handled in ingester.
-- order_book_raw:  hourly snapshot; {snapshot_ts, tick, t, sz} per-tick, size as wei string.
-- order_book_combined_{tickSize}: book + AMM merged per tick.
+- order_book_raw:  hourly snapshot. Real archive shape (per [[boros-historical-data-archive-layout]]):
+                   {blockNumber, blockTimestamp, dateTime, long: [{t, sz}], short: [{t, sz}], ammState}
+                   where `t` is integer tick (1bp units) and `sz` is wei-string PT-YT size.
+- order_book_combined_{tickSize}: book + AMM merged per tick. Real archive shape:
+                   {timestamp, datetime, blockNumber, long: [{rate, size}], short: [{rate, size}]}
+                   where `rate` is decimal APR (0.01 = 1%) and `size` is float PT-YT (NOT wei).
 - underlying_apr:  per-exchange funding rate history.
 - settlement:      funding-rate settlement events.
 - market_data:     on-chain event snapshots.
@@ -16,6 +20,14 @@ Note on `size` in market_trades:
   will infer Utf8 for both if the schema declares `size: pl.Utf8` — float values
   get coerced to string representations, integer wei strings stay as strings.
   The ingester handles both via the _parse_size_column() fallback logic.
+
+Historical note on order-book schemas:
+  Pre-2026-04-27 these schemas described a flat per-tick row shape that did NOT
+  match the real archive output. The Wave-1 bulk ingest (Phase 5.1) silently
+  produced parquet with all-NULL data columns because polars' `read_ndjson` with
+  a schema declaring nonexistent top-level fields creates one row per JSON line
+  with all-null values. Fixed alongside an explode-step in `order_book.py`.
+  See debug session `.planning/debug/order-book-combined-null.md`.
 """
 
 from __future__ import annotations
@@ -34,20 +46,58 @@ MARKET_TRADES_SCHEMA = pl.Schema(
     }
 )
 
+# Real archive shape for order-book/{market}/raw/{YYYY-MM}.ndjson.
+# Each NDJSON line is one hourly snapshot containing two arrays of per-tick liquidity.
 ORDER_BOOK_RAW_SCHEMA = pl.Schema(
     {
-        "snapshot_ts": pl.UInt64,
-        "tick": pl.Int64,
-        "t": pl.Int64,  # tick value (signed; same as tick? — keep both if present)
-        "sz": pl.Utf8,  # wei string
+        "blockNumber": pl.UInt64,
+        "blockTimestamp": pl.UInt64,
+        "dateTime": pl.Utf8,  # ISO 8601
+        "long": pl.List(
+            pl.Struct(
+                {
+                    "t": pl.Int64,  # signed tick (1bp units)
+                    "sz": pl.Utf8,  # wei string
+                }
+            )
+        ),
+        "short": pl.List(
+            pl.Struct(
+                {
+                    "t": pl.Int64,
+                    "sz": pl.Utf8,
+                }
+            )
+        ),
+        # ammState may be null or an object; declare permissively as Utf8 so
+        # polars JSON-encodes it. We do not parse it in DATA-02; downstream
+        # AMM-state ingest is a separate task.
+        "ammState": pl.Utf8,
     }
 )
 
+# Real archive shape for order-book/{market}/combined_{tickSize}/{YYYY-MM}.ndjson.
 ORDER_BOOK_COMBINED_SCHEMA = pl.Schema(
     {
-        "snapshot_ts": pl.UInt64,
-        "tick": pl.Int64,
-        "sz_combined": pl.Utf8,  # wei string
+        "timestamp": pl.UInt64,
+        "datetime": pl.Utf8,
+        "blockNumber": pl.UInt64,
+        "long": pl.List(
+            pl.Struct(
+                {
+                    "rate": pl.Float64,  # decimal APR (0.01 = 1%)
+                    "size": pl.Float64,  # PT-YT size (already a float, NOT wei)
+                }
+            )
+        ),
+        "short": pl.List(
+            pl.Struct(
+                {
+                    "rate": pl.Float64,
+                    "size": pl.Float64,
+                }
+            )
+        ),
     }
 )
 

@@ -1,3 +1,2 @@
-{"snapshot_ts":1754021093,"tick":100,"sz_combined":"60000000000000000"}
-{"snapshot_ts":1754021093,"tick":-50,"sz_combined":"35000000000000000"}
-{"snapshot_ts":1754021093,"tick":200,"sz_combined":"25000000000000000"}
+{"blockNumber":1000001,"timestamp":1754021093,"datetime":"2025-08-01T00:00:00.000Z","long":[{"rate":0.01,"size":0.06},{"rate":-0.005,"size":0.035}],"short":[{"rate":0.02,"size":0.025}]}
+{"blockNumber":1000002,"timestamp":1754024693,"datetime":"2025-08-01T01:00:00.000Z","long":[],"short":[]}
