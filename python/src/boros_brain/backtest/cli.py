@@ -127,7 +127,7 @@ async def _dispatch_run(args: argparse.Namespace, config: BotConfig, manifest: R
         manifest=manifest,
         replay_config=base_replay_cfg,
     )
-    base_result = await base_engine.run()
+    base_result = await base_engine.run(seed_from_config=True)
     for row in base_result.rows:
         write_backtest_row(row, parquet_root=output_parquet_root)
 

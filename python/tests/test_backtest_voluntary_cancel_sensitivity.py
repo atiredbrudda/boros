@@ -58,7 +58,7 @@ async def test_two_branches_produced(
 
     call_count = {"n": 0}
 
-    async def fake_run(self):  # type: ignore[no-untyped-def]
+    async def fake_run(self, **kwargs):  # type: ignore[no-untyped-def]
         call_count["n"] += 1
         branch = self.voluntary_cancel_branch
         return ReplayOutput(rows=[_build_synth_row(branch, 0.05)])
@@ -94,7 +94,7 @@ async def test_divergence_under_threshold_logs_sanity_pass(
 
     pnl_per_branch = {"benign": 0.05, "punitive": 0.06}  # divergence = 0.01
 
-    async def fake_run(self):  # type: ignore[no-untyped-def]
+    async def fake_run(self, **kwargs):  # type: ignore[no-untyped-def]
         b = self.voluntary_cancel_branch
         return ReplayOutput(rows=[_build_synth_row(b, pnl_per_branch[b])])
 
@@ -133,7 +133,7 @@ async def test_divergence_over_threshold_emits_followup_flag(
 
     pnl_per_branch = {"benign": 0.05, "punitive": -0.10}  # divergence = 0.15
 
-    async def fake_run(self):  # type: ignore[no-untyped-def]
+    async def fake_run(self, **kwargs):  # type: ignore[no-untyped-def]
         b = self.voluntary_cancel_branch
         return ReplayOutput(rows=[_build_synth_row(b, pnl_per_branch[b])])
 

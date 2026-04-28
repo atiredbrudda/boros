@@ -46,7 +46,7 @@ def _make_replay_inputs(tmp_path: Path) -> ReplayInputs:
 def _install_replay_stub(monkeypatch: pytest.MonkeyPatch) -> None:
     """Monkeypatch ReplayEngine.run to return positive daily_pnl stub."""
 
-    async def _stub_run(self: object) -> ReplayOutput:
+    async def _stub_run(self: object, **kwargs: object) -> ReplayOutput:
         return ReplayOutput(
             rows=[],
             decision_log=[],

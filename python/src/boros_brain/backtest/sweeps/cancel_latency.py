@@ -52,7 +52,7 @@ async def run_cancel_latency_sweep(
             run_id=child_manifest.run_id,
             manifest=child_manifest,
         )
-        result = await engine.run()
+        result = await engine.run(seed_from_config=True)
         # Tag the child run's first row with this sweep axis + value
         for r in result.rows:
             tagged = r.model_copy(

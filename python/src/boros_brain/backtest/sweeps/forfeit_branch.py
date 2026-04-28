@@ -68,7 +68,7 @@ async def run_forfeit_branch_sweep(
             run_id=child_manifest.run_id,
             manifest=child_manifest,
         )
-        result = await engine.run()
+        result = await engine.run(seed_from_config=True)
         for r in result.rows:
             tagged = r.model_copy(
                 update={

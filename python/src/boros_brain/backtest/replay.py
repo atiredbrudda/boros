@@ -21,6 +21,7 @@ This filter is auditable from the query plan and cannot be bypassed by Python br
 
 from __future__ import annotations
 
+import itertools
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any, Literal
@@ -203,6 +204,12 @@ class ReplayEngine:
         _inject_lookahead_probe: bool = False,
         _n_synthetic_orders: int = 0,
         _sim_duration_s: int = 0,
+        # Production-mode seeding: place one CLO-edge synthetic order before the
+        # event loop runs. Without this, the production CLI path (cli._dispatch_run)
+        # produced n_decisions=0 because the engine has no in-flight orders to
+        # evaluate (Phase 5.1 Wave 4 binding-run bug). Tests that opted into the
+        # _n_synthetic_orders path are unaffected.
+        seed_from_config: bool = False,
     ) -> ReplayOutput:
         """Orchestrate: read calib, iterate events, emit ticks, anchor snapshots.
 
@@ -218,6 +225,11 @@ class ReplayEngine:
             Test-only. When > 0, simulate this many 1 Hz ticks by manufacturing
             synthetic events at base_ts + i (i = 0..sim_duration_s-1). Used with
             _n_synthetic_orders to drive decision_log density assertions.
+        seed_from_config:
+            Production. When True (CLI dispatch + sweeps), peek the first event,
+            then seed ONE outer-CLO-edge synthetic order from config.markets[0]
+            before iterating. No-op when _n_synthetic_orders > 0 (test path
+            already populated the ledger).
         """
         # ── Spawn coordinator ────────────────────────────────────────────────
         self.coord = self._build_coord_for_backtest()
@@ -259,7 +271,19 @@ class ReplayEngine:
             return self.output
 
         # ── Real event loop ──────────────────────────────────────────────────
-        for evt in self.iter_events():
+        # Peek the first event so production seeding can stamp placed_at_ts
+        # with the actual first chain timestamp (rather than a sentinel).
+        events_iter = self.iter_events()
+        try:
+            first_evt = next(events_iter)
+        except StopIteration:
+            self._finalize_output(calib)
+            return self.output
+
+        if seed_from_config and _n_synthetic_orders == 0:
+            self._seed_initial_synthetic_order(int(first_evt["blockTimestamp"]))
+
+        for evt in itertools.chain([first_evt], events_iter):
             current_ts = int(evt["blockTimestamp"])
             self._maybe_anchor_snapshot(current_ts, evt)
             await self._maybe_emit_tick(current_ts, calib)
@@ -272,6 +296,77 @@ class ReplayEngine:
     # ─────────────────────────────────────────────────────────────────────────
     # Internal helpers
     # ─────────────────────────────────────────────────────────────────────────
+
+    def _seed_initial_synthetic_order(self, placed_at_ts: int) -> bool:
+        """Seed ONE outer-CLO-edge synthetic order from config.markets[0].
+
+        Phase 5.1 Wave 4 binding-run fix: the production CLI / sweep / perturbation
+        paths run the engine but never seed an initial order, so n_decisions=0
+        and the ship-gate verdict is meaningless. This restores the strategy seed:
+
+          - tick: clo_lower_thresh (long) | clo_upper_thresh (short) — outer edge
+          - q_me_pendle: config.sizer.q_min_pendle (sub-cap regime fixed point;
+            equals what sizer.q_me_target() returns at $100 collateral / 90k
+            notional_per_yu_usd per the optimizer.py docstring contract)
+          - depth_from_mark_ticks: |edge - midpoint(clo_lower, clo_upper)|
+          - queue_ahead_wei: 1e22 — outer-edge orders sit behind significant queue;
+            the v0.5 fill detection (replay._trade_consumes_order) is an
+            approximation that uses queue_ahead as an instantaneous fill threshold,
+            so a sufficiently large value keeps the order alive across the run.
+            Production-grade per-tick fill semantics are queue_tracker-based and
+            scoped to a later wave.
+
+        Returns True on seed; False (degraded mode) when config.markets is empty
+        or contains no entry whose market_id matches self.market_id — in that case
+        the caller will run with no in-flight orders and produce n_decisions=0.
+        """
+        market = next(
+            (
+                m
+                for m in self.config.markets
+                if m.market_id.endswith(self.market_id) or self.market_id.endswith(m.market_id)
+            ),
+            None,
+        )
+        if market is None:
+            log.warning(
+                "backtest.replay.no_market_calibration_for_seed",
+                market_id=self.market_id,
+                n_markets_in_config=len(self.config.markets),
+            )
+            return False
+
+        clo_lower = int(market.clo_lower_thresh)
+        clo_upper = int(market.clo_upper_thresh)
+        midpoint = (clo_lower + clo_upper) // 2
+        tick = clo_lower if self.side == "long" else clo_upper
+        depth_from_mark_ticks = abs(tick - midpoint)
+
+        order = SyntheticOrder(
+            order_id=f"initial_{self.run_id}_{self.side}",
+            market_id=self.market_id,
+            side=self.side,
+            tick=tick,
+            q_me_pendle=float(self.config.sizer.q_min_pendle),
+            placed_at_ts=placed_at_ts,
+            depth_from_mark_ticks=depth_from_mark_ticks,
+            queue_ahead_wei=10**22,
+            r_accum=0.0,
+            t_frac=1.0,
+        )
+        self.synthetic_orders.place(order)
+        log.info(
+            "backtest.replay.seeded_initial_order",
+            order_id=order.order_id,
+            market_id=self.market_id,
+            side=self.side,
+            tick=tick,
+            depth_from_mark_ticks=depth_from_mark_ticks,
+            q_me_pendle=order.q_me_pendle,
+            queue_ahead_wei=order.queue_ahead_wei,
+            placed_at_ts=placed_at_ts,
+        )
+        return True
 
     def _build_coord_for_backtest(self) -> BreakerCoordinator:
         """Construct a coordinator with an empty breaker list and a null cmd_bus.

@@ -205,7 +205,7 @@ async def run_perturbation_grid(
         run_id=parent_manifest.run_id,
         manifest=parent_manifest,
     )
-    base_result = await base_engine.run()
+    base_result = await base_engine.run(seed_from_config=True)
     base_verdict = evaluate_ship_gate(
         base_result.daily_pnl,
         manifest=parent_manifest,
@@ -225,8 +225,8 @@ async def run_perturbation_grid(
     # Resolve output_parquet_root: use the passed absolute path if provided, else fall
     # back to the config value. The CLI always passes the resolved absolute path to
     # prevent CWD-relative writes under python/ when invoked with `uv run --directory python`.
-    resolved_output_root = output_parquet_root if output_parquet_root is not None else Path(
-        base_config.backtest.output_parquet_root
+    resolved_output_root = (
+        output_parquet_root if output_parquet_root is not None else Path(base_config.backtest.output_parquet_root)
     )
 
     base_dict = base_config.model_dump(mode="json")
@@ -324,7 +324,7 @@ async def _run_one_perturbation(
         run_id=child_manifest.run_id,
         manifest=child_manifest,
     )
-    result = await engine.run()
+    result = await engine.run(seed_from_config=True)
     verdict = evaluate_ship_gate(
         result.daily_pnl,
         manifest=child_manifest,
@@ -333,8 +333,8 @@ async def _run_one_perturbation(
     # Persist ALL perturbed rows to parquet (sweep_axis="perturbation")
     # Use the caller-supplied absolute path to avoid CWD-relative writes under python/
     # when invoked via `uv run --directory python` (Rule 1 bug fix).
-    parquet_root = output_parquet_root if output_parquet_root is not None else Path(
-        perturbed_config.backtest.output_parquet_root
+    parquet_root = (
+        output_parquet_root if output_parquet_root is not None else Path(perturbed_config.backtest.output_parquet_root)
     )
     for result_row in result.rows:
         tagged = result_row.model_copy(

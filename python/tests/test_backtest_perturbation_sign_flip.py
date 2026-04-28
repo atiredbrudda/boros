@@ -89,7 +89,7 @@ async def test_run_perturbation_grid_returns_one_row_per_leaf(
     Monkeypatches ReplayEngine.run so the test runs in < 5 s.
     """
 
-    async def _stub_run(self: object) -> ReplayOutput:
+    async def _stub_run(self: object, **kwargs: object) -> ReplayOutput:
         return ReplayOutput(
             rows=[],
             decision_log=[],
@@ -146,7 +146,7 @@ async def test_fragile_knob_flagged_when_sign_flips(
     target_low_value = alt_yield_leaf.value * (1.0 - default_config.backtest.perturbation_pct)
     assert alt_yield_leaf.value != 0.0, "alt_yield must be non-zero for this test to be valid"
 
-    async def _stub_run(self: object) -> ReplayOutput:
+    async def _stub_run(self: object, **kwargs: object) -> ReplayOutput:
         return ReplayOutput(
             rows=[],
             decision_log=[],
@@ -208,7 +208,7 @@ async def test_fragile_flag_does_not_auto_fail_ship_gate(
     Sign-flip is RECORDED, not auto-fail (RESEARCH.md L1045 — operator decides).
     """
 
-    async def _stub_run(self: object) -> ReplayOutput:
+    async def _stub_run(self: object, **kwargs: object) -> ReplayOutput:
         return ReplayOutput(
             rows=[],
             decision_log=[],

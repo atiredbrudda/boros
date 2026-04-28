@@ -118,7 +118,7 @@ async def run_2d_contour_grid(
                 run_id=child_manifest.run_id,
                 manifest=child_manifest,
             )
-            result = await engine.run()
+            result = await engine.run(seed_from_config=True)
             verdict = evaluate_ship_gate(
                 result.daily_pnl,
                 manifest=child_manifest,
