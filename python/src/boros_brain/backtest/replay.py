@@ -533,14 +533,20 @@ class ReplayEngine:
                 .filter(pl.col("market_id").str.ends_with(self.market_id))
                 .collect()
             )
-            # Normalize column names: conftest uses 't' and 'sz' — rename to tick and size
+            # Normalize column names.
+            # Real archive data: sz_float/sz_combined_float, snapshot_ts is Hive string.
+            # Conftest data: 't' for tick, 'sz' for size.
             col_map_raw: dict[str, str] = {}
             if "t" in raw_df.columns and "tick" not in raw_df.columns:
                 col_map_raw["t"] = "tick"
-            if "sz" in raw_df.columns and "size" not in raw_df.columns:
+            if "sz_float" in raw_df.columns and "size" not in raw_df.columns:
+                col_map_raw["sz_float"] = "size"
+            elif "sz" in raw_df.columns and "size" not in raw_df.columns:
                 col_map_raw["sz"] = "size"
             if col_map_raw:
                 raw_df = raw_df.rename(col_map_raw)
+            if raw_df["snapshot_ts"].dtype == pl.String:
+                raw_df = raw_df.with_columns(pl.col("snapshot_ts").cast(pl.Int64))
         except Exception:  # noqa: BLE001
             return
 
@@ -555,10 +561,14 @@ class ReplayEngine:
             col_map_comb: dict[str, str] = {}
             if "t" in combined_df.columns and "tick" not in combined_df.columns:
                 col_map_comb["t"] = "tick"
-            if "sz" in combined_df.columns and "size_combined" not in combined_df.columns:
+            if "sz_combined_float" in combined_df.columns and "size_combined" not in combined_df.columns:
+                col_map_comb["sz_combined_float"] = "size_combined"
+            elif "sz" in combined_df.columns and "size_combined" not in combined_df.columns:
                 col_map_comb["sz"] = "size_combined"
             if col_map_comb:
                 combined_df = combined_df.rename(col_map_comb)
+            if combined_df["snapshot_ts"].dtype == pl.String:
+                combined_df = combined_df.with_columns(pl.col("snapshot_ts").cast(pl.Int64))
         except Exception:  # noqa: BLE001
             return
 
