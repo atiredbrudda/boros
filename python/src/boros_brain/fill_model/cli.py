@@ -20,10 +20,8 @@ import argparse
 import asyncio
 import json
 import sys
-from datetime import UTC, datetime
 from pathlib import Path
 
-import polars as pl
 import structlog
 
 __all__ = ["main", "build_parser"]
@@ -92,7 +90,47 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         if args.cmd == "fit":
+            from pathlib import Path as _Path
+
             from .refit_loop import refit_once
+
+            if args.market is not None:
+                # Single-market override: bypass config.markets and call fit_market_side
+                # directly for the specified (market, side) pair(s).  Needed when the
+                # shortlist YAML has markets: [] (schema max_length=1 prevents listing
+                # all shortlist markets in one YAML).
+                from datetime import UTC, datetime
+
+                from .features import build_features_table
+                from .fit import fit_market_side
+
+                now_s = int(datetime.now(UTC).timestamp())
+                window_end_ts = now_s
+                window_start_ts = window_end_ts - int(config.fill_model.window_days * 86400)
+                sides = [args.side] if args.side else ["long", "short"]
+                for side in sides:
+                    fs = build_features_table(
+                        config=config,
+                        market_id=args.market,
+                        window_start_ts=window_start_ts,
+                        window_end_ts=window_end_ts,
+                    )
+                    import polars as pl
+
+                    df = pl.read_parquet(fs.path)
+                    # Resolve sqlite_path absolutely (CWD may be python/ subdir
+                    # when invoked via ``uv run --directory python``).
+                    _module_root = _Path(__file__).resolve().parents[4]
+                    _sqlite_abs = _module_root / config.infra.sqlite_path
+                    fit_market_side(
+                        features_df=df,
+                        market_id=args.market,
+                        side=side,  # type: ignore[arg-type]
+                        config=config,
+                        run_id=manifest.run_id,
+                        sqlite_path=_sqlite_abs,
+                    )
+                return 0
 
             asyncio.run(refit_once(config, manifest.run_id))
             return 0

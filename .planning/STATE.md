@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: milestone
 status: executing
-stopped_at: Completed 05.1-03-PLAN.md — Wave 2 DATA-08 screener + DATA-09 (soft PASS via deviation); 4-market shortlist; ready for Wave 3
-last_updated: "2026-04-27T05:35:00.000Z"
-last_activity: 2026-04-27 — Phase 05.1 Wave 2 complete (PASS via deviation)
+stopped_at: Completed 05.1-04-PLAN.md — Wave 3 operator reward calibration + fill-model fit on 4-market shortlist; all (market,side) artifacts landed; ready for Wave 4 backtest
+last_updated: "2026-04-28T04:00:00.000Z"
+last_activity: 2026-04-28 -- Phase 05.1 Wave 3 complete
 progress:
   total_phases: 10
   completed_phases: 5
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-24)
 
 **Core value:** Earn net-positive yield on $100 collateral from the Boros Limit Order Liquidity Rewards pool that beats stablecoin alternatives, after gas and fill-loss — on a live, single-market deployment. If -EV, detect cheaply and kill; do not limp.
-**Current focus:** Phase 05.1 — Ship-Gate Execution (Wave 3 next)
+**Current focus:** Phase --phase — 05.1
 
 ## Current Position
 
-Phase: 05.1 (Ship-Gate Execution) — EXECUTING
-Plan: 05.1-03 complete; ready for Wave 3 (Plan 05.1-04 operator calibration)
-Status: Wave 2 PASS via deviation; binding economics check deferred to Wave 4 backtest
-Last activity: 2026-04-27 — Phase 05.1 Wave 2 complete (4-market shortlist; DATA-09 soft-PASS via plan-defect deviation)
+Phase: 05.1 — EXECUTING
+Plan: 05.1-04 complete; ready for Wave 4 backtest run (05.1-05)
+Status: Wave 3 complete — operator reward calibration + fill-model fit on 4-market shortlist
+Last activity: 2026-04-28 -- Wave 3 (05.1-04) complete
 
 Progress: [██████████] 100%
 
@@ -151,6 +151,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [2026-04-27 05.1-02] Wave 1 complete: fetcher _run_fetch_loop GREEN (Branch A URL template, ThreadPoolExecutor concurrency=6, --resolve DNS workaround for broken local resolver); bulk fetch produced 172 NDJSON files (61 MB on disk, 172 manifest entries) across 25 markets × 6 kinds × up to 3 months; bulk ingest produced parquet for 75 surviving market_id= partitions (141/141 jobs OK, 0 AMM violations, 0 IngesterSchemaViolation); 419 pytest PASS.
 - [2026-04-27 05.1-W1.5 hardening] Wave 1.5 hardening pass landed (commit 7a6e689) before Wave 2 could run: order_book schemas described flat per-tick rows but real archive NDJSON is nested per-snapshot arrays — polars silently produced 271 rows × all-null per market. Fixed schemas + ingester (_explode_raw, _explode_combined) + 6 fixtures + 9 tests; re-ingested 25 markets (240k combined + 695k raw rows of valid data). screener/metrics.py: replaced log-return realized_vol with rate-difference std (APR oscillates through zero → log undefined). screener/filter.py: added CLO scale-defaults (SCALE/S/TICK_SIZE) for two-point calibration fallback on single-observation markets. backfill_reward_budget_history.py: synthetic_current backfill (25 rows) bridging the LOCKED D-01 r_apr_potential migration gap. 4 debug sessions filed under .planning/debug/ — order-book-combined-null, realized-vol-on-boros-rates, reward-budget-history-empty, screener-marketid-maturity.
 - [2026-04-27 05.1-03] Wave 2 PASS via deviation: DATA-08 screener over 25 real-data markets passed 6 (top-4 shortlist = BINANCE-ETHUSDT-{25SEP,26JUN,29MAY}2026 + HYPERLIQUID-ETH-29MAY2026; 19 fail zero_depth_at_clo, 1 fail insufficient_reversals). DATA-09 economics gate raised ProjectHalt with empty Per-Market Evaluation table — false positive caused by LOCKED D-01 plan defect (gate expects r_apr_potential from market_reward_calibration which Wave 3 populates; Wave 2 has no calibration rows so every passer's r_apr_potential is null and the gate skip-branch fires for all). Soft-PASS branch taken: kill report deleted (empty rows = self-evidently a non-event), shortlist.json + shortlist_previous.json overwritten with the 4 DATA-08 passers (DATA-10 baseline seeded), economics_gate.json kept as informational audit trail (`{threshold:0.07, rows:[], shortlist:[]}`). Binding economics check deferred to Wave 4 backtest (BACK-07 ship-gate threshold = alt_yield + all_fees, same intent as DATA-09). Plan defect documented in [[phase-05-1-economics-gate-verdict]] for future plan revision. See [[phase-05-1-screener-verdict]] + [[phase-05-1-economics-gate-verdict]]. Deviations: local DNS broken (socket.getaddrinfo fails for historical-data.boros.finance) — resolved via --resolve IP override; underlying-apr archive uses Binance-ETH format (not BINANCE-ETHUSDT), xyz-prefix markets mapped via alias table; settlement parquet has null market_id (schema mismatch between archive format and ingester SETTLEMENT_SCHEMA — tracked as known issue). See [[phase-05-1-bulk-fetch-runbook]] + [[phase-05-1-bulk-ingest-runbook]].
+- [2026-04-28 05.1-04] Wave 3 complete: per-shortlist-market reward calibration written (4 operator rows, 0 BLOCKED); fill-model fit GREEN for all 8 (market, side) pairs; strategy/v0.5-phase05.1-shortlist.yaml committed; FILL-06 degraded count = 0; fill_model.cli extended with --market single-market override + absolute parquet_root/sqlite_path resolution (CWD-independent). Ready for Wave 4. See [[market-reward-calibration-2026-04-26]] + [[phase-05-1-fill-model-fit-summary]].
 - URL pattern Branch A: files.json master manifest + per-file static GET (no server-side folder ZIP); market-ID numeric-prefix divergence requires Wave 1 GET /markets cross-reference
 - data.ndjson declared as new storage node in architecture.yml; Wave 1 plan adds reads edges from ingester
 - scripts/__init__.py + pythonpath='..' added so python/tests can import scripts.fetch_historical_data as a package

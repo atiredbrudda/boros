@@ -21,11 +21,15 @@ log = structlog.get_logger(__name__)
 __all__ = ["write_fit_artifact"]
 
 
+_ARTIFACT_PROJECT_ROOT = Path(__file__).resolve().parents[4]  # …/boros/python/src/boros_brain/fill_model → boros/
+_DEFAULT_PARQUET_ROOT = _ARTIFACT_PROJECT_ROOT / "data/parquet/fill_model_artifacts"
+
+
 def write_fit_artifact(
     artifact: FitArtifact,
     *,
     sqlite_path: Path,
-    parquet_root: Path = Path("data/parquet/fill_model_artifacts"),
+    parquet_root: Path = _DEFAULT_PARQUET_ROOT,
 ) -> Path:
     """Write FitArtifact to parquet sidecar + SQLite. Returns parquet path.
 

@@ -17,7 +17,10 @@ CRITICAL INVARIANT (T-02-F-02 — no look-ahead):
 
 from __future__ import annotations
 
+import json
+import re
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 
 import polars as pl
@@ -27,6 +30,49 @@ from ..config.schema import BotConfig
 from ..duckdb_layer.setup import open_analytical_conn
 
 log = structlog.get_logger(__name__)
+
+# ── Market-ID translation (Wave-1 parquet uses archive-prefixed IDs) ─────────
+# The parquet partitions use ``{N}-{EXCHANGE}-{ASSET}-{MATURITY}`` keys
+# (e.g. ``101-BINANCE-ETHUSDT-25SEP2026``) while the operator and SQLite spine
+# use canonical ``{EXCHANGE}-{ASSET}-{MATURITY}`` keys. The mapping file
+# at var/fetcher/market_id_mapping.json bridges these two namespaces.
+# Same logic as screener/filter.py ``_parquet_market_id`` — kept as a local
+# copy here to avoid a cross-module import between fill_model and screener.
+# Resolve the mapping file relative to the module, not CWD, so this works
+# regardless of whether the caller runs from boros/ or python/ subdirectory.
+_FILL_PROJECT_ROOT = Path(__file__).resolve().parents[4]  # …/boros/python/src/boros_brain/fill_model → boros/
+_FILL_MAPPING_PATH = _FILL_PROJECT_ROOT / "var/fetcher/market_id_mapping.json"
+_FILL_ARCHIVE_PREFIX_RE = re.compile(r"^\d+-")
+
+
+@lru_cache(maxsize=1)
+def _load_fill_market_id_mapping() -> dict[str, str]:
+    """Load canonical→archive mapping. Returns {} when file absent (test fixtures)."""
+    if not _FILL_MAPPING_PATH.exists():
+        return {}
+    try:
+        raw = json.loads(_FILL_MAPPING_PATH.read_text())
+    except (OSError, json.JSONDecodeError) as exc:
+        log.warning("fill_model.features.mapping_load_failed", path=str(_FILL_MAPPING_PATH), error=str(exc))
+        return {}
+    out: dict[str, str] = {}
+    for canonical, entry in (raw.get("mapping") or {}).items():
+        recommended = (entry or {}).get("recommended")
+        if isinstance(recommended, str) and recommended:
+            out[canonical] = recommended
+    return out
+
+
+def _parquet_market_id(mid: str) -> str:
+    """Translate canonical market_id → archive-prefixed parquet partition key.
+
+    Idempotent: already-prefixed IDs pass through unchanged.
+    Unknown IDs pass through (preserves test-fixture paths).
+    """
+    if _FILL_ARCHIVE_PREFIX_RE.match(mid):
+        return mid
+    mapping = _load_fill_market_id_mapping()
+    return mapping.get(mid, mid)
 
 
 @dataclass(frozen=True)
@@ -65,49 +111,63 @@ WITH bins AS (
     market_id,
     side,
     -- 60-second bins: floor to bin boundary in epoch seconds
-    (blockTimestamp / :bin_duration_s_int) * :bin_duration_s_int AS bin_start_epoch,
+    (blockTimestamp / $bin_duration_s_int) * $bin_duration_s_int AS bin_start_epoch,
     COUNT(*)                                                      AS trade_count,
     AVG(rate)                                                     AS mid_rate
   FROM market_trades
-  WHERE blockTimestamp >= :window_start
-    AND blockTimestamp < :window_end
-    AND market_id = :market_id
+  WHERE blockTimestamp >= $window_start
+    AND blockTimestamp < $window_end
+    AND market_id = $market_id
   GROUP BY 1, 2, 3
 ),
+bins_lagged AS (
+  -- Step 1: compute squared return per bin (DuckDB forbids nested window funcs).
+  -- LAG must be in its own CTE before the rolling AVG window can reference it.
+  SELECT
+    market_id,
+    side,
+    bin_start_epoch,
+    mid_rate,
+    POW(
+      mid_rate - LAG(mid_rate) OVER (
+        PARTITION BY market_id, side
+        ORDER BY bin_start_epoch
+      ),
+      2
+    ) AS sq_return
+  FROM bins
+),
 vol AS (
-  -- Left-closed EWMA over last 5 bins (T-02-F-02 no-look-ahead invariant).
-  -- ROWS BETWEEN 5 PRECEDING AND 1 PRECEDING excludes the current bin.
+  -- Step 2: left-closed rolling avg of squared returns over 5 preceding bins.
+  -- ROWS BETWEEN 5 PRECEDING AND 1 PRECEDING excludes the current bin (T-02-F-02).
   SELECT
     market_id,
     side,
     bin_start_epoch,
     SQRT(
-      AVG(POW(mid_rate - LAG(mid_rate) OVER (
-        PARTITION BY market_id, side
-        ORDER BY bin_start_epoch
-      ), 2))
+      AVG(sq_return)
       OVER (
         PARTITION BY market_id, side
         ORDER BY bin_start_epoch
         ROWS BETWEEN 5 PRECEDING AND 1 PRECEDING
       )
     ) AS ewma_vol
-  FROM bins
+  FROM bins_lagged
 ),
 imbalance AS (
   -- Order-book imbalance from combined book snapshot closest to (but before) bin_start.
   SELECT
     market_id,
     -- Use snapshot_ts as bin proxy (already epoch-seconds in clo_history / order_book_combined)
-    (snapshot_ts / :bin_duration_s_int) * :bin_duration_s_int AS bin_start_epoch,
+    (snapshot_ts / $bin_duration_s_int) * $bin_duration_s_int AS bin_start_epoch,
     (
       SUM(CASE WHEN tick > 0 THEN TRY_CAST(sz_combined_float AS DOUBLE) ELSE 0.0 END)
       - SUM(CASE WHEN tick < 0 THEN TRY_CAST(sz_combined_float AS DOUBLE) ELSE 0.0 END)
     ) / NULLIF(SUM(TRY_CAST(sz_combined_float AS DOUBLE)), 0) AS book_imbalance
   FROM order_book_combined
-  WHERE snapshot_ts >= :window_start
-    AND snapshot_ts < :window_end
-    AND market_id = :market_id
+  WHERE snapshot_ts >= $window_start
+    AND snapshot_ts < $window_end
+    AND market_id = $market_id
   GROUP BY 1, 2
 ),
 underlying AS (
@@ -115,11 +175,11 @@ underlying AS (
   -- underlying_apr uses a numeric `timestamp` col; exchange+symbol map to market_id
   -- We join on the closest available underlying rate within the window.
   SELECT
-    (timestamp / :bin_duration_s_int) * :bin_duration_s_int AS bin_start_epoch,
+    (timestamp / $bin_duration_s_int) * $bin_duration_s_int AS bin_start_epoch,
     AVG(funding_rate_apr)                                     AS underlying_rate
   FROM underlying_apr
-  WHERE timestamp >= :window_start
-    AND timestamp < :window_end
+  WHERE timestamp >= $window_start
+    AND timestamp < $window_end
   GROUP BY 1
 )
 SELECT
@@ -137,7 +197,7 @@ SELECT
   COS(2 * PI() * (b.bin_start_epoch % 28800) / 28800.0)                     AS cos_settlement,
   -- Covariate 4: left-closed EWMA realized vol (T-02-F-02 no-look-ahead)
   COALESCE(v.ewma_vol, 0.0)                                                  AS ewma_vol,
-  CAST(:bin_duration_s AS DOUBLE)                                            AS bin_duration_s
+  CAST($bin_duration_s AS DOUBLE)                                            AS bin_duration_s
 FROM bins b
 LEFT JOIN vol v        USING (market_id, side, bin_start_epoch)
 LEFT JOIN imbalance i  USING (market_id, bin_start_epoch)
@@ -176,25 +236,50 @@ def build_features_table(
     bin_s = config.fill_model.bin_duration_s
     bin_s_int = int(bin_s)
 
-    conn = open_analytical_conn(config.infra.sqlite_path, "data/parquet/")
+    # Translate canonical market_id → archive-prefixed parquet partition key.
+    # The Wave-1 ingest pipeline partitioned by ``{N}-{EXCHANGE}-...`` while
+    # the operator and SQLite spine use ``{EXCHANGE}-...``. The query must use
+    # the parquet form; output is normalized back to the canonical form below.
+    parquet_market_id = _parquet_market_id(market_id)
+    if parquet_market_id != market_id:
+        log.debug(
+            "fill_model.features.market_id_translated",
+            canonical=market_id,
+            archive=parquet_market_id,
+        )
+
+    # Resolve paths relative to the project root (not CWD, which may be python/
+    # when invoked via ``uv run --directory python``).
+    _here = Path(__file__).resolve()
+    _project_root = _here.parents[4]  # .../boros/python/src/boros_brain/fill_model -> boros/
+    sqlite_abs = str(_project_root / config.infra.sqlite_path)
+    parquet_root_abs = str(_project_root / "data/parquet/")
+
+    conn = open_analytical_conn(sqlite_abs, parquet_root_abs)
     try:
-        df = conn.execute(
+        numpy_dict = conn.execute(
             _FEATURE_SQL,
             {
-                "market_id": market_id,
+                "market_id": parquet_market_id,
                 "window_start": window_start_ts,
                 "window_end": window_end_ts,
                 "bin_duration_s": bin_s,
                 "bin_duration_s_int": bin_s_int,
             },
-        ).pl()
+        ).fetchnumpy()  # numpy dict — works without pyarrow
+        df = pl.DataFrame(numpy_dict)
     finally:
         conn.close()
+
+    # Normalize the market_id column back to canonical form so downstream
+    # fill_model_fits rows and parquet artifacts use the operator-facing ID.
+    if parquet_market_id != market_id and "market_id" in df.columns:
+        df = df.with_columns(pl.lit(market_id).alias("market_id"))
 
     # Drop zero-duration bins (safety guard — should not arise with correct SQL)
     df = df.filter(pl.col("bin_duration_s") > 0)
 
-    out_root = Path("data/parquet/fill_features")
+    out_root = _FILL_PROJECT_ROOT / "data/parquet/fill_features"
     out_root.mkdir(parents=True, exist_ok=True)
 
     if df.is_empty():
@@ -213,7 +298,7 @@ def build_features_table(
 
     # Hive-partition by market_id; write via polars native (no pyarrow dependency).
     # One parquet file per (market_id, side, window_end_ts) partition.
-    side_count = df.select("side").n_unique().item()
+    side_count = df["side"].n_unique()
 
     # Write as a single parquet partitioned by market_id + side using polars sink.
     out_path = out_root
