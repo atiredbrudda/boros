@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: milestone
 status: executing
-stopped_at: Completed 05.1-04-PLAN.md — Wave 3 operator reward calibration + fill-model fit on 4-market shortlist; all (market,side) artifacts landed; ready for Wave 4 backtest
-last_updated: "2026-04-28T04:00:00.000Z"
-last_activity: 2026-04-28 -- Phase 05.1 Wave 3 complete
+stopped_at: Completed 05.1-03-PLAN.md — Wave 2 DATA-08 screener + DATA-09 (soft PASS via deviation); 4-market shortlist + Wave-1.5 hardening commit (7a6e689) landed
+last_updated: "2026-04-28T02:22:29.376Z"
+last_activity: 2026-04-28 -- Phase --phase execution started
 progress:
   total_phases: 10
   completed_phases: 5
   total_plans: 42
-  completed_plans: 40
-  percent: 95
+  completed_plans: 41
+  percent: 98
 ---
 
 # Project State
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-04-24)
 
 ## Current Position
 
-Phase: 05.1 — EXECUTING
-Plan: 05.1-04 complete; ready for Wave 4 backtest run (05.1-05)
-Status: Wave 3 complete — operator reward calibration + fill-model fit on 4-market shortlist
-Last activity: 2026-04-28 -- Wave 3 (05.1-04) complete
+Phase: --phase (05.1) — EXECUTING
+Plan: 1 of --name
+Status: Executing Phase --phase
+Last activity: 2026-04-28 -- Phase --phase execution started
 
 Progress: [██████████] 100%
 
@@ -152,6 +152,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [2026-04-27 05.1-W1.5 hardening] Wave 1.5 hardening pass landed (commit 7a6e689) before Wave 2 could run: order_book schemas described flat per-tick rows but real archive NDJSON is nested per-snapshot arrays — polars silently produced 271 rows × all-null per market. Fixed schemas + ingester (_explode_raw, _explode_combined) + 6 fixtures + 9 tests; re-ingested 25 markets (240k combined + 695k raw rows of valid data). screener/metrics.py: replaced log-return realized_vol with rate-difference std (APR oscillates through zero → log undefined). screener/filter.py: added CLO scale-defaults (SCALE/S/TICK_SIZE) for two-point calibration fallback on single-observation markets. backfill_reward_budget_history.py: synthetic_current backfill (25 rows) bridging the LOCKED D-01 r_apr_potential migration gap. 4 debug sessions filed under .planning/debug/ — order-book-combined-null, realized-vol-on-boros-rates, reward-budget-history-empty, screener-marketid-maturity.
 - [2026-04-27 05.1-03] Wave 2 PASS via deviation: DATA-08 screener over 25 real-data markets passed 6 (top-4 shortlist = BINANCE-ETHUSDT-{25SEP,26JUN,29MAY}2026 + HYPERLIQUID-ETH-29MAY2026; 19 fail zero_depth_at_clo, 1 fail insufficient_reversals). DATA-09 economics gate raised ProjectHalt with empty Per-Market Evaluation table — false positive caused by LOCKED D-01 plan defect (gate expects r_apr_potential from market_reward_calibration which Wave 3 populates; Wave 2 has no calibration rows so every passer's r_apr_potential is null and the gate skip-branch fires for all). Soft-PASS branch taken: kill report deleted (empty rows = self-evidently a non-event), shortlist.json + shortlist_previous.json overwritten with the 4 DATA-08 passers (DATA-10 baseline seeded), economics_gate.json kept as informational audit trail (`{threshold:0.07, rows:[], shortlist:[]}`). Binding economics check deferred to Wave 4 backtest (BACK-07 ship-gate threshold = alt_yield + all_fees, same intent as DATA-09). Plan defect documented in [[phase-05-1-economics-gate-verdict]] for future plan revision. See [[phase-05-1-screener-verdict]] + [[phase-05-1-economics-gate-verdict]]. Deviations: local DNS broken (socket.getaddrinfo fails for historical-data.boros.finance) — resolved via --resolve IP override; underlying-apr archive uses Binance-ETH format (not BINANCE-ETHUSDT), xyz-prefix markets mapped via alias table; settlement parquet has null market_id (schema mismatch between archive format and ingester SETTLEMENT_SCHEMA — tracked as known issue). See [[phase-05-1-bulk-fetch-runbook]] + [[phase-05-1-bulk-ingest-runbook]].
 - [2026-04-28 05.1-04] Wave 3 complete: per-shortlist-market reward calibration written (4 operator rows, 0 BLOCKED); fill-model fit GREEN for all 8 (market, side) pairs; strategy/v0.5-phase05.1-shortlist.yaml committed; FILL-06 degraded count = 0; fill_model.cli extended with --market single-market override + absolute parquet_root/sqlite_path resolution (CWD-independent). Ready for Wave 4. See [[market-reward-calibration-2026-04-26]] + [[phase-05-1-fill-model-fit-summary]].
+- [2026-04-28 05.1-04b] Engine-completeness fix: _aggregate_daily_pnl now composes (reward_accrual − fill_loss) per UTC day. Prior version captured only FILL_REALIZED pnl_pendle, making the bootstrapped p5 unconditionally ≤ 0 for any reward-driven strategy — guaranteeing a false-negative FAIL on Wave 4's binding ship-gate. Fix integrates r_share_per_epoch_pendle from decision_log via config.reward_share_model.epoch_days + config.decision.decision_loop_interval_s (PROTO-04 SSoT, no hard-coded constants). 5/5 tests GREEN (3 existing + 2 new regression tests: reward-only produces strictly positive daily_pnl; full-epoch integration reproduces r_share within 1e-6 rel). Commit 26bac74. Wiki [[backtest-daily-pnl-aggregation-v05]] filed Status: Current.
 - URL pattern Branch A: files.json master manifest + per-file static GET (no server-side folder ZIP); market-ID numeric-prefix divergence requires Wave 1 GET /markets cross-reference
 - data.ndjson declared as new storage node in architecture.yml; Wave 1 plan adds reads edges from ingester
 - scripts/__init__.py + pythonpath='..' added so python/tests can import scripts.fetch_historical_data as a package
