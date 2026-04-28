@@ -171,9 +171,13 @@ class ReplayEngine:
             return
 
         try:
+            # Phase 5.1 Wave 4 deviation fix (Rule 1): Wave-1 ingest wrote market_ids with
+            # numeric archive prefix (e.g. "112-BINANCE-ETHUSDT-29MAY2026"). The canonical
+            # market_id from the operator has no prefix. Use str.ends_with() so both forms
+            # are matched — mirrors the screener/filter.py _parquet_market_id shim.
             df = (
                 pl.scan_parquet(str(trades_dir / "**" / "*.parquet"))
-                .filter(pl.col("market_id") == self.market_id)
+                .filter(pl.col("market_id").str.ends_with(self.market_id))
                 .sort(["blockTimestamp", pl.col("eventIndex").fill_null(0)])
                 .collect()
             )
@@ -525,7 +529,8 @@ class ReplayEngine:
         try:
             raw_df = (
                 pl.scan_parquet(str(raw_dir / "**" / "*.parquet"))
-                .filter(pl.col("market_id") == self.market_id)
+                # Phase 5.1 fix: use ends_with to handle numeric-prefixed archive IDs
+                .filter(pl.col("market_id").str.ends_with(self.market_id))
                 .collect()
             )
             # Normalize column names: conftest uses 't' and 'sz' — rename to tick and size
@@ -543,7 +548,8 @@ class ReplayEngine:
         try:
             combined_df = (
                 pl.scan_parquet(str(combined_dir / "**" / "*.parquet"))
-                .filter(pl.col("market_id") == self.market_id)
+                # Phase 5.1 fix: use ends_with to handle numeric-prefixed archive IDs
+                .filter(pl.col("market_id").str.ends_with(self.market_id))
                 .collect()
             )
             col_map_comb: dict[str, str] = {}
@@ -583,8 +589,8 @@ class ReplayEngine:
 
         T-05-07: NEVER calls time.time() — current_ts is blockTimestamp from replay.
         """
-        evt_rate = float(evt.get("rate", 0.0))
-        evt_size = int(evt.get("size_wei", 0))
+        evt_rate = float(evt.get("rate") or 0.0)
+        evt_size = int(evt.get("size_wei") or 0)
         for order in list(self.synthetic_orders.in_flight()):
             if self._trade_consumes_order(order, evt_rate, evt_size):
                 sc = self.latency_scheduler.schedule(
