@@ -181,6 +181,7 @@ async def run_perturbation_grid(
     *,
     parent_manifest: RunManifest,
     n_resamples: int = 2000,
+    output_parquet_root: Path | None = None,
 ) -> list[PerturbationRow]:
     """Per BACK-08: ±perturbation_pct per-knob, ship-gate-compatible 5th-pct
     comparison, sign-flip detection.
@@ -221,6 +222,13 @@ async def run_perturbation_grid(
         baseline_p5=baseline_p5,
     )
 
+    # Resolve output_parquet_root: use the passed absolute path if provided, else fall
+    # back to the config value. The CLI always passes the resolved absolute path to
+    # prevent CWD-relative writes under python/ when invoked with `uv run --directory python`.
+    resolved_output_root = output_parquet_root if output_parquet_root is not None else Path(
+        base_config.backtest.output_parquet_root
+    )
+
     base_dict = base_config.model_dump(mode="json")
     for leaf in leaves:
         low_value = leaf.value * (1.0 - pct)
@@ -233,6 +241,7 @@ async def run_perturbation_grid(
             knob_path=leaf.path,
             new_value=low_value,
             sign="low",
+            output_parquet_root=resolved_output_root,
         )
         high_p5 = await _run_one_perturbation(
             base_dict=base_dict,
@@ -241,6 +250,7 @@ async def run_perturbation_grid(
             knob_path=leaf.path,
             new_value=high_value,
             sign="high",
+            output_parquet_root=resolved_output_root,
         )
 
         row = PerturbationRow(
@@ -273,6 +283,7 @@ async def _run_one_perturbation(
     knob_path: str,
     new_value: float,
     sign: Literal["low", "high"],
+    output_parquet_root: Path | None = None,
 ) -> float:
     """Run ONE perturbation child run. Returns the ship-gate 5th-pct P&L.
 
@@ -320,7 +331,11 @@ async def _run_one_perturbation(
         config=perturbed_config,
     )
     # Persist ALL perturbed rows to parquet (sweep_axis="perturbation")
-    parquet_root = Path(perturbed_config.backtest.output_parquet_root)
+    # Use the caller-supplied absolute path to avoid CWD-relative writes under python/
+    # when invoked via `uv run --directory python` (Rule 1 bug fix).
+    parquet_root = output_parquet_root if output_parquet_root is not None else Path(
+        perturbed_config.backtest.output_parquet_root
+    )
     for result_row in result.rows:
         tagged = result_row.model_copy(
             update={

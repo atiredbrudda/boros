@@ -140,6 +140,12 @@ class ReplayEngine:
         )
         self._scheduled_closes: list[ScheduledClose] = []
 
+        # AMM conservation data cache: lazily loaded once on first _check_amm_conservation
+        # call, then reused for all hourly boundaries in the same run. The underlying
+        # parquet files do not change during a replay run, so reading once is correct.
+        self._amm_raw_df: pl.DataFrame | None = None
+        self._amm_combined_df: pl.DataFrame | None = None
+
         # Pre-seed gas cache from config default; w3=None disables live RPC.
         if gas_cache is None:
             gas_cache = GasHistoryCache()
@@ -523,52 +529,69 @@ class ReplayEngine:
         raw_dir = self.parquet_root / "order_book_raw"
         combined_dir = self.parquet_root / "order_book_combined"
 
-        # Load raw snapshots
-        try:
-            raw_df = (
-                pl.scan_parquet(str(raw_dir / "**" / "*.parquet"))
-                # Phase 5.1 fix: use ends_with to handle numeric-prefixed archive IDs
-                .filter(pl.col("market_id").str.ends_with(self.market_id))
-                .collect()
-            )
-            # Normalize column names.
-            # Real archive data: sz_float/sz_combined_float, snapshot_ts is Hive string.
-            # Conftest data: 't' for tick, 'sz' for size.
-            col_map_raw: dict[str, str] = {}
-            if "t" in raw_df.columns and "tick" not in raw_df.columns:
-                col_map_raw["t"] = "tick"
-            if "sz_float" in raw_df.columns and "size" not in raw_df.columns:
-                col_map_raw["sz_float"] = "size"
-            elif "sz" in raw_df.columns and "size" not in raw_df.columns:
-                col_map_raw["sz"] = "size"
-            if col_map_raw:
-                raw_df = raw_df.rename(col_map_raw)
-            if raw_df["snapshot_ts"].dtype == pl.String:
-                raw_df = raw_df.with_columns(pl.col("snapshot_ts").cast(pl.Int64))
-        except Exception:  # noqa: BLE001
-            return
+        # Phase 5.1 Wave 4 performance fix (Rule 1+3): Scanning all 9000+ parquet files
+        # every hourly boundary (1440 times per run × 219 perturbation child runs) is
+        # prohibitively expensive. The archive layout uses numeric-prefixed market_id
+        # directories (e.g. "101-BINANCE-ETHUSDT-25SEP2026"). Filter at the directory
+        # level before calling scan_parquet — reduces I/O from ~9000 files to ~100.
+        def _market_specific_files(base_dir: Path) -> list[str]:
+            """Return parquet file paths for only the directories matching this market_id."""
+            if not base_dir.exists():
+                return []
+            matched: list[str] = []
+            for market_dir in base_dir.iterdir():
+                if market_dir.is_dir() and market_dir.name.endswith(self.market_id):
+                    matched.extend(str(p) for p in market_dir.rglob("*.parquet"))
+            return matched
 
-        # Load combined snapshots
-        try:
-            combined_df = (
-                pl.scan_parquet(str(combined_dir / "**" / "*.parquet"))
-                # Phase 5.1 fix: use ends_with to handle numeric-prefixed archive IDs
-                .filter(pl.col("market_id").str.ends_with(self.market_id))
-                .collect()
-            )
-            col_map_comb: dict[str, str] = {}
-            if "t" in combined_df.columns and "tick" not in combined_df.columns:
-                col_map_comb["t"] = "tick"
-            if "sz_combined_float" in combined_df.columns and "size_combined" not in combined_df.columns:
-                col_map_comb["sz_combined_float"] = "size_combined"
-            elif "sz" in combined_df.columns and "size_combined" not in combined_df.columns:
-                col_map_comb["sz"] = "size_combined"
-            if col_map_comb:
-                combined_df = combined_df.rename(col_map_comb)
-            if combined_df["snapshot_ts"].dtype == pl.String:
-                combined_df = combined_df.with_columns(pl.col("snapshot_ts").cast(pl.Int64))
-        except Exception:  # noqa: BLE001
-            return
+        # Load raw snapshots (lazy-load and cache: files don't change during a run)
+        if self._amm_raw_df is None:
+            try:
+                raw_files = _market_specific_files(raw_dir)
+                if not raw_files:
+                    return
+                raw_df = pl.read_parquet(raw_files)
+                # Normalize column names.
+                # Real archive data: sz_float/sz_combined_float, snapshot_ts is Hive string.
+                # Conftest data: 't' for tick, 'sz' for size.
+                col_map_raw: dict[str, str] = {}
+                if "t" in raw_df.columns and "tick" not in raw_df.columns:
+                    col_map_raw["t"] = "tick"
+                if "sz_float" in raw_df.columns and "size" not in raw_df.columns:
+                    col_map_raw["sz_float"] = "size"
+                elif "sz" in raw_df.columns and "size" not in raw_df.columns:
+                    col_map_raw["sz"] = "size"
+                if col_map_raw:
+                    raw_df = raw_df.rename(col_map_raw)
+                if raw_df["snapshot_ts"].dtype == pl.String:
+                    raw_df = raw_df.with_columns(pl.col("snapshot_ts").cast(pl.Int64))
+                self._amm_raw_df = raw_df
+            except Exception:  # noqa: BLE001
+                return
+        raw_df = self._amm_raw_df
+
+        # Load combined snapshots (lazy-load and cache)
+        if self._amm_combined_df is None:
+            try:
+                combined_files = _market_specific_files(combined_dir)
+                if not combined_files:
+                    return
+                combined_df = pl.read_parquet(combined_files)
+                col_map_comb: dict[str, str] = {}
+                if "t" in combined_df.columns and "tick" not in combined_df.columns:
+                    col_map_comb["t"] = "tick"
+                if "sz_combined_float" in combined_df.columns and "size_combined" not in combined_df.columns:
+                    col_map_comb["sz_combined_float"] = "size_combined"
+                elif "sz" in combined_df.columns and "size_combined" not in combined_df.columns:
+                    col_map_comb["sz"] = "size_combined"
+                if col_map_comb:
+                    combined_df = combined_df.rename(col_map_comb)
+                if combined_df["snapshot_ts"].dtype == pl.String:
+                    combined_df = combined_df.with_columns(pl.col("snapshot_ts").cast(pl.Int64))
+                self._amm_combined_df = combined_df
+            except Exception:  # noqa: BLE001
+                return
+        combined_df = self._amm_combined_df
 
         # Both datasets must have snapshot_ts for the filter to work.
         if "snapshot_ts" not in raw_df.columns or "snapshot_ts" not in combined_df.columns:

@@ -146,6 +146,7 @@ async def _dispatch_run(args: argparse.Namespace, config: BotConfig, manifest: R
         replay_inputs,
         parent_manifest=manifest,
         n_resamples=config.backtest.bootstrap_n_resamples,
+        output_parquet_root=output_parquet_root,
     )
 
     log.info("backtest.run.contour_2d_start")
