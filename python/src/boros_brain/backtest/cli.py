@@ -80,12 +80,26 @@ async def _dispatch_run(args: argparse.Namespace, config: BotConfig, manifest: R
 
     log = structlog.get_logger("backtest.cli")
 
-    parquet_root = Path(config.backtest.output_parquet_root)
+    # output_parquet_root is for writing results (Hive-partitioned, under run_id=).
+    # input_parquet_root is for reading ingested market data (market_trades/, order_book_*/).
+    # Phase 5.1 Wave 4 deviation fix (Rule 1): output_parquet_root was incorrectly used for
+    # both reads and writes. The ingested data lives at data/parquet/ (Wave 1 output), NOT
+    # under data/parquet/backtest_results/ (the write root). This split avoids adding a new
+    # BotConfig knob (PROTO-04) while correcting the read path.
+    # Resolve absolute repo root from __file__ (mirrors fill_model/cli.py pattern):
+    # python/src/boros_brain/backtest/cli.py → parents[4] = repo root
+    _repo_root = Path(__file__).resolve().parents[4]
+    output_parquet_root = (_repo_root / config.backtest.output_parquet_root).resolve()
+    input_parquet_root = (_repo_root / "data/parquet").resolve()
+
+    sqlite_path_abs = (_repo_root / config.infra.sqlite_path).resolve()
+    var_backtest_abs = (_repo_root / "var/backtest").resolve()
+
     replay_inputs = ReplayInputs(
         market_id=args.market,
         side=args.side,
-        parquet_root=parquet_root,
-        sqlite_path=Path(config.infra.sqlite_path),
+        parquet_root=input_parquet_root,
+        sqlite_path=sqlite_path_abs,
         cancel_latency_s=float(config.execution.cancel_latency_budget_s),
         voluntary_cancel_branch="benign",
         sigma_others_multiplier=1.0,
@@ -94,8 +108,8 @@ async def _dispatch_run(args: argparse.Namespace, config: BotConfig, manifest: R
         config=config,
         market_id=args.market,
         side=args.side,
-        parquet_root=parquet_root,
-        sqlite_path=Path(config.infra.sqlite_path),
+        parquet_root=input_parquet_root,
+        sqlite_path=sqlite_path_abs,
         cancel_latency_s=float(config.execution.cancel_latency_budget_s),
         voluntary_cancel_branch="benign",
         sigma_others_multiplier=1.0,
@@ -106,8 +120,8 @@ async def _dispatch_run(args: argparse.Namespace, config: BotConfig, manifest: R
         config=config,
         market_id=args.market,
         side=args.side,
-        parquet_root=parquet_root,
-        sqlite_path=Path(config.infra.sqlite_path),
+        parquet_root=input_parquet_root,
+        sqlite_path=sqlite_path_abs,
         cancel_latency_s=float(config.execution.cancel_latency_budget_s),
         run_id=manifest.run_id,
         manifest=manifest,
@@ -115,7 +129,7 @@ async def _dispatch_run(args: argparse.Namespace, config: BotConfig, manifest: R
     )
     base_result = await base_engine.run()
     for row in base_result.rows:
-        write_backtest_row(row, parquet_root=parquet_root)
+        write_backtest_row(row, parquet_root=output_parquet_root)
 
     log.info("backtest.run.cancel_latency_sweep_start")
     await run_cancel_latency_sweep(base_replay_cfg, parent_manifest=manifest, config=config)
@@ -147,7 +161,7 @@ async def _dispatch_run(args: argparse.Namespace, config: BotConfig, manifest: R
         run_id=manifest.run_id,
         knob_a_path=knob_a,
         knob_b_path=knob_b,
-        parquet_root=parquet_root,
+        parquet_root=output_parquet_root,
     )
 
     log.info("backtest.run.ship_gate_evaluate")
@@ -156,8 +170,8 @@ async def _dispatch_run(args: argparse.Namespace, config: BotConfig, manifest: R
         manifest=manifest,
         config=config,
     )
-    write_ship_gate_verdict_json(verdict, parquet_root=parquet_root)
-    output_dir = Path("var/backtest") / manifest.run_id
+    write_ship_gate_verdict_json(verdict, parquet_root=output_parquet_root)
+    output_dir = var_backtest_abs / manifest.run_id
     report_path = write_ship_gate_report(
         verdict,
         config=config,
@@ -224,21 +238,27 @@ def main(argv: list[str] | None = None) -> int:
 
     # MANIFEST-FIRST (PROTO-01) — 4-step preamble copied verbatim from
     # decision/cli.py:85-99, only tier name changed.
+    # Resolve paths absolute from repo root (mirrors fill_model/cli.py pattern) so that
+    # `uv run --directory python` CWD does not break relative paths.
+    _repo_root_main = Path(__file__).resolve().parents[4]
+    _logs_dir_abs = (_repo_root_main / config.infra.logs_dir).resolve()
+    _sqlite_abs = (_repo_root_main / config.infra.sqlite_path).resolve()
+    _var_backtest_abs = (_repo_root_main / "var/backtest").resolve()
     manifest = build_run_manifest(config)
     configure_logging(
         run_id=manifest.run_id,
         tier="backtest-cli",
-        logs_dir=Path(config.infra.logs_dir),
+        logs_dir=_logs_dir_abs,
     )
     write_manifest(
         manifest,
-        logs_dir=Path(config.infra.logs_dir),
-        sqlite_path=Path(config.infra.sqlite_path),
+        logs_dir=_logs_dir_abs,
+        sqlite_path=_sqlite_abs,
     )
     emit_backtest_manifest(
         manifest,
         run_id=manifest.run_id,
-        output_dir=Path("var/backtest") / manifest.run_id,
+        output_dir=_var_backtest_abs / manifest.run_id,
     )
     log = structlog.get_logger("backtest.cli")
     log.info("RUN_MANIFEST", **manifest.model_dump(mode="json"))

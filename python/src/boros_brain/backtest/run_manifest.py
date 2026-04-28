@@ -53,7 +53,11 @@ def emit_backtest_manifest(
 
     Returns the path written.
     """
-    var_root = Path("var/backtest").resolve()
+    # Resolve var_root from __file__ so this works regardless of CWD
+    # (e.g. when invoked via `uv run --directory python`).
+    # python/src/boros_brain/backtest/run_manifest.py → parents[4] = repo root
+    _repo_root = Path(__file__).resolve().parents[4]
+    var_root = (_repo_root / "var/backtest").resolve()
     output_dir = output_dir.resolve()
     _ensure_under_root(output_dir, var_root)
     output_dir.mkdir(parents=True, exist_ok=True)
