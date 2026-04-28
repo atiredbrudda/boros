@@ -34,10 +34,7 @@ from ..decision.breaker_coordinator import BreakerCoordinator
 from ..decision.engine import evaluate as evaluate_decision
 from ..decision.gas_history import GasHistoryCache
 from ..decision.schemas import EvaluateInput
-from ..fill_model.amm_consumption import (
-    AMMConsumptionIdentityError,
-    compute_amm_share_timeseries,
-)
+from ..fill_model.amm_consumption import AMMConsumptionIdentityError
 from ..fill_model.queue_tracker import QueueTracker
 from .cancel_latency import LatencyScheduler, ScheduledClose
 from .schemas import BacktestRunOutput, ReplayOutput
@@ -576,18 +573,34 @@ class ReplayEngine:
         if "snapshot_ts" not in raw_df.columns or "snapshot_ts" not in combined_df.columns:
             return
 
-        # compute_amm_share_timeseries raises AMMConsumptionIdentityError if combined < raw.
-        # T-05-04: do NOT catch here — let it propagate.
-        amm_share = compute_amm_share_timeseries(
-            raw_df,
-            combined_df,
-            epoch_start_ts=epoch_start_ts,
-            epoch_end_ts=epoch_end_ts,
+        # Per-snapshot-total conservation check (DATA-05 / T-05-04).
+        # Raw uses 1bp-tick grid; combined uses rate/tick_size grid — per-tick join is wrong.
+        # The invariant is per-snapshot total: SUM(combined) >= SUM(raw).
+        raw_epoch = raw_df.filter(
+            (pl.col("snapshot_ts") >= epoch_start_ts) & (pl.col("snapshot_ts") < epoch_end_ts)
         )
-        # For Wave 1, we only verify the conservation identity via compute_amm_share_timeseries
-        # (which raises on violation). The assert_epoch_conservation call (BACK-03 sweep input)
-        # requires bookkeeping numbers we don't have yet at Wave 1; that lands in Plan 05-03.
-        _ = amm_share  # consumed by Plan 05-03+
+        combined_epoch = combined_df.filter(
+            (pl.col("snapshot_ts") >= epoch_start_ts) & (pl.col("snapshot_ts") < epoch_end_ts)
+        )
+        if raw_epoch.is_empty() or combined_epoch.is_empty():
+            return
+        raw_size_col = "size" if "size" in raw_epoch.columns else "sz_float"
+        comb_size_col = "size_combined" if "size_combined" in combined_epoch.columns else "sz_combined_float"
+        raw_tot = raw_epoch.group_by("snapshot_ts").agg(pl.col(raw_size_col).sum().alias("raw_total"))
+        comb_tot = combined_epoch.group_by("snapshot_ts").agg(pl.col(comb_size_col).sum().alias("combined_total"))
+        joined = raw_tot.join(comb_tot, on="snapshot_ts", how="full", coalesce=True).with_columns(
+            pl.col("raw_total").fill_null(0.0),
+            pl.col("combined_total").fill_null(0.0),
+        )
+        # 1% relative tolerance (same as ingest-time assert_amm_conservation)
+        neg = joined.filter(
+            (pl.col("combined_total") - pl.col("raw_total")) < -(pl.col("raw_total").abs() * 0.01 + 1e-9)
+        )
+        if not neg.is_empty():
+            raise AMMConsumptionIdentityError(
+                f"combined < raw on {neg.height} snapshot(s) during [{epoch_start_ts}, {epoch_end_ts}); "
+                f"first 5: {neg.head(5).to_dicts()}"
+            )
 
     def _handle_trade_event(self, evt: dict[str, Any], current_ts: int) -> None:
         """Detect fills against in-flight synthetic orders; schedule close-at-market.
