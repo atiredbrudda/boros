@@ -26,6 +26,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 import duckdb
+import numpy as np
 import polars as pl
 import structlog
 
@@ -576,9 +577,7 @@ class ReplayEngine:
         # Per-snapshot-total conservation check (DATA-05 / T-05-04).
         # Raw uses 1bp-tick grid; combined uses rate/tick_size grid — per-tick join is wrong.
         # The invariant is per-snapshot total: SUM(combined) >= SUM(raw).
-        raw_epoch = raw_df.filter(
-            (pl.col("snapshot_ts") >= epoch_start_ts) & (pl.col("snapshot_ts") < epoch_end_ts)
-        )
+        raw_epoch = raw_df.filter((pl.col("snapshot_ts") >= epoch_start_ts) & (pl.col("snapshot_ts") < epoch_end_ts))
         combined_epoch = combined_df.filter(
             (pl.col("snapshot_ts") >= epoch_start_ts) & (pl.col("snapshot_ts") < epoch_end_ts)
         )
@@ -715,6 +714,14 @@ class ReplayEngine:
             1, len(self.output.decision_log)
         )
 
+        # Bin realized-fill P&L by UTC day across the run window. Reward accrual
+        # (the positive component of strategy P&L) is added by a downstream wave;
+        # this captures the fill-loss component, which is sufficient for
+        # block_bootstrap_pnl + ship-gate to be well-defined. A single zero day
+        # is emitted when no events were observed (e.g. unseeded test fixture)
+        # so callers like run_perturbation_grid don't trip the empty-array guard.
+        self.output.daily_pnl = self._aggregate_daily_pnl()
+
         self.output.rows.append(
             BacktestRunOutput(
                 run_id=self.run_id,
@@ -744,3 +751,62 @@ class ReplayEngine:
                 parquet_partition=f"run_id={self.run_id}/sweep_axis=base",
             )
         )
+
+    def _aggregate_daily_pnl(self) -> np.ndarray:
+        """Bin net P&L (reward_accrual − fill_loss) by UTC day across the run window.
+
+        Composed from two independent sources in the decision_log:
+
+        1. Reward accrual — any entry carrying `r_share_per_epoch_pendle` > 0
+           (typically HOLD/CANCEL ticks from _maybe_emit_tick) contributes:
+             reward_per_tick = r_share_per_epoch_pendle * (dt_per_tick / seconds_per_epoch)
+           where seconds_per_epoch comes from config.reward_share_model.epoch_days
+           and dt_per_tick from config.decision.decision_loop_interval_s (PROTO-04 SSoT).
+
+        2. Fill losses — FILL_REALIZED entries contribute their `pnl_pendle` field
+           (negative for realized losses, by convention).
+
+        Both branches are independent: FILL_REALIZED entries never carry
+        r_share_per_epoch_pendle (see _fire_scheduled_closes), so an entry
+        contributes to at most one branch.
+
+        Window endpoints come from the full decision_log (every entry carries
+        `current_chain_ts`), so days with no events appear as zero P&L rather
+        than dropping out — block_bootstrap_pnl needs a well-defined N. A single
+        zero day is returned for an empty log (empty-array guard for callers like
+        run_perturbation_grid).
+        """
+        log_entries = self.output.decision_log
+        if not log_entries:
+            return np.zeros(1, dtype=np.float64)
+
+        timestamps = [int(e["current_chain_ts"]) for e in log_entries if "current_chain_ts" in e]
+        if not timestamps:
+            return np.zeros(1, dtype=np.float64)
+
+        first_ts = min(timestamps)
+        last_ts = max(timestamps)
+        n_days = max(1, (last_ts - first_ts) // 86400 + 1)
+
+        # Unit-conversion constants — PROTO-04 SSoT, never hard-coded.
+        seconds_per_epoch = float(self.config.reward_share_model.epoch_days) * 86400.0
+        dt_per_tick = float(self.config.decision.decision_loop_interval_s)
+
+        daily = np.zeros(n_days, dtype=np.float64)
+        for entry in log_entries:
+            ts = entry.get("current_chain_ts")
+            if ts is None:
+                continue
+            day_idx = (int(ts) - first_ts) // 86400
+
+            # Branch 1 — fill loss (FILL_REALIZED entries only).
+            if entry.get("decision_kind") == "FILL_REALIZED":
+                daily[day_idx] += float(entry.get("pnl_pendle", 0.0))
+
+            # Branch 2 — reward accrual (any entry with r_share_per_epoch_pendle > 0).
+            r_share = entry.get("r_share_per_epoch_pendle")
+            if r_share is not None and r_share > 0.0:
+                reward_per_tick = float(r_share) * (dt_per_tick / seconds_per_epoch)
+                daily[day_idx] += reward_per_tick
+
+        return daily
