@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: milestone
-status: ready_to_plan
-stopped_at: Phase 5.1 Wave 4 ship-gate FAIL — run_id=01KQB9CPQAQS31P2ZSY14DHYH6, p5=0.49% APR vs threshold 6.00% APR. See docs/kill-report-20260429.md.
-last_updated: "2026-04-29T06:46:38.677Z"
-last_activity: 2026-04-29 -- Phase 05.1 Wave 4 ship-gate binding backtest FAIL
+status: halted
+stopped_at: "Phase 5.1 re-run FAIL — run_id=01KQDMC1DC3JW07VG2VMKKXM6T, p5=2.44% APR vs threshold 6.00% APR (delta −3.56 ppt). Corrected inputs (pendle_price_usd=1.35, loss_model SQL fix, pyarrow workaround) lifted p5 from 0.49% to 2.44%. Residual gap: sparse-event tick under-counting (engine gap, unfixed). See docs/kill-report-20260429-rerun.md."
+last_updated: "2026-04-29T22:10:00.000Z"
+last_activity: 2026-04-29 -- Phase 05.1 ship-gate re-run FAIL (corrected inputs, p5=2.44%)
 progress:
   total_phases: 10
   completed_phases: 7
@@ -154,6 +154,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [2026-04-28 05.1-04] Wave 3 complete: per-shortlist-market reward calibration written (4 operator rows, 0 BLOCKED); fill-model fit GREEN for all 8 (market, side) pairs; strategy/v0.5-phase05.1-shortlist.yaml committed; FILL-06 degraded count = 0; fill_model.cli extended with --market single-market override + absolute parquet_root/sqlite_path resolution (CWD-independent). Ready for Wave 4. See [[market-reward-calibration-2026-04-26]] + [[phase-05-1-fill-model-fit-summary]].
 - [2026-04-28 05.1-04b] Engine-completeness fix: _aggregate_daily_pnl now composes (reward_accrual − fill_loss) per UTC day. Prior version captured only FILL_REALIZED pnl_pendle, making the bootstrapped p5 unconditionally ≤ 0 for any reward-driven strategy — guaranteeing a false-negative FAIL on Wave 4's binding ship-gate. Fix integrates r_share_per_epoch_pendle from decision_log via config.reward_share_model.epoch_days + config.decision.decision_loop_interval_s (PROTO-04 SSoT, no hard-coded constants). 5/5 tests GREEN (3 existing + 2 new regression tests: reward-only produces strictly positive daily_pnl; full-epoch integration reproduces r_share within 1e-6 rel). Commit 26bac74. Wiki [[backtest-daily-pnl-aggregation-v05]] filed Status: Current.
 - [2026-04-29 05.1-05 FAIL] Phase 05.1 ship-gate FAILED on real data: market=BINANCE-ETHUSDT-25SEP2026 side=long; p5_annualized_pnl=0.004897 vs threshold=0.0600 (delta=−0.05510); run_id=01KQB9CPQAQS31P2ZSY14DHYH6; PROJECT HALTED. Real kill report at docs/kill-report-20260429.md (real ULID, real markets, no fixture leaks). Two engine-completeness gaps documented (sparse-event tick under-counting, loss_model SQL column mismatch) — neither closes the 5.51 ppt gap. See [[ship-gate-verdict-20260429]] Status: Current — Phase 5 ship-gate FAIL, project halted.
+- [2026-04-29 re-run FAIL] Phase 05.1 ship-gate re-run (corrected stale inputs): p5=0.0244 (2.44% APR) vs threshold=0.0600; delta=−0.0356 (−3.56 ppt); run_id=01KQDMC1DC3JW07VG2VMKKXM6T. Input fixes: pendle_price_usd 7.0→1.35 (+4.98× reward lift), loss_model SQL corrected (246 fill rows vs 0), pyarrow workaround (.fetchall() path). Still FAIL — residual gap dominated by sparse-event tick under-counting (structural engine gap, unfixed). Real kill report at docs/kill-report-20260429-rerun.md. See [[ship-gate-verdict-20260429-rerun]].
 - URL pattern Branch A: files.json master manifest + per-file static GET (no server-side folder ZIP); market-ID numeric-prefix divergence requires Wave 1 GET /markets cross-reference
 - data.ndjson declared as new storage node in architecture.yml; Wave 1 plan adds reads edges from ingester
 - scripts/__init__.py + pythonpath='..' added so python/tests can import scripts.fetch_historical_data as a package
@@ -168,7 +169,7 @@ None yet.
 
 ### Blockers/Concerns
 
-- **[2026-04-29 HALT] Phase 5.1 Wave 4 ship-gate FAIL** — run_id `01KQB9CPQAQS31P2ZSY14DHYH6`, p5=0.49% APR vs threshold 6.00% APR (delta −5.51 ppt). Market: BINANCE-ETHUSDT-25SEP2026 long. Phase 6 is BLOCKED. See `docs/kill-report-20260429.md` and wiki [[ship-gate-verdict-20260429]]. Two engine-completeness gaps documented: (1) sparse-event tick under-counting, (2) loss_model SQL column mismatch. These partially explain the shortfall but do not close the 5.51 ppt gap. This is a confirmed FAIL — Risk R8 "kill cheap" outcome. DATA-10 daily re-screen cadence deferred until operator decision to resume.
+- **[2026-04-29 HALT, UPDATED by re-run] Phase 5.1 ship-gate FAIL (both runs)** — Original run_id `01KQB9CPQAQS31P2ZSY14DHYH6` (p5=0.49% APR, stale inputs); re-run run_id `01KQDMC1DC3JW07VG2VMKKXM6T` (p5=2.44% APR, corrected inputs). Market: BINANCE-ETHUSDT-25SEP2026 long. Phase 6 is BLOCKED. See `docs/kill-report-20260429-rerun.md` and wiki [[ship-gate-verdict-20260429-rerun]]. Remaining gap (−3.56 ppt) dominated by sparse-event tick under-counting. Operator decision required: (A) fix sparse-tick synthesis and re-run, or (B) accept FAIL as strategy not viable at $100/$1.35 PENDLE. DATA-10 daily re-screen cadence deferred until operator decision.
 - ~~Phase 0 P0-02 (minimum order size) is existential~~ **Resolved 2026-04-23** — no protocol minimum. Existential halt-condition is off the table.
 - ~~Phase 0 P0-01 (voluntary-cancel forfeit behavior) may drive material divergence in Phase 5 backtest sensitivity; if so, Phase 7 paper is blocked until P0-01 is resolved.~~ **Resolved 2026-04-23** — `voluntary_cancel_forfeits_accumulated = False`; sensitivity row demoted to sanity check, no longer a blocker.
 - ~~P0-04 PARTIAL~~ **Resolved 2026-04-23** — Send Txs Bot is the mandatory submission lane; direct-submit ruled out. Latency budget closes on ~1–3s typical, <5s worst, with pre-signed calldata + Send Txs Bot. [[Sign-only cancel primitive]], [[Send Txs Bot integration]].
@@ -176,10 +177,10 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-29T01:00:00.000Z
-Stopped at: Phase 5.1 Wave 4 ship-gate FAIL — run_id=01KQB9CPQAQS31P2ZSY14DHYH6, p5=0.49% APR vs threshold 6.00% APR. See docs/kill-report-20260429.md.
+Last session: 2026-04-29T22:10:00.000Z
+Stopped at: Phase 5.1 ship-gate re-run FAIL — run_id=01KQDMC1DC3JW07VG2VMKKXM6T, p5=2.44% APR vs threshold 6.00% APR (delta −3.56 ppt). Corrected inputs (pendle_price=1.35, loss_model SQL fix, pyarrow workaround). See docs/kill-report-20260429-rerun.md.
 Resume file: None
 
-**Next action:** Project halted 2026-04-29; see [[ship-gate-verdict-20260429]] — no Phase 6 work begins.
+**Next action:** Project halted. Operator decision required: (A) implement sparse-event tick synthesis in replay engine and re-run ship-gate, or (B) accept FAIL — strategy not viable at $100 collateral / $1.35 PENDLE at current reward rates. See [[ship-gate-verdict-20260429-rerun]].
 
-**Planned Phase:** 05.1 (Ship-Gate Execution: Historical Data Fetch + Ingest + Screener + Economics Gate + Backtest Run) — 5 plans — 2026-04-26T22:49:30.154Z
+**Planned Phase:** 05.1 re-run complete — next phase depends on operator decision above.

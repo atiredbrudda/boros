@@ -170,7 +170,10 @@ def replay_historical_fills(
         parquet_root = "data/parquet/"
         conn = open_analytical_conn(sqlite_path, parquet_root)
         try:
-            df = conn.execute(
+            # DuckDB .pl() and pl.from_pandas() both require pyarrow which is not
+            # in this project's deps. Build a polars DataFrame via fetchall() +
+            # column-by-column construction (no pyarrow dependency).
+            _result = conn.execute(
                 _REPLAY_SQL,
                 {
                     "market_id": _parquet_market_id(market_id),
@@ -178,7 +181,13 @@ def replay_historical_fills(
                     "window_end": window_end_ts,
                     "close_latency_budget_s": int(lcfg.close_latency_budget_s),
                 },
-            ).pl()
+            )
+            _cols = [desc[0] for desc in _result.description]
+            _rows = _result.fetchall()
+            if _rows:
+                df = pl.DataFrame({col: [row[i] for row in _rows] for i, col in enumerate(_cols)})
+            else:
+                df = pl.DataFrame(schema={col: pl.Utf8 for col in _cols})
         finally:
             conn.close()
 
