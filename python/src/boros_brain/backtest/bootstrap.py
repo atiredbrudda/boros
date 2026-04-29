@@ -44,6 +44,17 @@ def block_bootstrap_pnl(
 ) -> np.ndarray:
     """Returns N annualized P&L values resampled with replacement on day-blocks.
 
+    Unit contract (load-bearing — see [[ship-gate-units-bug-2026-04-30]]):
+      `daily_pnl[i]` MUST be a daily fraction of USD collateral (i.e., daily-USD-APR
+      already normalized by capital). Producer: replay._aggregate_daily_pnl. With
+      that contract, `sample.sum() × 365 / n_days` returns a USD-APR fraction
+      directly comparable to `screener.alt_yield + backtest.all_fees_threshold`.
+
+      Passing raw PENDLE/day (or any unnormalized quantity) silently produces a
+      number with the wrong unit; the verdict comparison in evaluate_ship_gate
+      will be unit-incoherent. The replay path enforces the contract; tests that
+      hand-craft daily_pnl arrays must do the same (see test_backtest_ship_gate_*).
+
     Resampling: rng.choice(daily_pnl, size=n_days, replace=True) per resample.
     Annualization: sum_resampled * (365.0 / n_days).
 

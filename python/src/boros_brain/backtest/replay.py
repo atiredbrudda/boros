@@ -875,13 +875,27 @@ class ReplayEngine:
         )
 
     def _aggregate_daily_pnl(self) -> np.ndarray:
-        """Bin net P&L (reward_accrual − fill_loss) by UTC day across the run window.
+        """Bin net P&L (reward_accrual − fill_loss) by UTC day, returned as
+        **daily fraction of USD collateral** so block_bootstrap_pnl yields a
+        USD-APR fraction comparable to `screener.alt_yield + backtest.all_fees_threshold`.
+
+        Unit contract (load-bearing — see [[ship-gate-units-bug-2026-04-30]]):
+
+          daily_pnl[i] = (reward_accrual_pendle_i − fill_loss_pendle_i)
+                         × pendle_price_usd / collateral_usd
+
+        After bootstrap annualization (`sample.sum() × 365 / n_days`), the
+        resulting value is a decimal-fraction USD-APR on collateral_usd, the
+        same unit as the threshold. The earlier implementation returned raw
+        PENDLE/day with no collateral denominator, so `p5_annualized_pnl` was
+        in PENDLE/year (a quantity, not a rate) and the verdict comparison was
+        unit-incoherent (Bug A in the units audit).
 
         Composed from two independent sources in the decision_log:
 
         1. Reward accrual — any entry carrying `r_share_per_epoch_pendle` > 0
            (typically HOLD/CANCEL ticks from _maybe_emit_tick) contributes:
-             reward_per_tick = r_share_per_epoch_pendle * (dt_per_tick / seconds_per_epoch)
+             reward_per_tick_pendle = r_share_per_epoch_pendle * (dt_per_tick / seconds_per_epoch)
            where seconds_per_epoch comes from config.reward_share_model.epoch_days
            and dt_per_tick from config.decision.decision_loop_interval_s (PROTO-04 SSoT).
 
@@ -891,6 +905,10 @@ class ReplayEngine:
         Both branches are independent: FILL_REALIZED entries never carry
         r_share_per_epoch_pendle (see _fire_scheduled_closes), so an entry
         contributes to at most one branch.
+
+        The PENDLE→USD-fraction conversion `pendle_price_usd / collateral_usd`
+        is applied once at the end (linear in PENDLE), preserving order so
+        `np.percentile` is unaffected by the order of operations.
 
         Window endpoints come from the full decision_log (every entry carries
         `current_chain_ts`), so days with no events appear as zero P&L rather
@@ -913,8 +931,11 @@ class ReplayEngine:
         # Unit-conversion constants — PROTO-04 SSoT, never hard-coded.
         seconds_per_epoch = float(self.config.reward_share_model.epoch_days) * 86400.0
         dt_per_tick = float(self.config.decision.decision_loop_interval_s)
+        pendle_price_usd = float(self.config.pricing.pendle_price_usd)
+        collateral_usd = float(self.config.sizer.collateral_usd)
+        pendle_to_usd_fraction = pendle_price_usd / collateral_usd
 
-        daily = np.zeros(n_days, dtype=np.float64)
+        daily_pendle = np.zeros(n_days, dtype=np.float64)
         for entry in log_entries:
             ts = entry.get("current_chain_ts")
             if ts is None:
@@ -923,12 +944,12 @@ class ReplayEngine:
 
             # Branch 1 — fill loss (FILL_REALIZED entries only).
             if entry.get("decision_kind") == "FILL_REALIZED":
-                daily[day_idx] += float(entry.get("pnl_pendle", 0.0))
+                daily_pendle[day_idx] += float(entry.get("pnl_pendle", 0.0))
 
             # Branch 2 — reward accrual (any entry with r_share_per_epoch_pendle > 0).
             r_share = entry.get("r_share_per_epoch_pendle")
             if r_share is not None and r_share > 0.0:
-                reward_per_tick = float(r_share) * (dt_per_tick / seconds_per_epoch)
-                daily[day_idx] += reward_per_tick
+                reward_per_tick_pendle = float(r_share) * (dt_per_tick / seconds_per_epoch)
+                daily_pendle[day_idx] += reward_per_tick_pendle
 
-        return daily
+        return daily_pendle * pendle_to_usd_fraction

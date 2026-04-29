@@ -79,6 +79,10 @@ async def test_replay_run_bins_realized_fill_pnl_by_day(
 ) -> None:
     """FILL_REALIZED entries land in the correct UTC-day bin of daily_pnl.
 
+    Per the unit contract introduced 2026-04-30 ([[ship-gate-units-bug-2026-04-30]]),
+    daily_pnl is in *daily fraction of USD collateral*, so PENDLE inputs are scaled
+    by `pendle_price_usd / collateral_usd` before binning.
+
     Skips the parquet/sqlite seeding by using the test-injection sim path
     (`_sim_duration_s=0` + manual decision_log writes + _finalize_output).
     """
@@ -106,11 +110,12 @@ async def test_replay_run_bins_realized_fill_pnl_by_day(
 
     daily = engine._aggregate_daily_pnl()
 
+    pendle_to_usd_fraction = default_config.pricing.pendle_price_usd / default_config.sizer.collateral_usd
     assert daily.shape == (4,), f"expected 4 day bins, got {daily.shape}"
-    assert daily[0] == pytest.approx(-0.50)
+    assert daily[0] == pytest.approx(-0.50 * pendle_to_usd_fraction)
     assert daily[1] == 0.0
     assert daily[2] == 0.0
-    assert daily[3] == pytest.approx(-0.25)
+    assert daily[3] == pytest.approx(-0.25 * pendle_to_usd_fraction)
 
 
 def test_aggregate_daily_pnl_empty_decision_log_returns_single_zero_day(
@@ -146,9 +151,14 @@ def test_aggregate_daily_pnl_includes_reward_accrual_when_no_fills(
     rewards (no fills) must produce daily_pnl > 0, NOT ≤ 0. Without this fix,
     Wave 4's ship-gate issued a false-negative FAIL.
 
+    Per the unit contract ([[ship-gate-units-bug-2026-04-30]]), daily_pnl is the
+    daily fraction of USD collateral, so the per-day expectation is the PENDLE
+    accrual times `pendle_price_usd / collateral_usd`.
+
     Uses 60 HOLD entries per day across 3 UTC days, each with
     r_share_per_epoch_pendle = 1.0 (1 PENDLE/epoch).
-    Expected per-day reward ≈ 60 * 1.0 / (7 * 86400) PENDLE.
+    Expected per-day reward (PENDLE) ≈ 60 * 1.0 / (7 * 86400);
+    expected per-day reward (USD-fraction) = above × pendle_price_usd / collateral_usd.
     """
     manifest = build_run_manifest(default_config)
     engine = ReplayEngine(
@@ -183,25 +193,28 @@ def test_aggregate_daily_pnl_includes_reward_accrual_when_no_fills(
     # Epoch defaults: epoch_days=7.0, decision_loop_interval_s=1.0
     seconds_per_epoch = default_config.reward_share_model.epoch_days * 86400.0
     dt_per_tick = default_config.decision.decision_loop_interval_s
-    expected_per_day = entries_per_day * r_share * (dt_per_tick / seconds_per_epoch)
+    pendle_to_usd_fraction = default_config.pricing.pendle_price_usd / default_config.sizer.collateral_usd
+    expected_per_day = entries_per_day * r_share * (dt_per_tick / seconds_per_epoch) * pendle_to_usd_fraction
 
     assert daily.shape == (n_days,), f"expected {n_days} day bins, got {daily.shape}"
     for d in range(n_days):
         assert daily[d] > 0.0, f"daily[{d}] must be strictly positive for reward-only strategy"
         assert daily[d] == pytest.approx(
-            expected_per_day, abs=1e-9
+            expected_per_day, abs=1e-12
         ), f"daily[{d}]={daily[d]!r} != expected {expected_per_day!r}"
 
 
 def test_aggregate_daily_pnl_full_epoch_integration_matches_r_share(
     default_config: BotConfig,
 ) -> None:
-    """Integrating r_share_per_epoch_pendle over one full epoch reproduces r_share exactly.
+    """Integrating r_share_per_epoch_pendle over one full epoch reproduces r_share
+    in USD-fraction units (the new contract — see [[ship-gate-units-bug-2026-04-30]]).
 
     Uses a tiny synthetic epoch (epoch_days = 1/86400 → seconds_per_epoch = 1s) so
     a single decision-log entry with dt_per_tick=1s represents one full epoch.
-    This is the unit-conversion invariant: alive-time of exactly one epoch must
-    yield sum(daily_pnl) == r_share_per_epoch_pendle within 1e-6 relative tolerance.
+    Unit-conversion invariant: alive-time of exactly one epoch must yield
+        sum(daily_pnl) == r_share_per_epoch_pendle × pendle_price_usd / collateral_usd
+    within 1e-6 relative tolerance.
     """
     manifest = build_run_manifest(default_config)
 
@@ -228,7 +241,8 @@ def test_aggregate_daily_pnl_full_epoch_integration_matches_r_share(
     base_ts = 1_700_000_000
 
     # seconds_per_epoch = (1/86400) * 86400 = 1.0s; dt_per_tick = 1.0s.
-    # One entry = one full epoch → reward_per_tick = 5.0 * (1.0 / 1.0) = 5.0.
+    # One entry = one full epoch → reward_per_tick = 5.0 * (1.0 / 1.0) = 5.0 PENDLE.
+    # In USD-fraction: 5.0 × pendle_price_usd / collateral_usd.
     engine.output.decision_log.append(
         {
             "current_chain_ts": base_ts,
@@ -239,6 +253,10 @@ def test_aggregate_daily_pnl_full_epoch_integration_matches_r_share(
 
     daily = engine._aggregate_daily_pnl()
 
-    assert daily.sum() == pytest.approx(
-        r_share, rel=1e-6
-    ), f"Full-epoch integration: daily.sum()={daily.sum()!r} != r_share={r_share!r}"
+    pendle_to_usd_fraction = tiny_epoch_config.pricing.pendle_price_usd / tiny_epoch_config.sizer.collateral_usd
+    expected_usd_fraction = r_share * pendle_to_usd_fraction
+    assert daily.sum() == pytest.approx(expected_usd_fraction, rel=1e-6), (
+        f"Full-epoch integration: daily.sum()={daily.sum()!r} != "
+        f"expected USD-fraction {expected_usd_fraction!r} (r_share={r_share}, "
+        f"pendle_to_usd_fraction={pendle_to_usd_fraction})"
+    )

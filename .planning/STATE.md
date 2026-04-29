@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: milestone
 status: halted
-stopped_at: "Phase 5.1 re-run FAIL — run_id=01KQDMC1DC3JW07VG2VMKKXM6T, p5=2.44% APR vs threshold 6.00% APR (delta −3.56 ppt). Corrected inputs (pendle_price_usd=1.35, loss_model SQL fix, pyarrow workaround) lifted p5 from 0.49% to 2.44%. Residual gap: sparse-event tick under-counting (engine gap, unfixed). See docs/kill-report-20260429-rerun.md."
-last_updated: "2026-04-29T22:10:00.000Z"
-last_activity: 2026-04-29 -- Phase 05.1 ship-gate re-run FAIL (corrected inputs, p5=2.44%)
+stopped_at: "Phase 5.1 ship-gate units-corrected FAIL — run_id=01KQDQG0D3TZNZS2QQAPTEAPYJ, p5=0.0334% USD-APR vs threshold 6.00% USD-APR (delta −5.97 ppt). Replay aggregator was producing PENDLE-per-year quantities mislabeled as % APR; fix multiplies daily PENDLE by pendle_price_usd / collateral_usd. Prior verdicts (01KQB9C..., 01KQDMC...) were unit-incoherent — FAIL direction stood but margin was wrong. See docs/kill-report-20260430-units-corrected.md and [[ship-gate-units-bug-2026-04-30]]."
+last_updated: "2026-04-30T00:15:00.000Z"
+last_activity: 2026-04-30 -- Phase 05.1 ship-gate units-corrected FAIL (run_id 01KQDQG0..., 0.0334% USD-APR)
 progress:
   total_phases: 10
   completed_phases: 7
@@ -169,7 +169,7 @@ None yet.
 
 ### Blockers/Concerns
 
-- **[2026-04-29 HALT, UPDATED by re-run] Phase 5.1 ship-gate FAIL (both runs)** — Original run_id `01KQB9CPQAQS31P2ZSY14DHYH6` (p5=0.49% APR, stale inputs); re-run run_id `01KQDMC1DC3JW07VG2VMKKXM6T` (p5=2.44% APR, corrected inputs). Market: BINANCE-ETHUSDT-25SEP2026 long. Phase 6 is BLOCKED. See `docs/kill-report-20260429-rerun.md` and wiki [[ship-gate-verdict-20260429-rerun]]. Remaining gap (−3.56 ppt) dominated by sparse-event tick under-counting. Operator decision required: (A) fix sparse-tick synthesis and re-run, or (B) accept FAIL as strategy not viable at $100/$1.35 PENDLE. DATA-10 daily re-screen cadence deferred until operator decision.
+- **[2026-04-30 HALT, UPDATED by units fix] Phase 5.1 ship-gate FAIL (all three runs)** — Run 1 `01KQB9CPQAQS31P2ZSY14DHYH6` (input-stale + units-incoherent, reported 0.49% PENDLE/year mislabeled "% APR"); Run 2 `01KQDMC1DC3JW07VG2VMKKXM6T` (corrected inputs, units-incoherent, reported 2.44% PENDLE/year mislabeled "% APR"); Run 3 (binding) `01KQDQG0D3TZNZS2QQAPTEAPYJ` (units-corrected, p5=**0.0334% USD-APR** vs 6.00% USD-APR threshold, delta **−5.97 ppt**). Market: BINANCE-ETHUSDT-25SEP2026 long. Phase 6 is BLOCKED. See `docs/kill-report-20260430-units-corrected.md` and wiki [[ship-gate-units-bug-2026-04-30]]. The "−3.56 ppt residual gap → close with sparse-tick fix" path is no longer viable: in defensible USD-APR units the gap is −5.97 ppt and a 10× engine-completeness multiplier only reaches 0.33% USD-APR (still 18× below threshold). Operator decision required: (A) investigate the dapp-dashboard ~1000% USD-APR claim — definition mismatch (per-position vs per-collateral, before-fees, fresh-market boost) OR backtest `q_me / sigma_others` mis-estimate — both cheap; (B) accept FAIL — strategy not viable at $100 collateral / $1.35 PENDLE on this shortlist. DATA-10 daily re-screen cadence deferred until operator decision.
 - ~~Phase 0 P0-02 (minimum order size) is existential~~ **Resolved 2026-04-23** — no protocol minimum. Existential halt-condition is off the table.
 - ~~Phase 0 P0-01 (voluntary-cancel forfeit behavior) may drive material divergence in Phase 5 backtest sensitivity; if so, Phase 7 paper is blocked until P0-01 is resolved.~~ **Resolved 2026-04-23** — `voluntary_cancel_forfeits_accumulated = False`; sensitivity row demoted to sanity check, no longer a blocker.
 - ~~P0-04 PARTIAL~~ **Resolved 2026-04-23** — Send Txs Bot is the mandatory submission lane; direct-submit ruled out. Latency budget closes on ~1–3s typical, <5s worst, with pre-signed calldata + Send Txs Bot. [[Sign-only cancel primitive]], [[Send Txs Bot integration]].
@@ -177,10 +177,10 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-29T22:10:00.000Z
-Stopped at: Phase 5.1 ship-gate re-run FAIL — run_id=01KQDMC1DC3JW07VG2VMKKXM6T, p5=2.44% APR vs threshold 6.00% APR (delta −3.56 ppt). Corrected inputs (pendle_price=1.35, loss_model SQL fix, pyarrow workaround). See docs/kill-report-20260429-rerun.md.
+Last session: 2026-04-30T00:15:00.000Z
+Stopped at: Phase 5.1 ship-gate units-corrected FAIL — run_id=01KQDQG0D3TZNZS2QQAPTEAPYJ, p5=0.0334% USD-APR vs threshold 6.00% USD-APR (delta −5.97 ppt). Replay aggregator was returning PENDLE/year quantities mislabeled as % APR; fix multiplies daily PENDLE by pendle_price_usd / collateral_usd. See docs/kill-report-20260430-units-corrected.md.
 Resume file: None
 
-**Next action:** Project halted. Operator decision required: (A) implement sparse-event tick synthesis in replay engine and re-run ship-gate, or (B) accept FAIL — strategy not viable at $100 collateral / $1.35 PENDLE at current reward rates. See [[ship-gate-verdict-20260429-rerun]].
+**Next action:** Project halted. Sparse-tick recovery path is no longer viable in USD-APR units. Operator decision required: (A) investigate the dapp-dashboard ~1000% USD-APR claim before any further engineering — likely either definition mismatch (per-position vs per-collateral, before-fees, fresh-market boost) or `q_me / sigma_others` mis-estimate (both cheap, ~hours each); (B) accept FAIL — strategy not viable at $100 collateral / $1.35 PENDLE on this shortlist. See [[ship-gate-units-bug-2026-04-30]].
 
-**Planned Phase:** 05.1 re-run complete — next phase depends on operator decision above.
+**Planned Phase:** 05.1 units-corrected re-run complete — next phase depends on operator decision above.
