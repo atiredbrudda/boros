@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: milestone
 status: halted
-stopped_at: "Phase 5.1 Wave 4 ship-gate FAIL — run_id=01KQB9CPQAQS31P2ZSY14DHYH6, p5=0.49% APR vs threshold 6.00% APR. See docs/kill-report-20260429.md. Engine completeness gaps (sparse-event tick under-counting + loss_model SQL column mismatch) partially explain the shortfall; verdict stands as FAIL. Operator must decide: fix engine gaps and re-run OR advance to Phase 6 with eyes open."
-last_updated: "2026-04-29T00:17:37.917403Z"
+stopped_at: "Phase 5.1 Wave 4 ship-gate FAIL — run_id=01KQB9CPQAQS31P2ZSY14DHYH6, p5=0.49% APR vs threshold 6.00% APR. See docs/kill-report-20260429.md."
+last_updated: "2026-04-29T01:00:00.000Z"
 last_activity: 2026-04-29 -- Phase 05.1 Wave 4 ship-gate binding backtest FAIL
 progress:
   total_phases: 10
@@ -21,14 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-24)
 
 **Core value:** Earn net-positive yield on $100 collateral from the Boros Limit Order Liquidity Rewards pool that beats stablecoin alternatives, after gas and fill-loss — on a live, single-market deployment. If -EV, detect cheaply and kill; do not limp.
-**Current focus:** Phase --phase — 05.1
+**Current focus:** Phase 05.1 — HALTED
 
 ## Current Position
 
-Phase: --phase (05.1) — EXECUTING
-Plan: 1 of --name
-Status: Executing Phase --phase
-Last activity: 2026-04-28 -- Phase --phase execution started
+Phase: 05.1 / Plan: 05.1-05 FAIL-branch terminal; PHASE TERMINATES; project halted.
+Status: HALTED — ship-gate FAIL 2026-04-29
+Last activity: 2026-04-29 -- Phase 05.1 Wave 4 ship-gate binding backtest FAIL
 
 Progress: [██████████] 100%
 
@@ -153,6 +152,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [2026-04-27 05.1-03] Wave 2 PASS via deviation: DATA-08 screener over 25 real-data markets passed 6 (top-4 shortlist = BINANCE-ETHUSDT-{25SEP,26JUN,29MAY}2026 + HYPERLIQUID-ETH-29MAY2026; 19 fail zero_depth_at_clo, 1 fail insufficient_reversals). DATA-09 economics gate raised ProjectHalt with empty Per-Market Evaluation table — false positive caused by LOCKED D-01 plan defect (gate expects r_apr_potential from market_reward_calibration which Wave 3 populates; Wave 2 has no calibration rows so every passer's r_apr_potential is null and the gate skip-branch fires for all). Soft-PASS branch taken: kill report deleted (empty rows = self-evidently a non-event), shortlist.json + shortlist_previous.json overwritten with the 4 DATA-08 passers (DATA-10 baseline seeded), economics_gate.json kept as informational audit trail (`{threshold:0.07, rows:[], shortlist:[]}`). Binding economics check deferred to Wave 4 backtest (BACK-07 ship-gate threshold = alt_yield + all_fees, same intent as DATA-09). Plan defect documented in [[phase-05-1-economics-gate-verdict]] for future plan revision. See [[phase-05-1-screener-verdict]] + [[phase-05-1-economics-gate-verdict]]. Deviations: local DNS broken (socket.getaddrinfo fails for historical-data.boros.finance) — resolved via --resolve IP override; underlying-apr archive uses Binance-ETH format (not BINANCE-ETHUSDT), xyz-prefix markets mapped via alias table; settlement parquet has null market_id (schema mismatch between archive format and ingester SETTLEMENT_SCHEMA — tracked as known issue). See [[phase-05-1-bulk-fetch-runbook]] + [[phase-05-1-bulk-ingest-runbook]].
 - [2026-04-28 05.1-04] Wave 3 complete: per-shortlist-market reward calibration written (4 operator rows, 0 BLOCKED); fill-model fit GREEN for all 8 (market, side) pairs; strategy/v0.5-phase05.1-shortlist.yaml committed; FILL-06 degraded count = 0; fill_model.cli extended with --market single-market override + absolute parquet_root/sqlite_path resolution (CWD-independent). Ready for Wave 4. See [[market-reward-calibration-2026-04-26]] + [[phase-05-1-fill-model-fit-summary]].
 - [2026-04-28 05.1-04b] Engine-completeness fix: _aggregate_daily_pnl now composes (reward_accrual − fill_loss) per UTC day. Prior version captured only FILL_REALIZED pnl_pendle, making the bootstrapped p5 unconditionally ≤ 0 for any reward-driven strategy — guaranteeing a false-negative FAIL on Wave 4's binding ship-gate. Fix integrates r_share_per_epoch_pendle from decision_log via config.reward_share_model.epoch_days + config.decision.decision_loop_interval_s (PROTO-04 SSoT, no hard-coded constants). 5/5 tests GREEN (3 existing + 2 new regression tests: reward-only produces strictly positive daily_pnl; full-epoch integration reproduces r_share within 1e-6 rel). Commit 26bac74. Wiki [[backtest-daily-pnl-aggregation-v05]] filed Status: Current.
+- [2026-04-29 05.1-05 FAIL] Phase 05.1 ship-gate FAILED on real data: market=BINANCE-ETHUSDT-25SEP2026 side=long; p5_annualized_pnl=0.004897 vs threshold=0.0600 (delta=−0.05510); run_id=01KQB9CPQAQS31P2ZSY14DHYH6; PROJECT HALTED. Real kill report at docs/kill-report-20260429.md (real ULID, real markets, no fixture leaks). Two engine-completeness gaps documented (sparse-event tick under-counting, loss_model SQL column mismatch) — neither closes the 5.51 ppt gap. See [[ship-gate-verdict-20260429]] Status: Current — Phase 5 ship-gate FAIL, project halted.
 - URL pattern Branch A: files.json master manifest + per-file static GET (no server-side folder ZIP); market-ID numeric-prefix divergence requires Wave 1 GET /markets cross-reference
 - data.ndjson declared as new storage node in architecture.yml; Wave 1 plan adds reads edges from ingester
 - scripts/__init__.py + pythonpath='..' added so python/tests can import scripts.fetch_historical_data as a package
@@ -167,7 +167,7 @@ None yet.
 
 ### Blockers/Concerns
 
-- **[2026-04-29 HALT] Phase 5.1 Wave 4 ship-gate FAIL** — run_id `01KQB9CPQAQS31P2ZSY14DHYH6`, p5=0.49% APR vs threshold 6.00% APR (delta −5.51 ppt). Market: BINANCE-ETHUSDT-25SEP2026 long. Phase 6 is BLOCKED pending operator decision. See `docs/kill-report-20260429.md` and wiki [[ship-gate-verdict-20260429]]. Two engine-completeness gaps identified: (1) sparse-event tick under-counting (1 Hz reward loop not synthesized between trade events), (2) loss_model SQL column mismatch (`marketId`/`size` vs `market_id`/`size_float`; `buy`/`sell` vs `long`/`short`). These partially explain the shortfall but do not fully close the 5.51 ppt gap. Operator must decide: fix engine gaps and re-run OR advance to Phase 6 paper trading with eyes open.
+- **[2026-04-29 HALT] Phase 5.1 Wave 4 ship-gate FAIL** — run_id `01KQB9CPQAQS31P2ZSY14DHYH6`, p5=0.49% APR vs threshold 6.00% APR (delta −5.51 ppt). Market: BINANCE-ETHUSDT-25SEP2026 long. Phase 6 is BLOCKED. See `docs/kill-report-20260429.md` and wiki [[ship-gate-verdict-20260429]]. Two engine-completeness gaps documented: (1) sparse-event tick under-counting, (2) loss_model SQL column mismatch. These partially explain the shortfall but do not close the 5.51 ppt gap. This is a confirmed FAIL — Risk R8 "kill cheap" outcome. DATA-10 daily re-screen cadence deferred until operator decision to resume.
 - ~~Phase 0 P0-02 (minimum order size) is existential~~ **Resolved 2026-04-23** — no protocol minimum. Existential halt-condition is off the table.
 - ~~Phase 0 P0-01 (voluntary-cancel forfeit behavior) may drive material divergence in Phase 5 backtest sensitivity; if so, Phase 7 paper is blocked until P0-01 is resolved.~~ **Resolved 2026-04-23** — `voluntary_cancel_forfeits_accumulated = False`; sensitivity row demoted to sanity check, no longer a blocker.
 - ~~P0-04 PARTIAL~~ **Resolved 2026-04-23** — Send Txs Bot is the mandatory submission lane; direct-submit ruled out. Latency budget closes on ~1–3s typical, <5s worst, with pre-signed calldata + Send Txs Bot. [[Sign-only cancel primitive]], [[Send Txs Bot integration]].
@@ -175,25 +175,10 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-27T05:35:00.000Z
-Stopped at: Completed 05.1-03-PLAN.md — Wave 2 DATA-08 screener + DATA-09 (soft PASS via deviation); 4-market shortlist + Wave-1.5 hardening commit (7a6e689) landed
+Last session: 2026-04-29T01:00:00.000Z
+Stopped at: Phase 5.1 Wave 4 ship-gate FAIL — run_id=01KQB9CPQAQS31P2ZSY14DHYH6, p5=0.49% APR vs threshold 6.00% APR. See docs/kill-report-20260429.md.
 Resume file: None
 
-**Completed this session (2026-04-24 second pass):**
-
-- Fixed wrapper scripts: DOTENV_PRIVATE_KEY_PRODUCTION → DOTENV_PRIVATE_KEY (env var name mismatch with .env.keys)
-- Fixed venv editable install: uv sync --locked in python/ updated stale .pth from old path to /Users/macbookair/boros/python/src
-- Loaded brain launchd agent: bootstrap + enable + kickstart. Brain running at /Users/macbookair/boros.
-- Test 2 PASS: SIGKILL PID 18701 at 07:37:02 → new PID 18896 at 07:37:13 (11s restart). Fresh RUN_MANIFEST confirmed.
-- Test 6 PARTIAL: clo_history 41 rows, f_index_raw populated, market_ids correct. MarketsPoller duplicate-symbol fix applied (HYPERLIQUID-BTC-29MAY2026 deduped). reward_budget_history = 0 — ELiqPoller Assumption A5 fields absent from live API.
-- LLM Wiki stays at original path. CLAUDE.md updated: ../LLM Wiki/ → absolute /Users/macbookair/Documents/project/test/rerun7/LLM Wiki/.
-- ELiqPoller gap documented in UAT file: needs redesign before Phase 3 reward-share model.
-
-**Carried concern:**
-
-- ELiqPoller (DATA-11): fields liquidityRewardPerEpoch/longBudget/shortBudget NOT in GET /markets. Real source of E_liq_per_epoch unknown — candidates: config.liqSettings.{base,slope}, on-chain distributor contract, or separate endpoint. Investigate before Phase 3.
-
-**Next action:**
-Wave 3 — Plan 05.1-04 operator-driven reward calibration (`human-verify` checkpoint at Task 1; operator must look up `e_liq_per_epoch_pendle` + per-side splits per shortlist market from Pendle dApp / team statements / docs).
+**Next action:** Project halted 2026-04-29; see [[ship-gate-verdict-20260429]] — no Phase 6 work begins.
 
 **Planned Phase:** 05.1 (Ship-Gate Execution: Historical Data Fetch + Ingest + Screener + Economics Gate + Backtest Run) — 5 plans — 2026-04-26T22:49:30.154Z
