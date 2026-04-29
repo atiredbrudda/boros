@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: milestone
-status: executing
-stopped_at: Completed 05.1-03-PLAN.md — Wave 2 DATA-08 screener + DATA-09 (soft PASS via deviation); 4-market shortlist + Wave-1.5 hardening commit (7a6e689) landed
-last_updated: "2026-04-28T11:32:44.067Z"
-last_activity: 2026-04-28 -- Phase --phase execution started
+status: halted
+stopped_at: "Phase 5.1 Wave 4 ship-gate FAIL — run_id=01KQB9CPQAQS31P2ZSY14DHYH6, p5=0.49% APR vs threshold 6.00% APR. See docs/kill-report-20260429.md. Engine completeness gaps (sparse-event tick under-counting + loss_model SQL column mismatch) partially explain the shortfall; verdict stands as FAIL. Operator must decide: fix engine gaps and re-run OR advance to Phase 6 with eyes open."
+last_updated: "2026-04-29T00:17:37.917403Z"
+last_activity: 2026-04-29 -- Phase 05.1 Wave 4 ship-gate binding backtest FAIL
 progress:
   total_phases: 10
   completed_phases: 5
   total_plans: 43
-  completed_plans: 41
-  percent: 95
+  completed_plans: 43
+  percent: 100
 ---
 
 # Project State
@@ -167,6 +167,7 @@ None yet.
 
 ### Blockers/Concerns
 
+- **[2026-04-29 HALT] Phase 5.1 Wave 4 ship-gate FAIL** — run_id `01KQB9CPQAQS31P2ZSY14DHYH6`, p5=0.49% APR vs threshold 6.00% APR (delta −5.51 ppt). Market: BINANCE-ETHUSDT-25SEP2026 long. Phase 6 is BLOCKED pending operator decision. See `docs/kill-report-20260429.md` and wiki [[ship-gate-verdict-20260429]]. Two engine-completeness gaps identified: (1) sparse-event tick under-counting (1 Hz reward loop not synthesized between trade events), (2) loss_model SQL column mismatch (`marketId`/`size` vs `market_id`/`size_float`; `buy`/`sell` vs `long`/`short`). These partially explain the shortfall but do not fully close the 5.51 ppt gap. Operator must decide: fix engine gaps and re-run OR advance to Phase 6 paper trading with eyes open.
 - ~~Phase 0 P0-02 (minimum order size) is existential~~ **Resolved 2026-04-23** — no protocol minimum. Existential halt-condition is off the table.
 - ~~Phase 0 P0-01 (voluntary-cancel forfeit behavior) may drive material divergence in Phase 5 backtest sensitivity; if so, Phase 7 paper is blocked until P0-01 is resolved.~~ **Resolved 2026-04-23** — `voluntary_cancel_forfeits_accumulated = False`; sensitivity row demoted to sanity check, no longer a blocker.
 - ~~P0-04 PARTIAL~~ **Resolved 2026-04-23** — Send Txs Bot is the mandatory submission lane; direct-submit ruled out. Latency budget closes on ~1–3s typical, <5s worst, with pre-signed calldata + Send Txs Bot. [[Sign-only cancel primitive]], [[Send Txs Bot integration]].

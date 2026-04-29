@@ -342,6 +342,10 @@ class ReplayEngine:
         tick = clo_lower if self.side == "long" else clo_upper
         depth_from_mark_ticks = abs(tick - midpoint)
 
+        # queue_ahead_wei=10**22 exceeds int64 range; orjson serialises as float string.
+        # Use 10**18 (1e18 wei = 1 ETH-scale) which is within int64 and still represents
+        # "deep back of queue" for the outer-edge seeded order.
+        _queue_ahead = 10**18
         order = SyntheticOrder(
             order_id=f"initial_{self.run_id}_{self.side}",
             market_id=self.market_id,
@@ -350,7 +354,7 @@ class ReplayEngine:
             q_me_pendle=float(self.config.sizer.q_min_pendle),
             placed_at_ts=placed_at_ts,
             depth_from_mark_ticks=depth_from_mark_ticks,
-            queue_ahead_wei=10**22,
+            queue_ahead_wei=_queue_ahead,
             r_accum=0.0,
             t_frac=1.0,
         )
@@ -363,7 +367,7 @@ class ReplayEngine:
             tick=tick,
             depth_from_mark_ticks=depth_from_mark_ticks,
             q_me_pendle=order.q_me_pendle,
-            queue_ahead_wei=order.queue_ahead_wei,
+            queue_ahead_wei=str(_queue_ahead),
             placed_at_ts=placed_at_ts,
         )
         return True

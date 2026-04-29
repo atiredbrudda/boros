@@ -1,0 +1,9 @@
+{
+  "p5_annualized_pnl": 0.004896723646723647,
+  "threshold": 0.060000000000000005,
+  "passed": false,
+  "n_resamples": 2000,
+  "block_seconds": 86400,
+  "seed": 1948926074177518118,
+  "manifest_run_id": "01KQB9CPQAQS31P2ZSY14DHYH6"
+}
