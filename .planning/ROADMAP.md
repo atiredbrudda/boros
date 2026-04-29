@@ -190,7 +190,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: TBD
 **UI hint**: yes
 
-### Phase 05.1: Ship-Gate Execution: Historical Data Fetch + Ingest + Screener + Economics Gate + Backtest Run (INSERTED)
+### Phase 05.1: Ship-Gate Execution: Historical Data Fetch + Ingest + Screener + Economics Gate + Backtest Run (INSERTED) — HALTED 2026-04-29
+
+**HALT VERDICT:** Phase 05.1 TERMINATES with FAIL on 2026-04-29. Binding backtest: BINANCE-ETHUSDT-25SEP2026 long, run_id=01KQB9CPQAQS31P2ZSY14DHYH6, p5=0.49% APR vs threshold 6.00% APR. Kill report: docs/kill-report-20260429.md. Wiki: [[ship-gate-verdict-20260429]] (Status: Current). Phase 6 BLOCKED. All 5 plans executed (01 Wave 0, 02 Wave 1, 03 Wave 2, 04/04b Wave 3, 05 Wave 4).
 
 **Goal:** Run the Phase-5 backtest engine end-to-end against real Boros historical data and produce a binding ship-gate verdict (PASS → Phase 6 unblocked; FAIL → real kill report + project halt). Phase 5 verified the engine is correct on synthetic tests; Phase 5.1 verifies the *strategy* by feeding real data through it. Bridges the gap that Phase 1 left open — only a 41-row `clo_history` UAT snapshot and a single `BINANCE-ETHUSDT-29MAY2026` fill-model artifact exist on disk; no `market-trades/`, no `order-book/`, no `underlying-apr/`, no operator-calibrated `market_reward_calibration` rows, alembic head still at `0002` (behind Phase-4's `0007`). Source identified: `https://historical-data.boros.finance` (public ZIP/NDJSON dumps, no auth, layout matches the Phase-1 ingester 1:1).
 

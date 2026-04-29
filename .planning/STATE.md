@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: milestone
-status: halted
-stopped_at: "Phase 5.1 Wave 4 ship-gate FAIL — run_id=01KQB9CPQAQS31P2ZSY14DHYH6, p5=0.49% APR vs threshold 6.00% APR. See docs/kill-report-20260429.md."
-last_updated: "2026-04-29T01:00:00.000Z"
+status: HALTED — ship-gate FAIL 2026-04-29
+stopped_at: Phase 5.1 Wave 4 ship-gate FAIL — run_id=01KQB9CPQAQS31P2ZSY14DHYH6, p5=0.49% APR vs threshold 6.00% APR. See docs/kill-report-20260429.md.
+last_updated: "2026-04-29T06:46:38.677Z"
 last_activity: 2026-04-29 -- Phase 05.1 Wave 4 ship-gate binding backtest FAIL
 progress:
   total_phases: 10
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 43
   completed_plans: 43
   percent: 100
