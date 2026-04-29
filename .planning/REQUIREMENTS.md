@@ -284,9 +284,9 @@ Every v1 requirement is mapped to exactly one phase. Phase names are the consoli
 | DATA-05 | Phase 1: Foundation (Infra + Data + Economics Gate) | Pending |
 | DATA-06 | Phase 1: Foundation (Infra + Data + Economics Gate) | Pending |
 | DATA-07 | Phase 1: Foundation (Infra + Data + Economics Gate) | Pending |
-| DATA-08 | Phase 1: Foundation (Infra + Data + Economics Gate) | Pending |
-| DATA-09 | Phase 1: Foundation (Infra + Data + Economics Gate) | Pending |
-| DATA-10 | Phase 1: Foundation (Infra + Data + Economics Gate) | Pending |
+| DATA-08 | Phase 1: Foundation (Infra + Data + Economics Gate) | Complete |
+| DATA-09 | Phase 1: Foundation (Infra + Data + Economics Gate) | Complete |
+| DATA-10 | Phase 1: Foundation (Infra + Data + Economics Gate) | Complete |
 | DATA-11 | Phase 1: Foundation (Infra + Data + Economics Gate) | Pending |
 | PROTO-01 | Phase 1: Foundation (Infra + Data + Economics Gate) | Pending |
 | PROTO-02 | Phase 1: Foundation (Infra + Data + Economics Gate) | Pending |
@@ -326,7 +326,7 @@ Every v1 requirement is mapped to exactly one phase. Phase names are the consoli
 | BACK-04 | Phase 5: Event-Driven Backtest (Ship-Gate) | Pending |
 | BACK-05 | Phase 5: Event-Driven Backtest (Ship-Gate) | Pending |
 | BACK-06 | Phase 5: Event-Driven Backtest (Ship-Gate) | Pending |
-| BACK-07 | Phase 5: Event-Driven Backtest (Ship-Gate) | Pending |
+| BACK-07 | Phase 5: Event-Driven Backtest (Ship-Gate) | Complete |
 | BACK-08 | Phase 5: Event-Driven Backtest (Ship-Gate) | Pending |
 | EXEC-01 | Phase 6: Execution Layer (TypeScript hands) | Pending |
 | EXEC-02 | Phase 6: Execution Layer (TypeScript hands) | Pending |
