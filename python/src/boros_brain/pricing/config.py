@@ -32,7 +32,12 @@ class PricingConfig(StrictBase):
     """
 
     pendle_price_usd: float = Field(7.0, ge=0.1, le=1000.0)
-    """Operator-supplied PENDLE/USD price. v1.0 will replace with oracle read."""
+    """Operator-supplied PENDLE/USD price. v1.0 will replace with oracle read.
+
+    NOTE: the 7.0 default is a legacy test-scaffold value — do NOT trust it for
+    live runs. The strategy YAML must override with the current PENDLE/USD.
+    Real PENDLE was ~$1.35 as of 2026-04-29 (operator-supplied).
+    """
 
     price_source: Literal["manual", "chainlink", "pyth"] = "manual"
     """Source enum. v0.5 fixed at 'manual'; v1.0 may flip to a live oracle."""

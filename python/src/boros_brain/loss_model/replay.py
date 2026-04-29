@@ -21,6 +21,11 @@ from the caller (window_start_ts, window_end_ts).
 
 from __future__ import annotations
 
+import json
+import re
+from functools import lru_cache
+from pathlib import Path
+
 import polars as pl
 import structlog
 
@@ -32,6 +37,45 @@ from .schemas import PerFillPnL
 log = structlog.get_logger(__name__)
 
 __all__ = ["replay_historical_fills", "build_per_fill_pnl_from_frame"]
+
+# Phase 5.1 Wave-1 fetcher writes ``var/fetcher/market_id_mapping.json`` mapping
+# canonical symbol (e.g. "BINANCE-ETHUSDT-25SEP2026") → archive-prefixed parquet
+# partition key (e.g. "101-BINANCE-ETHUSDT-25SEP2026"). Mirrors the helper in
+# fill_model/features.py and screener/filter.py — kept local to avoid a
+# cross-module import.
+_LOSS_PROJECT_ROOT = Path(__file__).resolve().parents[4]
+_LOSS_MAPPING_PATH = _LOSS_PROJECT_ROOT / "var/fetcher/market_id_mapping.json"
+_LOSS_ARCHIVE_PREFIX_RE = re.compile(r"^\d+-")
+
+
+@lru_cache(maxsize=1)
+def _load_loss_market_id_mapping() -> dict[str, str]:
+    """Load canonical→archive mapping. Returns {} when file absent (test fixtures)."""
+    if not _LOSS_MAPPING_PATH.exists():
+        return {}
+    try:
+        raw = json.loads(_LOSS_MAPPING_PATH.read_text())
+    except (OSError, json.JSONDecodeError) as exc:
+        log.warning("loss_model.replay.mapping_load_failed", path=str(_LOSS_MAPPING_PATH), error=str(exc))
+        return {}
+    out: dict[str, str] = {}
+    for canonical, entry in (raw.get("mapping") or {}).items():
+        recommended = (entry or {}).get("recommended")
+        if isinstance(recommended, str) and recommended:
+            out[canonical] = recommended
+    return out
+
+
+def _parquet_market_id(mid: str) -> str:
+    """Translate canonical market_id → archive-prefixed parquet partition key.
+
+    Idempotent: already-prefixed IDs pass through unchanged.
+    Unknown IDs pass through (preserves test-fixture paths).
+    """
+    if _LOSS_ARCHIVE_PREFIX_RE.match(mid):
+        return mid
+    mapping = _load_loss_market_id_mapping()
+    return mapping.get(mid, mid)
 
 
 def _get_loss_model_config(config: BotConfig) -> LossModelConfig:
@@ -52,14 +96,14 @@ def _get_loss_model_config(config: BotConfig) -> LossModelConfig:
 _REPLAY_SQL = """
 WITH fills AS (
     SELECT
-        marketId AS market_id,
+        market_id,
         side AS side,
         eventIndex AS fill_event_index,
         blockTimestamp AS fill_block_ts,
         rate AS fill_rate,
-        size AS fill_size_str
+        size_float AS fill_size_float
     FROM market_trades
-    WHERE marketId = $market_id
+    WHERE market_id = $market_id
       AND blockTimestamp >= $window_start
       AND blockTimestamp <= $window_end
 ),
@@ -74,13 +118,13 @@ closes AS (
         f.fill_event_index,
         f.fill_block_ts,
         f.fill_rate,
-        f.fill_size_str,
+        f.fill_size_float,
         c.rate AS close_rate,
         c.blockTimestamp AS close_block_ts,
         c.eventIndex AS close_event_index
     FROM fills f
     LEFT JOIN market_trades c
-      ON c.marketId = f.market_id
+      ON c.market_id = f.market_id
      AND c.side != f.side
      AND c.blockTimestamp >= f.fill_block_ts
      AND (c.blockTimestamp > f.fill_block_ts OR c.eventIndex > f.fill_event_index)
@@ -129,7 +173,7 @@ def replay_historical_fills(
             df = conn.execute(
                 _REPLAY_SQL,
                 {
-                    "market_id": market_id,
+                    "market_id": _parquet_market_id(market_id),
                     "window_start": window_start_ts,
                     "window_end": window_end_ts,
                     "close_latency_budget_s": int(lcfg.close_latency_budget_s),
@@ -172,11 +216,12 @@ def build_per_fill_pnl_from_frame(
     """Compute PerFillPnL rows from a polars DataFrame matching the replay SQL output.
 
     Expected columns: market_id, side, fill_event_index, fill_block_ts, fill_rate,
-    fill_size_str (or fill_size_float), close_rate, close_block_ts, close_event_index
-    (optional), and optionally depth_from_mark_ticks if the frame already carries it
-    (test injection path). When depth_from_mark_ticks is missing we fall back to 0
-    — the Phase-1 parquet does not yet carry it; the screener tick helper lands in
-    Plan 03-04. For test fixtures, callers pass it through directly.
+    fill_size_float (or legacy fill_size_str for wei-string test fixtures),
+    close_rate, close_block_ts, close_event_index (optional), and optionally
+    depth_from_mark_ticks if the frame already carries it (test injection path).
+    When depth_from_mark_ticks is missing we fall back to 0 — the Phase-1 parquet
+    does not yet carry it; the screener tick helper lands in Plan 03-04. For test
+    fixtures, callers pass it through directly.
 
     ``pendle_price_usd`` defaults to ``config.pricing.pendle_price_usd`` when
     omitted (Plan 03-04 wiring). Tests may pass an explicit value to exercise
