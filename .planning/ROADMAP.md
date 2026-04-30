@@ -258,8 +258,40 @@ Decimal phases appear between their surrounding integers in numeric order.
   6. Re-run binding ship-gate on the fully repaired engine. `n_fills` from the new `decision_log` matches W0 audit's edge-crossing count. Verdict JSON reports gross-vs-net reward decomposition explicitly. PASS classification requires net-of-fills `p5 ≥ threshold × adequate_margin` (5× starting band); FAIL classification names the residual gap.
 
 **Plans**: 2 plans (one engineering, one research; runnable in parallel)
-- [ ] 05.3-01-PLAN.md — Fill-path repair: YU unit convention + shared `_clo_findex_to_tick` + decouple rate-crossing from queue gate + smoke test + re-run verdict
-- [ ] 05.3-02-PLAN.md — Reward-path research: source Pendle's LO reward formula + reconcile dapp 489% LONG APR + derive expected-verdict band (consumed by Plan 01 T7)
+- [x] 05.3-01-PLAN.md — Fill-path repair: T1–T5 complete (5 atomic commits `4c75d9a` → `c435378`); T6/T7 routed to Phase 05.4 due to 4 prerequisite bugs surfaced during T6 dry-run. See `05.3-01-SUMMARY.md`.
+- [x] 05.3-02-PLAN.md — Reward-path research: T1–T4 complete (1 commit `1ba8481` + 3 wiki pages + band JSON). Outputs consumed unchanged by Phase 05.4-04 T7. See `05.3-02-SUMMARY.md`.
+**UI hint**: no
+
+### Phase 05.4: Verdict Prerequisites + Binding Ship-Gate Re-Run (INSERTED 2026-04-30) — COMPLETES PHASE 05.3 T6/T7
+**Goal**: Produce a clean binding ship-gate verdict on the all-bugs-fixed engine, classified against the (unchanged) Phase 05.3 expected-verdict band. The Phase 05.3 Plan 01 T6 dry-run (run_id `01KQFABR9VNPMKKQYPTQGRJMDR`) validated the fill-path fix empirically (11 FILL_REALIZED entries; reconstructed p5 = 894% from reward leg only — directional PASS) but surfaced 4 separate prerequisite bugs that block a binding verdict regardless of engine repair. This phase fixes those bugs (sequentially where dependent, parallel where independent), then re-runs T6/T7 against the inherited classification rule.
+**Depends on**: Phase 05.3 Plan 01 T1–T5 (fill-path repair landed in HEAD `c435378`); Phase 05.3 Plan 02 T1–T4 (band + classification rule pinned in `var/reports/expected_verdict_band_2026-04-30.json`)
+**Requirements**: BACK-07 (re-evaluation, fill-detection branch); inherits classification thresholds from Phase 05.3 Plan 02 T4
+**Success Criteria**:
+  1. Bug A fixed: Alembic migration 0008 applied; `effective_at_utc` column live in `state.market_reward_calibration`; prior + current epoch operator rows inserted for binding market; `_load_operator_calibration_history` returns ≥2 rows; `no_operator_calibration` warnings drop to 0 in a smoke run.
+  2. Bug B resolved: replay loop processes the full 237-trade tape (or root cause documented as a cascade of Bug A and explicitly verified). `decision_log['current_chain_ts'].max()` reaches at least the last trade's blockTimestamp.
+  3. Bug C addressed: fill_model fit window bounded to `current_chain_ts` per tick (or per-day refit), OR look-ahead bias quantified with explicit band widening for verdict classification.
+  4. Bug D fixed: `pnl_pendle` column persisted in decision_log parquet; regression test verifies parquet-aggregation matches in-memory aggregation to 1e-9 rel tolerance.
+  5. Re-run binding ship-gate: produces a real `ship_gate_verdict.json` with `p5_annualized_pnl` AND `n_fills > 0`. Verdict classifier (read from band JSON's `classification_rule` block):
+     - `p5 ∈ [pass_lo=0.42, pass_hi=18.10]` → **PASS — within band**, halt-lift candidate.
+     - `p5 < fail_lo=0.0` → **FAIL** with kill report.
+     - else → **FLAG**, route to Phase 05.5 (sixth-bug investigation) BEFORE lifting halt.
+  6. Phase 05.4 SUMMARY documents the verdict + which bugs were fixed vs deferred + whether the band was widened (if Bug C was deferred).
+
+**Plans**: 4 plans (sequential dependency where bugs may cascade; parallel where independent)
+- [ ] 05.4-01-PLAN.md — Fix Bug A: apply Alembic 0008 migration + insert prior/current epoch operator calibration rows for binding market. Sequential (must precede 05.4-02).
+- [ ] 05.4-02-PLAN.md — Investigate Bug B against the A-fixed engine. May reduce to "no-op, was a cascade — document". Investigation budget 2 hours; if root cause not found, route to Phase 05.5.
+- [ ] 05.4-03-PLAN.md — Fix Bug C (look-ahead in fill/loss fits) AND Bug D (persist pnl_pendle to decision_log parquet). Wave-parallel with 05.4-02.
+- [ ] 05.4-04-PLAN.md — Inherit-and-execute T6+T7: binding ship-gate ~4h re-run + verdict classification against `var/reports/expected_verdict_band_2026-04-30.json` (consumed UNCHANGED from Phase 05.3 Plan 02 T4). Includes explicit escape valve to Phase 05.5 if `p5` outside band.
+
+**Inherited artifacts (do NOT re-derive)**:
+- Phase 05.3 commits `4c75d9a` → `c435378` (fill-path repair); commit `1ba8481` (band derivation script + smoke tests with classification_rule pinning)
+- `var/reports/expected_verdict_band_2026-04-30.json` (band + classification_rule block)
+- `[[fill-path-repair-2026-04-30]]` Status: Current
+- `[[expected-verdict-band-2026-04-30]]` Status: Current
+- `[[pendle-lo-reward-formula-verified]]` Status: Current — PARTIAL
+- `[[dapp-apr-reconciliation-2026-04-30]]` Status: Current
+- `[[phase-05-3-bugs-discovered-during-t6]]` Status: Current — load-bearing input
+
 **UI hint**: no
 
 ### Phase 6: Execution Layer (TypeScript hands)

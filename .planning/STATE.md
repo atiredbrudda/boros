@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: milestone
-status: awaiting_operator_t6_approval
-stopped_at: Phase 05.3 — Plan 01 T1–T5 complete (5 atomic commits); Plan 02 T1–T4 complete (1 atomic commit + 3 wiki pages); awaiting operator approval to start T6 binding ship-gate ~4h re-run
-last_updated: "2026-04-30T14:30:00.000Z"
-last_activity: 2026-04-30 — Plan 01 fill-path repair landed (4c75d9a → c435378); Plan 02 expected-verdict band published (1ba8481); ready for T6 operator-gated re-run
+status: ready_to_plan
+stopped_at: Phase 05.3 closed (Plan 01 T1–T5 + Plan 02 T1–T4 done; T6/T7 routed to Phase 05.4 due to 4 prerequisite bugs surfaced during T6 dry-run); Phase 05.4 scaffolded with CONTEXT.md
+last_updated: "2026-04-30T15:30:00.000Z"
+last_activity: 2026-04-30 — Phase 05.3 SUMMARYs filed; LLM Wiki pages committed in 2 batches (4b079ad, 7aac48a); Phase 05.4 ROADMAP entry + CONTEXT.md scaffolded; classification_rule pinned in band JSON
 progress:
-  total_phases: 12
+  total_phases: 13
   completed_phases: 6
-  total_plans: 51
-  completed_plans: 48
-  percent: 94
+  total_plans: 55
+  completed_plans: 49
+  percent: 89
 ---
 
 # Project State
@@ -21,17 +21,37 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-24)
 
 **Core value:** Earn net-positive yield on $100 collateral from the Boros Limit Order Liquidity Rewards pool that beats stablecoin alternatives, after gas and fill-loss — on a live, single-market deployment. If -EV, detect cheaply and kill; do not limp.
-**Current focus:** Phase 05.3 — Fill-Path Repair (drafted; ready to execute)
+**Current focus:** Phase 05.4 — Verdict Prerequisites + Binding Ship-Gate Re-Run (scaffolded; ready to plan)
 
 ## Current Position
 
-Phase: 05.3 — AWAITING OPERATOR T6 APPROVAL
-Plans: 05.3-01 (engineering, T1–T5 complete) + 05.3-02 (research, T1–T4 complete)
-Status: Both Wave-1 tracks landed. Fill-path is unit-coherent. Expected-verdict band published. T6 = ~4h binding ship-gate re-run, gated on operator GO.
+Phase: 05.4 — READY TO PLAN
+Plans: 0 of 4 drafted. CONTEXT.md scaffolded with inherited artifacts from Phase 05.3 + sequential plan structure (05.4-01 → 05.4-02 → 05.4-03 → 05.4-04).
+Status: Phase 05.3 closed honestly (both plan SUMMARYs filed; LLM Wiki pages committed with supersedence). 4 prerequisite bugs (A/B/C/D) catalogued in [[phase-05-3-bugs-discovered-during-t6]]. Band JSON + classification_rule pinned and consumed unchanged by 05.4-04 T7.
 
-Progress: [██████████░] 94%
+Progress: [█████████░░] 89% (denominator increased by Phase 05.4 4 plans)
 
-## Phase 05.3 Checkpoint (2026-04-30T14:30Z)
+## Phase 05.4 Resume Notes (entry point)
+
+**Why this phase exists:** Phase 05.3 Plan 01 T6 (binding ship-gate ~4h re-run) was attempted on 2026-04-30 as run_id `01KQFABR9VNPMKKQYPTQGRJMDR` and surfaced 4 separate prerequisite bugs that block a clean verdict regardless of engine repair. The dry-run validated Plan 01's fill-path fix empirically (11 FILL_REALIZED entries vs Phase 05.2 W5's 0; reconstructed reward-leg-only p5 = 894% USD-APR, inside the band [42%, 1810%], directional PASS) but did not produce a binding verdict. Phase 05.4 closes the verdict loop by fixing the 4 bugs (sequentially where dependent, parallel where independent) and re-running T6/T7 against the unchanged classification rule.
+
+**4 prerequisite bugs** (full diagnosis in `[[phase-05-3-bugs-discovered-during-t6]]`):
+  - **A** Alembic 0008 migration never applied → `_load_operator_calibration_history` returns []. Independent (load-bearing first).
+  - **B** Replay loop terminates at trade #65 of 237 (7.72/25.74 days). May cascade from A.
+  - **C** Look-ahead bias in fill_model + loss_model fits — empirical 30× p_fill underestimate. Independent.
+  - **D** `pnl_pendle` column missing from persisted decision_log parquet schema. Independent.
+
+**Plan structure** (sequential 01 → 02; parallel 02‖03 → 04):
+  - **05.4-01** Fix Bug A — apply migration, insert prior+current epoch operator rows
+  - **05.4-02** Investigate Bug B against A-fixed engine; may reduce to no-op
+  - **05.4-03** Fix Bug C + Bug D (parallel with 02)
+  - **05.4-04** T6 + T7 re-run; classify against pinned `classification_rule` block; **escape valve to Phase 05.5 if outside band**
+
+**Halt status:** `halted_pending_phase_05_4`. T7 verdict against pinned classifier is the gate to halt-lift candidacy.
+
+**Resume signal:** start with `/gsd-plan-phase 05.4` (or `/gsd-discuss-phase 05.4` first if more context-gathering is wanted; CONTEXT.md already pins the inherited artifacts).
+
+## Phase 05.3 Closure Summary (2026-04-30T14:30Z → 15:30Z)
 
 ### Plan 01 — Fill-path repair (engineering, sonnet executor) — T1–T5 ✅
 
@@ -85,17 +105,22 @@ Classification rule per `[[expected-verdict-band-2026-04-30]]`:
   - `p5 < 0`                   → **FAIL — negative EV after fills**
   - else                       → **FLAG — sixth bug suspected**
 
-### Next gated step: Plan 01 T6 — binding ship-gate ~4h re-run
+### T6 dry-run findings (preserved for Phase 05.4)
 
-```bash
-boros_brain.backtest run \
-    --config strategy/v0.5-phase05.1-shortlist.yaml \
-    --market BINANCE-ETHUSDT-25SEP2026 \
-    --side long \
-    --parent-run-id 01KQEZ6M0SWVXX3H4G5W7RNFS8
-```
+T6 was launched on 2026-04-30T13:48Z as run_id `01KQFABR9VNPMKKQYPTQGRJMDR` and killed at 19:02Z mid-perturbation-grid after surfacing 4 prerequisite bugs. The dry-run completed: baseline + 6× cancel_latency_sweep + 6× competition_sweep + 2× forfeit_branch_sweep (sanity_check_pass) + 26 of N perturbation_grid rows. Did NOT reach `evaluate_ship_gate`, so no `ship_gate_verdict.json` was written.
 
-All preconditions satisfied: fill-path is unit-coherent, single-source-of-truth helper in place, rate-crossing path no longer hard-gated on the dead trade handler, verdict band ready for T7 classification. **Halt remains `halted_pending_phase_05_2` until T7 verdict classification completes.**
+**Empirical signals (load-bearing for Phase 05.4):**
+  - **11 FILL_REALIZED** entries in baseline decision_log over partial 7.72-day window — confirms Plan 01's fill-path fix works (vs Phase 05.2 W5's 0 fills)
+  - Reconstructed p5 (reward leg only, no fill losses) = **894% USD-APR** — inside the band [42%, 1810%], directional PASS
+  - Diagnostic data preserved at `data/parquet/backtest_results/run_id=01KQFABR9VNPMKKQYPTQGRJMDR/` (gitignored runtime artifact, useful for Phase 05.4-02 Bug B investigation)
+
+**Why the dry-run produced no binding verdict (4 prerequisite bugs):**
+  - **Bug A** (Alembic 0008 not applied): 4.5M `no_operator_calibration` warnings; engine uses default fallback `e_liq=100, side_split=0.5`
+  - **Bug B** (replay truncates at trade #65/237): only 7.72 of 25.74 days replayed; may cascade from A
+  - **Bug C** (look-ahead in fill/loss fits): 30× p_fill underestimate empirically
+  - **Bug D** (`pnl_pendle` not persisted): in-memory verdict path fine, parquet reconstruction biased
+
+All 4 routed to Phase 05.4 with sequential dependency structure + escape valve to Phase 05.5 if verdict lands outside band.
 
 ## Performance Metrics
 
@@ -235,7 +260,7 @@ None yet.
 
 ### Blockers/Concerns
 
-- **[2026-04-30 HALT — pending Phase 05.2 fix] Phase 05.1 FAIL caused by 5 engine bugs** (not strategy non-viability). Forensic audit on 2026-04-30 via dapp UI probing surfaced: (1) `notional_per_yu_usd = 90,000` placeholder hardcoded to BTC value, semantically should be `margin_per_yu_usd ≈ $18.30` for binding market — ~5,000× APR suppression; (2) `long_side_split = 0.784` should be 0.327 (operator entered backward) — 2.4×; (3) `competition_history` empty in backtest sqlite → `sigma_others = 0` via silent bare-except — 330,000× inflation; (4) sparse-tick under-counting (already documented) — 10,000× suppression; (5) units bug — 22× inflation, **fixed in commit 9625c93**. Net of (3)+(4)+(5) ≈ cancel. Bug (1) alone explains the 5,000× APR suppression that produced the FAIL. **Predicted verdict at $100 collateral on binding market with all 5 bugs fixed: ~415% USD-APR PASS.** Phase 05.2 directory created with full audit context — see `.planning/phases/05.2-sizer-replay-reconcile-to-production/05.2-CONTEXT.md`. Next session: `/gsd-plan-phase 05.2` to formalize.
+- ~~**[2026-04-30 HALT — pending Phase 05.2 fix] Phase 05.1 FAIL caused by 5 engine bugs**~~ **Resolved 2026-04-30** — Phase 05.2 fixed 5 bugs (commits ending in `cad821f`). Phase 05.3 added a 6th surfaced post-W5 (epoch-keyed calibration; commit `cad821f`) and fixed the fill-path repair (Plan 01 commits `4c75d9a → c435378`). Phase 05.3 T6 dry-run surfaced **4 NEW prerequisite bugs** (A/B/C/D — see `[[phase-05-3-bugs-discovered-during-t6]]`); routed to Phase 05.4 with escape valve to Phase 05.5 if verdict outside band. Halt is now `halted_pending_phase_05_4`.
 - ~~Phase 0 P0-02 (minimum order size) is existential~~ **Resolved 2026-04-23** — no protocol minimum. Existential halt-condition is off the table.
 - ~~Phase 0 P0-01 (voluntary-cancel forfeit behavior) may drive material divergence in Phase 5 backtest sensitivity; if so, Phase 7 paper is blocked until P0-01 is resolved.~~ **Resolved 2026-04-23** — `voluntary_cancel_forfeits_accumulated = False`; sensitivity row demoted to sanity check, no longer a blocker.
 - ~~P0-04 PARTIAL~~ **Resolved 2026-04-23** — Send Txs Bot is the mandatory submission lane; direct-submit ruled out. Latency budget closes on ~1–3s typical, <5s worst, with pre-signed calldata + Send Txs Bot. [[Sign-only cancel primitive]], [[Send Txs Bot integration]].
@@ -243,26 +268,22 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-30T14:30Z (Plan 01 T1–T5 + Plan 02 T1–T4 done in coordinated parallel run)
-Stopped at: Operator checkpoint before T6 binding ship-gate ~4h re-run.
+Last session: 2026-04-30T15:30Z (Phase 05.3 closed; Phase 05.4 scaffolded)
+Stopped at: Phase 05.4 ready to plan. CONTEXT.md pins inherited artifacts from 05.3 + bug catalog + sequential plan structure (01 → 02 → 03 parallel → 04 verdict + escape valve to 05.5).
 Resume file: None
 
-**Next action:** Operator GO-decision on T6:
+**Next action:** Run `/gsd-plan-phase 05.4` to draft 4 plans:
+  - **05.4-01** Fix Bug A (Alembic 0008 + operator calibration rows). Sequential, must precede 02.
+  - **05.4-02** Investigate Bug B against A-fixed engine. May reduce to no-op (cascade of A); 2-hour investigation budget then route to 05.5.
+  - **05.4-03** Fix Bug C (look-ahead in fill/loss fits) + Bug D (persist `pnl_pendle`). Wave-parallel with 02.
+  - **05.4-04** Inherit-and-execute T6+T7 against the unchanged band JSON. Includes explicit escape valve to Phase 05.5 if `p5` outside `[pass_lo=0.42, pass_hi=18.10]`.
 
-  **Approve T6 → run** (boros root, ≈ 4 hours):
-  ```bash
-  cd /Users/macbookair/boros && uv run --project python python -m boros_brain.backtest run \
-      --config strategy/v0.5-phase05.1-shortlist.yaml \
-      --market BINANCE-ETHUSDT-25SEP2026 \
-      --side long \
-      --parent-run-id 01KQEZ6M0SWVXX3H4G5W7RNFS8
-  ```
+  **Or — discuss first**: `/gsd-discuss-phase 05.4` (more context-gathering before plan; CONTEXT.md already pins inherited artifacts).
 
-  **Then T7 (verdict classification)** reads `var/reports/expected_verdict_band_2026-04-30.json` and classifies the realized `p5_annualized_pnl_usd` against `[0.5×low, 1.5×high]` = `[0.42, 18.10]`. Inside band → PASS; below 0 → FAIL; outside → FLAG (sixth bug).
+**Halt status:** `halted_pending_phase_05_4` until T7 verdict classification (against pinned band JSON) produces a clean PASS / FAIL / FLAG verdict.
 
-  **Or — review before approving:**
-  - Read commits `4c75d9a → c435378` (Plan 01 fill-path repair, 5 atomic commits)
-  - Read commit `1ba8481` (Plan 02 band script + 7/7 smoke tests)
-  - Read wiki `[[fill-path-repair-2026-04-30]]` + `[[expected-verdict-band-2026-04-30]]`
-
-**Halt status:** `halted_pending_phase_05_2` until T7 verdict classification produces a clean PASS/FAIL.
+**Inherited artifacts (consumed unchanged by Phase 05.4):**
+  - `var/reports/expected_verdict_band_2026-04-30.json` — band + `classification_rule` block (pass_lo=0.42, pass_hi=18.10, fail_lo=0)
+  - boros commits `4c75d9a → c435378` (Plan 01 T1–T5) + `1ba8481` (Plan 02 T3)
+  - LLM Wiki commits `4b079ad` (Phase 05.3 outputs + supersedence) + `7aac48a` (bugs catalog)
+  - 5 wiki pages: `[[fill-path-repair-2026-04-30]]`, `[[pendle-lo-reward-formula-verified]]`, `[[dapp-apr-reconciliation-2026-04-30]]`, `[[expected-verdict-band-2026-04-30]]`, `[[phase-05-3-bugs-discovered-during-t6]]`
