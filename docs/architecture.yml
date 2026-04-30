@@ -2956,3 +2956,7 @@ edges:
 
   # ── Phase 05.2 Bug #6 edge — chain_ts-aware calibration read ──────────────
   - {from: brain.backtest.replay, to: state.market_reward_calibration, type: reads, notes: "Phase 05.2 Bug #6: _calibration_at_chain_ts loads all operator rows ASC by effective_at_utc and picks the row whose effective_at_utc <= current_chain_ts on every _build_evaluate_input call. Replaces the static calibrated_at_utc DESC LIMIT 1 read that retroactively applied current-epoch reward splits to historical replay windows. [[ship-gate-bug-6-epoch-keyed-calibration]]"}
+
+  # ── Phase 05.3 Plan 01 T2 — D1 YU unit convention (queue_ahead rename) ─────
+  - {from: brain.backtest.replay, to: config.backtest.queue_ahead_yu_default, type: depends-on-config, notes: "Phase 05.3 D1: _seed_initial_synthetic_order uses YU-denominated default for queue_ahead (was wei-denominated 10**18 constant). Knob lives on BacktestConfig (PROTO-04 SSoT). [[fill-path-repair-2026-04-30]]"}
+  - {from: brain.backtest.replay, to: parquet.market_trades, type: reads, notes: "Phase 05.3 D1: _handle_trade_event reads size_float (YU) instead of size_wei (NULL across the binding-market parquet — ingester correctly emits null when source is the float column). Comparison vs SyntheticOrder.queue_ahead_yu (also YU). [[fill-path-repair-2026-04-30]]"}

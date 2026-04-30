@@ -197,7 +197,9 @@ def test_evaluate_input_uses_chain_ts_aware_calibration(
         q_me_pendle=4.92,
         placed_at_ts=_to_unix("2026-04-20T00:00:00+00:00"),
         depth_from_mark_ticks=10,
-        queue_ahead_wei=10**18,
+        # Phase 05.3 D1: queue_ahead_wei → queue_ahead_yu (YU unit convention).
+        # 1.0 YU is the wei-equivalent of the prior 10**18 wei via the seam adapter.
+        queue_ahead_yu=1.0,
     )
 
     prior_ts = _to_unix("2026-04-22T00:00:00+00:00")

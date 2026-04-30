@@ -86,9 +86,11 @@ def _seed_market_trades_with_crossings(
         rates.append(above if i % 2 == 0 else below)
 
     n = len(rates)
+    # Space events 60s apart so the fill_model fit does not go stale across
+    # the synthetic window (default fit_max_staleness_s = 3600s).
     rows = {
         "market_id": [f"101-{market_id}"] * n,
-        "blockTimestamp": [base_ts + i * 3600 for i in range(n)],
+        "blockTimestamp": [base_ts + i * 60 for i in range(n)],
         "eventIndex": [i + 1 for i in range(n)],
         "rate": rates,
         "size_float": [1.0] * n,  # nonzero YU — would consume queue if queue is small
@@ -185,21 +187,23 @@ async def test_size_float_only_data_produces_fill(
     parquet_root = tmp_path / "parquet"
     out_dir = parquet_root / "market_trades" / f"market_id=101-{MARKET_ID}"
     out_dir.mkdir(parents=True, exist_ok=True)
-    # One trade event with nonzero size_float that crosses the long lower edge.
-    # The seeded order will rest at the lower-edge tick; rate=0.003 < 0.005
-    # crosses the edge, and size_float=10.0 YU >> queue_ahead_yu (~100 YU
-    # default → too large). To force a fill via the trade-handler path
-    # (not inter-event), seed the queue with a SMALL value via direct ledger
-    # placement after the engine seeds.
+    # Two trade events:
+    #   1. The "fill" event: size_float=10.0 YU crosses the seeded order's
+    #      queue_ahead_yu=0.5 → schedules a close at +0.1s.
+    #   2. A no-op trade 60s later — its job is to drive _fire_scheduled_closes
+    #      past the close_at_ts so the FILL_REALIZED entry actually appears.
+    # In the real binding-market run there are 100s of trade events so this
+    # tail-flush is automatic; for a 1-event fixture the engine has no later
+    # tick to fire the scheduled close on.
     pl.DataFrame(
         {
-            "market_id": [f"101-{MARKET_ID}"],
-            "blockTimestamp": [base_ts],
-            "eventIndex": [1],
-            "rate": [0.003],
-            "size_float": [10.0],
-            "size_wei": [None],
-            "side": ["long"],
+            "market_id": [f"101-{MARKET_ID}"] * 2,
+            "blockTimestamp": [base_ts, base_ts + 60],
+            "eventIndex": [1, 2],
+            "rate": [0.003, 0.003],
+            "size_float": [10.0, 0.001],
+            "size_wei": [None, None],
+            "side": ["long", "long"],
         },
         schema={
             "market_id": pl.String,

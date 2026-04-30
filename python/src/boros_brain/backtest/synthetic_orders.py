@@ -8,12 +8,24 @@ Defensive: cancel/fill/purge raise KeyError on unknown order_id (orchestration
 bugs surface loudly, not silently).
 
 [[backtest-replay-engine-v05]]
+[[fill-path-repair-2026-04-30]]
+
+Phase 05.3 Plan 01 D1 — YU unit convention (rename queue_ahead_wei →
+queue_ahead_yu): the binding-market parquet writes ``size_wei = NULL`` for
+every row (ingester correctly emits null when the source is the float column);
+the only populated size column is ``size_float`` (YU-denominated). The
+backtest's fill detection therefore operates in YU throughout. The live
+``fill_model.queue_tracker`` already operates in YU internally (per-tick
+dict[int, float] keyed on tick → YU size), so no live-path rename is needed.
+The IPC seam (PredictInput / EvaluateInput / SizerInput) keeps wei semantics;
+``replay._build_evaluate_input`` converts YU → wei at the seam.
 """
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from dataclasses import dataclass, replace
-from typing import Iterator, Literal
+from typing import Literal
 
 
 @dataclass(frozen=True)
@@ -22,6 +34,13 @@ class SyntheticOrder:
 
     Immutable — state transitions (cancel/fill/purge) produce new instances via
     dataclasses.replace().
+
+    ``queue_ahead_yu`` (Phase 05.3 D1, replaces ``queue_ahead_wei``):
+        Estimated queue size in YU sitting in front of this order on the
+        order book. Compared to trade ``size_float`` (also YU) in the
+        backtest fill-detection path; when ``size_float >= queue_ahead_yu``
+        the order is considered filled. Default ``0.0`` so an unset queue
+        means "next in line" (any nonzero trade event consumes it).
     """
 
     order_id: str
@@ -31,7 +50,7 @@ class SyntheticOrder:
     q_me_pendle: float
     placed_at_ts: int
     depth_from_mark_ticks: int
-    queue_ahead_wei: int = 0
+    queue_ahead_yu: float = 0.0
     r_accum: float = 0.0
     status: Literal["active", "filled", "cancelled", "purged"] = "active"
     t_frac: float = 1.0
@@ -63,11 +82,13 @@ class SyntheticOrderLedger:
         """Transition order to 'purged'. Raises KeyError if unknown."""
         self._orders[order_id] = replace(self._orders[order_id], status="purged")
 
-    def update_queue_ahead(self, order_id: str, queue_ahead_wei: int) -> None:
-        """Update queue-ahead estimate for an active order. Raises KeyError if unknown."""
-        self._orders[order_id] = replace(
-            self._orders[order_id], queue_ahead_wei=queue_ahead_wei
-        )
+    def update_queue_ahead(self, order_id: str, queue_ahead_yu: float) -> None:
+        """Update queue-ahead estimate (YU) for an active order. Raises KeyError if unknown.
+
+        Renamed from ``queue_ahead_wei`` in Phase 05.3 D1; semantics unchanged
+        beyond the unit convention (now YU).
+        """
+        self._orders[order_id] = replace(self._orders[order_id], queue_ahead_yu=float(queue_ahead_yu))
 
     def in_flight(self) -> Iterator[SyntheticOrder]:
         """Iterate over all orders whose status == 'active'."""

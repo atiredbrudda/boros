@@ -12,10 +12,8 @@ See [[backtest-1hz-tick-synthesis-2026-04-30]].
 
 from __future__ import annotations
 
-import asyncio
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
-from unittest.mock import patch
 
 import polars as pl
 import pytest
@@ -42,14 +40,16 @@ def _seed_two_event_trades(
     parquet_root = tmp_path / "parquet"
     out_dir = parquet_root / "market_trades" / f"market_id={market_id}"
     out_dir.mkdir(parents=True, exist_ok=True)
-    pl.DataFrame({
-        "market_id": [market_id, market_id],
-        "blockTimestamp": [t0, t1],
-        "eventIndex": [0, 0],
-        "rate": [rate, rate],
-        "size_wei": [0, 0],
-        "side": ["buy", "buy"],
-    }).write_parquet(out_dir / "trades.parquet")
+    pl.DataFrame(
+        {
+            "market_id": [market_id, market_id],
+            "blockTimestamp": [t0, t1],
+            "eventIndex": [0, 0],
+            "rate": [rate, rate],
+            "size_wei": [0, 0],
+            "side": ["buy", "buy"],
+        }
+    ).write_parquet(out_dir / "trades.parquet")
     return parquet_root
 
 
@@ -62,11 +62,7 @@ def _make_engine(
 ) -> ReplayEngine:
     """Build a ReplayEngine with the given parquet/sqlite roots."""
     modified_config = config.model_copy(
-        update={
-            "backtest": config.backtest.model_copy(
-                update={"tick_period_s": tick_period_s}
-            )
-        }
+        update={"backtest": config.backtest.model_copy(update={"tick_period_s": tick_period_s})}
     )
     manifest = build_run_manifest(modified_config)
     engine = ReplayEngine(
@@ -83,18 +79,22 @@ def _make_engine(
     from boros_brain.backtest.synthetic_orders import SyntheticOrder
 
     for i in range(n_synthetic_orders):
-        engine.synthetic_orders.place(SyntheticOrder(
-            order_id=f"test_order_{i}",
-            market_id=MARKET_ID,
-            side="long",
-            tick=9400,
-            q_me_pendle=1.0,
-            placed_at_ts=0,
-            depth_from_mark_ticks=50,
-            queue_ahead_wei=10**25,  # enormous — won't fill
-            r_accum=0.0,
-            t_frac=1.0,
-        ))
+        engine.synthetic_orders.place(
+            SyntheticOrder(
+                order_id=f"test_order_{i}",
+                market_id=MARKET_ID,
+                side="long",
+                tick=9400,
+                q_me_pendle=1.0,
+                placed_at_ts=0,
+                depth_from_mark_ticks=50,
+                # Phase 05.3 D1: queue_ahead is YU-denominated (was wei).
+                # 1e7 YU is enormous vs any plausible trade event size_float.
+                queue_ahead_yu=1e7,
+                r_accum=0.0,
+                t_frac=1.0,
+            )
+        )
     return engine
 
 
@@ -133,14 +133,18 @@ async def test_synthetic_ticks_emitted_between_trade_events(
         parquet_root=parquet_root,
     )
 
-    sqlite_path = seed_market_reward_calibration([{
-        "market_id": MARKET_ID,
-        "e_liq_per_epoch_pendle": 100.0,
-        "long_side_split": 0.5,
-        "short_side_split": 0.5,
-        "calibrated_at_utc": "2026-04-25T00:00:00Z",
-        "source": "dapp_ui",
-    }])
+    sqlite_path = seed_market_reward_calibration(
+        [
+            {
+                "market_id": MARKET_ID,
+                "e_liq_per_epoch_pendle": 100.0,
+                "long_side_split": 0.5,
+                "short_side_split": 0.5,
+                "calibrated_at_utc": "2026-04-25T00:00:00Z",
+                "source": "dapp_ui",
+            }
+        ]
+    )
     seed_competition_history(
         [("2026-04-25T00:00:00Z", t0 - 1, 1.0, 50.0)],
         market_id=MARKET_ID,
@@ -160,7 +164,8 @@ async def test_synthetic_ticks_emitted_between_trade_events(
 
     # Filter to HOLD/CANCEL ticks (not FILL_REALIZED rows)
     tick_entries = [
-        d for d in result.decision_log
+        d
+        for d in result.decision_log
         if d.get("decision_kind") not in ("FILL_REALIZED",)
         and "current_chain_ts" in d
         and t0 <= d["current_chain_ts"] <= t1
@@ -176,9 +181,7 @@ async def test_synthetic_ticks_emitted_between_trade_events(
 
     # All chain_ts values in [t0, t1]
     for entry in tick_entries:
-        assert t0 <= entry["current_chain_ts"] <= t1, (
-            f"chain_ts {entry['current_chain_ts']} out of range [{t0}, {t1}]"
-        )
+        assert t0 <= entry["current_chain_ts"] <= t1, f"chain_ts {entry['current_chain_ts']} out of range [{t0}, {t1}]"
 
 
 @pytest.mark.asyncio
@@ -207,14 +210,18 @@ async def test_synthetic_ticks_no_lookahead(
         parquet_root=parquet_root,
     )
 
-    sqlite_path = seed_market_reward_calibration([{
-        "market_id": MARKET_ID,
-        "e_liq_per_epoch_pendle": 100.0,
-        "long_side_split": 0.5,
-        "short_side_split": 0.5,
-        "calibrated_at_utc": "2026-04-25T00:00:00Z",
-        "source": "dapp_ui",
-    }])
+    sqlite_path = seed_market_reward_calibration(
+        [
+            {
+                "market_id": MARKET_ID,
+                "e_liq_per_epoch_pendle": 100.0,
+                "long_side_split": 0.5,
+                "short_side_split": 0.5,
+                "calibrated_at_utc": "2026-04-25T00:00:00Z",
+                "source": "dapp_ui",
+            }
+        ]
+    )
     seed_competition_history(
         [("2026-04-25T00:00:00Z", t0 - 1, 1.0, 50.0)],
         market_id=MARKET_ID,
@@ -232,10 +239,7 @@ async def test_synthetic_ticks_no_lookahead(
     result = await engine.run()
 
     # No decision_log entry should have chain_ts > last_real_event_ts (t1)
-    future_entries = [
-        d for d in result.decision_log
-        if "current_chain_ts" in d and d["current_chain_ts"] > t1
-    ]
+    future_entries = [d for d in result.decision_log if "current_chain_ts" in d and d["current_chain_ts"] > t1]
     assert not future_entries, (
         f"Look-ahead detected: {len(future_entries)} entries have chain_ts > {t1}. "
         f"First offender: {future_entries[0] if future_entries else 'none'}"
@@ -269,14 +273,18 @@ async def test_synthetic_ticks_dont_double_anchor(
         parquet_root=parquet_root,
     )
 
-    sqlite_path = seed_market_reward_calibration([{
-        "market_id": MARKET_ID,
-        "e_liq_per_epoch_pendle": 100.0,
-        "long_side_split": 0.5,
-        "short_side_split": 0.5,
-        "calibrated_at_utc": "2026-04-25T00:00:00Z",
-        "source": "dapp_ui",
-    }])
+    sqlite_path = seed_market_reward_calibration(
+        [
+            {
+                "market_id": MARKET_ID,
+                "e_liq_per_epoch_pendle": 100.0,
+                "long_side_split": 0.5,
+                "short_side_split": 0.5,
+                "calibrated_at_utc": "2026-04-25T00:00:00Z",
+                "source": "dapp_ui",
+            }
+        ]
+    )
     seed_competition_history(
         [("2026-04-25T00:00:00Z", t0 - 1, 1.0, 50.0)],
         market_id=MARKET_ID,
@@ -344,14 +352,18 @@ async def test_decision_log_streamed_to_parquet(
         parquet_root=parquet_root,
     )
 
-    sqlite_path = seed_market_reward_calibration([{
-        "market_id": MARKET_ID,
-        "e_liq_per_epoch_pendle": 100.0,
-        "long_side_split": 0.5,
-        "short_side_split": 0.5,
-        "calibrated_at_utc": "2026-04-25T00:00:00Z",
-        "source": "dapp_ui",
-    }])
+    sqlite_path = seed_market_reward_calibration(
+        [
+            {
+                "market_id": MARKET_ID,
+                "e_liq_per_epoch_pendle": 100.0,
+                "long_side_split": 0.5,
+                "short_side_split": 0.5,
+                "calibrated_at_utc": "2026-04-25T00:00:00Z",
+                "source": "dapp_ui",
+            }
+        ]
+    )
     seed_competition_history(
         [("2026-04-25T00:00:00Z", t0 - 1, 1.0, 50.0)],
         market_id=MARKET_ID,
@@ -381,18 +393,20 @@ async def test_decision_log_streamed_to_parquet(
         run_id=manifest.run_id,
         manifest=manifest,
     )
-    engine.synthetic_orders.place(SyntheticOrder(
-        order_id="test_stream_order",
-        market_id=MARKET_ID,
-        side="long",
-        tick=9400,
-        q_me_pendle=1.0,
-        placed_at_ts=0,
-        depth_from_mark_ticks=50,
-        queue_ahead_wei=10**25,
-        r_accum=0.0,
-        t_frac=1.0,
-    ))
+    engine.synthetic_orders.place(
+        SyntheticOrder(
+            order_id="test_stream_order",
+            market_id=MARKET_ID,
+            side="long",
+            tick=9400,
+            q_me_pendle=1.0,
+            placed_at_ts=0,
+            depth_from_mark_ticks=50,
+            queue_ahead_yu=1e7,  # Phase 05.3 D1 rename; enormous YU value, no fills
+            r_accum=0.0,
+            t_frac=1.0,
+        )
+    )
 
     # Patch the streaming threshold to 5 so we can test flushing with a small fixture.
     engine._decision_log_stream_threshold = 5
@@ -400,9 +414,7 @@ async def test_decision_log_streamed_to_parquet(
     result = await engine.run()
 
     # The final flush must have written at least 1 parquet part file.
-    decision_log_dir = (
-        tmp_path / "backtest_results" / f"run_id={manifest.run_id}" / "decision_log"
-    )
+    decision_log_dir = tmp_path / "backtest_results" / f"run_id={manifest.run_id}" / "decision_log"
     parquet_files = list(decision_log_dir.glob("*.parquet")) if decision_log_dir.exists() else []
 
     assert parquet_files, (
@@ -412,9 +424,5 @@ async def test_decision_log_streamed_to_parquet(
     )
 
     # Total row count across all parquet parts should be > 0
-    total_rows = sum(
-        pl.read_parquet(str(p)).height for p in parquet_files
-    )
-    assert total_rows > 0, (
-        f"decision_log parquet files exist but are empty: {parquet_files}"
-    )
+    total_rows = sum(pl.read_parquet(str(p)).height for p in parquet_files)
+    assert total_rows > 0, f"decision_log parquet files exist but are empty: {parquet_files}"

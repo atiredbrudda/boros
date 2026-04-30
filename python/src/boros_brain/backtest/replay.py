@@ -332,7 +332,7 @@ class ReplayEngine:
                     q_me_pendle=1.0,
                     placed_at_ts=_base_ts,
                     depth_from_mark_ticks=50 + i,
-                    queue_ahead_wei=0,
+                    queue_ahead_yu=0.0,
                     r_accum=0.0,
                     t_frac=1.0,
                 )
@@ -395,16 +395,16 @@ class ReplayEngine:
         and the ship-gate verdict is meaningless. This restores the strategy seed:
 
           - tick: clo_lower_thresh (long) | clo_upper_thresh (short) — outer edge
-          - q_me_pendle: config.sizer.q_min_pendle (sub-cap regime fixed point;
-            equals what sizer.q_me_target() returns at $100 collateral / 90k
-            margin_per_yu_usd per the optimizer.py docstring contract)
-          - depth_from_mark_ticks: |edge - midpoint(clo_lower, clo_upper)|
-          - queue_ahead_wei: 1e22 — outer-edge orders sit behind significant queue;
-            the v0.5 fill detection (replay._trade_consumes_order) is an
-            approximation that uses queue_ahead as an instantaneous fill threshold,
-            so a sufficiently large value keeps the order alive across the run.
-            Production-grade per-tick fill semantics are queue_tracker-based and
-            scoped to a later wave.
+            (T3 will replace this with the lifted ``clo_findex_to_tick`` helper
+            so the seeded coordinate is a unit-coherent order-book tick).
+          - q_me_pendle: ``q_max`` from sizer (collateral_usd × q_max_safety_margin
+            / margin_per_yu_usd). With binding-market margin $18.30/YU at $100
+            collateral × 0.9 safety = ≈ 4.92 YU.
+          - depth_from_mark_ticks: |edge - midpoint(clo_lower, clo_upper)|.
+          - queue_ahead_yu: ``config.backtest.queue_ahead_yu_default`` (default
+            100 YU). Phase 05.3 D1: replaces the prior wei-denominated constant
+            10**18 with a YU value consistent with the size_float column the
+            binding-market parquet actually populates. Per [[fill-path-repair-2026-04-30]].
 
         Returns True on seed; False (degraded mode) when config.markets is empty
         or contains no entry whose market_id matches self.market_id — in that case
@@ -432,16 +432,16 @@ class ReplayEngine:
         tick = clo_lower if self.side == "long" else clo_upper
         depth_from_mark_ticks = abs(tick - midpoint)
 
-        # queue_ahead_wei=10**22 exceeds int64 range; orjson serialises as float string.
-        # Use 10**18 (1e18 wei = 1 ETH-scale) which is within int64 and still represents
-        # "deep back of queue" for the outer-edge seeded order.
-        _queue_ahead = 10**18
-        # Phase 05.2 Wave 5 Bug fix (Rule 1): prior implementation used q_min_pendle
-        # (0.001 YU) as the seeded size, citing the "sub-cap regime fixed point equals
-        # q_me_target() at 90k margin_per_yu_usd". That comment was valid when the
-        # Bug #1 placeholder was in place (90000 USD/YU → q_max ≈ 1e-6 YU → always
-        # at q_min floor). With margin_per_yu_usd=18.30 (W1 fix), q_max ≈ 4.92 YU —
-        # the optimizer targets the cap, not the floor. Use q_max for the seed.
+        # Phase 05.3 D1: queue_ahead is YU-denominated (was wei). PROTO-04 SSoT:
+        # value comes from config.backtest.queue_ahead_yu_default (no hardcoded
+        # constant in engine code). The cross-tier IPC seam (PredictInput etc.)
+        # still wants wei semantics; conversion happens in _build_evaluate_input.
+        _queue_ahead_yu = float(self.config.backtest.queue_ahead_yu_default)
+
+        # Sizing: q_max from sizer (collateral × safety / margin_per_yu_usd).
+        # Phase 05.2 W1 confirmed margin_per_yu_usd=18.30 → q_max ≈ 4.92 YU at
+        # $100 collateral / 0.9 safety. The optimizer targets the cap in this
+        # regime, so we seed at q_max (max(q_min, q_max) preserves the floor).
         _margin = float(getattr(market, "margin_per_yu_usd", None) or self.config.sizer.margin_per_yu_usd)
         _q_max = float(self.config.sizer.collateral_usd) * float(self.config.sizer.q_max_safety_margin) / _margin
         _q_seed = max(float(self.config.sizer.q_min_pendle), _q_max)
@@ -453,7 +453,7 @@ class ReplayEngine:
             q_me_pendle=_q_seed,
             placed_at_ts=placed_at_ts,
             depth_from_mark_ticks=depth_from_mark_ticks,
-            queue_ahead_wei=_queue_ahead,
+            queue_ahead_yu=_queue_ahead_yu,
             r_accum=0.0,
             t_frac=1.0,
         )
@@ -466,7 +466,7 @@ class ReplayEngine:
             tick=tick,
             depth_from_mark_ticks=depth_from_mark_ticks,
             q_me_pendle=order.q_me_pendle,
-            queue_ahead_wei=str(_queue_ahead),
+            queue_ahead_yu=_queue_ahead_yu,
             placed_at_ts=placed_at_ts,
         )
         return True
@@ -858,18 +858,21 @@ class ReplayEngine:
         have occurred in the gap between consecutive trade events. When implied APR
         crosses our edge price during the inter-event interval, a fill must be emitted.
 
-        Detection mechanism: on each real trade event, check whether the event's rate
-        crosses our edge price (long: rate <= clo_lower; short: rate >= clo_upper).
-        If so, and if the order's queue_ahead_wei would have been consumed by any
-        trade of nonzero size in that direction, schedule a close.
+        Phase 05.3 D1 (T2): trade size compared in YU (``size_float``) against
+        ``order.queue_ahead_yu``. The ``_trade_consumes_order`` skip-condition
+        prevents double-counting against ``_handle_trade_event``.
 
-        This is a conservative check (uses current event rate as proxy for the
-        crossing rate). A full tick-by-tick fill model would interpolate, but for
-        the backtest approximation this is sufficient to close the under-counting gap
-        evidenced by E4 (6 lo + 9 hi crossings in 237 events → n_fills was 0).
+        Phase 05.3 D2 (T3 — landed separately): the ``/ 10_000`` rescale is
+        replaced with the shared ``clo_findex_to_tick`` helper.
+
+        Phase 05.3 D3 (T4 — landed separately): the queue-gate
+        ``order.queue_ahead_yu == 0`` precondition is dropped so the rate-crossing
+        fires unconditionally; queue uncertainty lives in the fill-model
+        ``p_fill`` term (decision engine), not as a simulator hard-gate.
 
         T-05-07: NEVER calls time.time(); current_ts comes from blockTimestamp.
 
+        [[fill-path-repair-2026-04-30]]
         [[backtest-1hz-tick-synthesis-2026-04-30]]
         [[n-fills-zero-binding-window-audit]]
         """
@@ -889,11 +892,26 @@ class ReplayEngine:
         if market is None:
             return  # no market config — skip inter-event detection gracefully
 
+        # T2 NOTE: the /10_000 rescale below is unit-broken — clo_lower_thresh
+        # is in fIndex display units, not order-book ticks. T3 replaces this
+        # with the shared clo_findex_to_tick helper. Tests that rely on the
+        # corrected behavior either inject `clo_lower_rate_fraction` directly
+        # via attribute (post-T3 hook) or wait for T3 to land.
         clo_lower = float(market.clo_lower_thresh) / 10_000.0  # ticks to rate fraction
         clo_upper = float(market.clo_upper_thresh) / 10_000.0
+        # Test/T3 override hook — see clo_lower_rate_fraction attribute on engine.
+        override_lower = getattr(self, "clo_lower_rate_fraction", None)
+        override_upper = getattr(self, "clo_upper_rate_fraction", None)
+        if override_lower is not None:
+            clo_lower = float(override_lower)
+        if override_upper is not None:
+            clo_upper = float(override_upper)
 
         for order in list(self.synthetic_orders.in_flight()):
-            if self._trade_consumes_order(order, evt_rate, int(evt.get("size_wei") or 0)):
+            # Phase 05.3 D1: trade size now in YU (size_float). Null size_float
+            # is a data error — binding-market parquet always populates size_float.
+            evt_size_yu = float(evt.get("size_float") or 0.0)
+            if self._trade_consumes_order(order, evt_rate, evt_size_yu):
                 # Already handled by _handle_trade_event — skip to avoid double fill.
                 continue
 
@@ -903,7 +921,9 @@ class ReplayEngine:
             if self.side == "long" and evt_rate <= clo_lower or self.side == "short" and evt_rate >= clo_upper:
                 edge_crossed = True
 
-            if edge_crossed and order.queue_ahead_wei == 0:
+            # T2 keeps the queue-gate condition (renamed wei→yu). T4 drops it
+            # to fully decouple rate-crossing from queue-position state.
+            if edge_crossed and order.queue_ahead_yu == 0.0:
                 # Our queue-in-front was already consumed; the rate crossing fills us.
                 sc = self.latency_scheduler.schedule(
                     fill_ts=float(current_ts),
@@ -912,7 +932,7 @@ class ReplayEngine:
                     fill_event_index=int(evt.get("eventIndex") or 0),
                 )
                 self._scheduled_closes.append(sc)
-                self.synthetic_orders.update_queue_ahead(order.order_id, 0)
+                self.synthetic_orders.update_queue_ahead(order.order_id, 0.0)
                 log.debug(
                     "backtest.replay.inter_event_fill_detected",
                     order_id=order.order_id,
@@ -958,12 +978,26 @@ class ReplayEngine:
         # NOT authoritative for per-tick reward share. See [[ship-gate-bug-6-epoch-keyed-calibration]].
         per_tick_calib = self._calibration_at_chain_ts(int(current_chain_ts))
 
+        # Phase 05.3 D1 ADAPTER (cross-tier IPC seam):
+        # Backtest is YU-native (Phase 05.3 D1); the live decision/sizer/fill_model
+        # IPC schemas are wei-native (PredictInput.queue_ahead_wei,
+        # EvaluateInput.queue_ahead_wei). Convert YU → wei here so backtest's
+        # SyntheticOrder.queue_ahead_yu reaches the live engine in the magnitude
+        # range the predict.py queue_penalty (`exp(-1e-18 * queue_ahead_wei)`)
+        # expects. Conversion factor: 1 YU ≈ 1e18 wei (the original "ETH-scale"
+        # constant 10**18 used in the prior implementation). This preserves the
+        # existing fill_model behavior while letting backtest fill detection
+        # run in YU.
+        # Per [[fill-path-repair-2026-04-30]]:
+        #   queue_ahead_wei (IPC) = queue_ahead_yu (backtest) * 1e18
+        queue_ahead_wei_for_ipc = int(order.queue_ahead_yu * 10**18)
+
         return EvaluateInput(
             order_id=order.order_id,
             market_id=order.market_id,
             side=order.side,
             depth_from_mark_ticks=order.depth_from_mark_ticks,
-            queue_ahead_wei=order.queue_ahead_wei,
+            queue_ahead_wei=queue_ahead_wei_for_ipc,
             current_features=current_features,
             time_to_epoch_end_s=3600.0,
             time_to_maturity_s=86400 * 30,
@@ -1061,8 +1095,15 @@ class ReplayEngine:
 
             raw_df = pl.read_parquet(raw_files)
 
-            # Schema normalisation — archive uses sz_float; test fixtures may use sz or size.
+            # Schema normalisation — archive uses sz_float / tick; test fixtures may
+            # use sz / t. Rule-1 fix (Phase 05.3 T2): mirror the rename map already
+            # used by the AMM cache (lines further below) so the tick column exists
+            # before the in-range filter runs. Prior to this fix, fixtures keyed
+            # on `t` triggered ColumnNotFoundError when config.markets was non-empty
+            # (the empty-markets fast-path bypassed this read entirely).
             col_map: dict[str, str] = {}
+            if "t" in raw_df.columns and "tick" not in raw_df.columns:
+                col_map["t"] = "tick"
             if "sz_float" in raw_df.columns and "size" not in raw_df.columns:
                 col_map["sz_float"] = "size"
             elif "sz" in raw_df.columns and "size" not in raw_df.columns:
@@ -1243,17 +1284,25 @@ class ReplayEngine:
     def _handle_trade_event(self, evt: dict[str, Any], current_ts: int) -> None:
         """Detect fills against in-flight synthetic orders; schedule close-at-market.
 
-        v0.5 fill detection: a synthetic order is hit when the trade's size_wei
-        is >= the order's queue_ahead_wei (queue-in-front fully consumed).
-        Production-grade detection lives in queue_tracker; this is the backtest-side
-        approximation matching Phase 2 fit semantics.
+        v0.5 fill detection: a synthetic order is hit when the trade's
+        ``size_float`` (YU) is >= the order's ``queue_ahead_yu``
+        (queue-in-front fully consumed). Production-grade detection lives in
+        ``fill_model.queue_tracker``; this is the backtest-side approximation
+        matching Phase 2 fit semantics.
+
+        Phase 05.3 D1 (T2): the comparison is now YU-native (was wei). The real
+        archive populates ``size_float`` for every row and emits ``size_wei =
+        NULL`` (per the ingester schema), so the prior wei-native comparison
+        was structurally dead. Per [[fill-path-repair-2026-04-30]].
 
         T-05-07: NEVER calls time.time() — current_ts is blockTimestamp from replay.
         """
         evt_rate = float(evt.get("rate") or 0.0)
-        evt_size = int(evt.get("size_wei") or 0)
+        # Phase 05.3 D1: YU comparison. size_float is populated for every row in
+        # the binding-market parquet; null is treated as "no fill possible" via 0.0.
+        evt_size_yu = float(evt.get("size_float") or 0.0)
         for order in list(self.synthetic_orders.in_flight()):
-            if self._trade_consumes_order(order, evt_rate, evt_size):
+            if self._trade_consumes_order(order, evt_rate, evt_size_yu):
                 sc = self.latency_scheduler.schedule(
                     fill_ts=float(current_ts),
                     fill_rate=evt_rate,
@@ -1261,18 +1310,19 @@ class ReplayEngine:
                     fill_event_index=int(evt.get("eventIndex") or 0),
                 )
                 self._scheduled_closes.append(sc)
-                # Mark queue_ahead as 0 — order is hit; remaining fills are scheduled.
-                self.synthetic_orders.update_queue_ahead(order.order_id, 0)
+                # Mark queue_ahead as 0 YU — order is hit; remaining fills are scheduled.
+                self.synthetic_orders.update_queue_ahead(order.order_id, 0.0)
 
-    def _trade_consumes_order(self, order: SyntheticOrder, evt_rate: float, evt_size: int) -> bool:
+    def _trade_consumes_order(self, order: SyntheticOrder, evt_rate: float, evt_size_yu: float) -> bool:
         """v0.5 fill detection: trade consumes the order's queue-in-front.
 
         Production-grade detection is in queue_tracker; this is the backtest-side
         approximation. The order is filled when:
-          - The trade's size_wei >= order's queue_ahead_wei (queue fully consumed).
+          - Phase 05.3 D1: ``evt.size_float`` (YU) >= ``order.queue_ahead_yu``
+            (queue fully consumed in YU).
         Rate-crossing check is deferred to Plan 05-04+ (sweep/fill-model integration).
         """
-        return order.queue_ahead_wei <= evt_size
+        return order.queue_ahead_yu <= evt_size_yu
 
     def _fire_scheduled_closes(self, current_ts: int) -> None:
         """Fire scheduled closes whose close_at_ts has been reached.

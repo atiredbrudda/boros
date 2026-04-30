@@ -64,5 +64,23 @@ class BacktestConfig(StrictBase):
     _iter_chain_seconds (int cast), so values in [0.1, 1.0) behave identically to 1.0.
     """
 
+    queue_ahead_yu_default: float = Field(100.0, ge=0.0, le=1_000_000.0)
+    """Phase 05.3 D1 — initial queue-ahead estimate (YU) for outer-CLO-edge seeded orders.
+
+    Replaces the prior wei-denominated constant ``10**18`` with a YU-denominated
+    value (consistent with the size_float column in the binding-market parquet,
+    where ``size_wei`` is null for every row).
+
+    Default 100.0 YU represents a realistic deep-back-of-queue estimate at the
+    outer CLO edge — sized so a single typical trade event (binding-market median
+    size_float ≈ 1.0 YU) does not consume the queue but a fat tail event can.
+    Operators can override per-run via the YAML config to test sensitivity.
+
+    Valid range: [0.0, 1_000_000.0] YU. ``0.0`` means "next in line" — any trade
+    event of nonzero size_float fills the order immediately.
+
+    See [[fill-path-repair-2026-04-30]] for the YU unit convention rationale.
+    """
+
 
 __all__ = ["BacktestConfig"]
