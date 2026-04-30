@@ -39,13 +39,14 @@ from ..decision.schemas import EvaluateInput
 from ..fill_model.amm_consumption import AMMConsumptionIdentityError
 from ..fill_model.queue_tracker import QueueTracker
 from .cancel_latency import LatencyScheduler, ScheduledClose
+from .exceptions import EmptyCompetitionPoolError
 from .schemas import BacktestRunOutput, ReplayOutput
 from .synthetic_orders import SyntheticOrder, SyntheticOrderLedger
 
 log = structlog.get_logger(__name__)
 
 # Re-export so tests can import from this module directly.
-__all__ = ["ReplayEngine", "LookAheadError", "AMMConsumptionIdentityError"]
+__all__ = ["ReplayEngine", "LookAheadError", "AMMConsumptionIdentityError", "EmptyCompetitionPoolError"]
 
 
 class LookAheadError(RuntimeError):
@@ -146,6 +147,10 @@ class ReplayEngine:
         # parquet files do not change during a replay run, so reading once is correct.
         self._amm_raw_df: pl.DataFrame | None = None
         self._amm_combined_df: pl.DataFrame | None = None
+
+        # Bug #3 fix (Phase 05.2 Wave 3): order_book_raw cache for sigma_others parquet read.
+        # Loaded once per run (mirrors AMM cache); parquet files don't change during replay.
+        self._order_book_raw_df: pl.DataFrame | None = None
 
         # Pre-seed gas cache from config default; w3=None disables live RPC.
         if gas_cache is None:
@@ -486,25 +491,20 @@ class ReplayEngine:
         row = dict(zip(cols, rows[0], strict=False))
         side_split = row["long_side_split"] if self.side == "long" else row["short_side_split"]
 
-        # Read sigma_others from competition_history (latest) + apply multiplier (BACK-04).
-        sigma_others: float = 0.0
-        try:
-            sigma_rows = conn.execute(
-                "SELECT sigma_others_pendle FROM competition_history "
-                "WHERE market_id = ? ORDER BY chain_ts DESC LIMIT 1",
-                [self.market_id],
-            ).fetchall()
-            if sigma_rows:
-                sigma_others = float(sigma_rows[0][0]) * self.sigma_others_multiplier
-        except Exception:  # noqa: BLE001
-            pass
-
         conn.close()
+
+        # Bug #3 fix (Phase 05.2 Wave 3): sigma_others is NO LONGER read from
+        # competition_history here (the table was perpetually empty in backtest sqlite,
+        # causing silent sigma_others=0 → infinite reward share → ~330,000× APR inflation).
+        # Instead, sigma_others is read per-tick in _build_evaluate_input via
+        # _read_sigma_others_from_parquet_at_ts, which mirrors the live CompetitionTracker.
+        # The sentinel value -1.0 here signals "not yet computed"; _build_evaluate_input
+        # replaces it with the parquet-derived value at each tick's chain_ts.
 
         return {
             "e_liq_per_epoch_pendle": float(row["e_liq_per_epoch_pendle"]),
             "side_split": float(side_split),
-            "sigma_others_pendle": sigma_others,
+            "sigma_others_pendle": -1.0,  # sentinel — overridden per-tick in _build_evaluate_input
             "calibrated_at_utc": str(row["calibrated_at_utc"]),
             "source": str(row["source"]),
         }
@@ -583,6 +583,14 @@ class ReplayEngine:
             # Fallback if whitelist is empty or attribute missing
             current_features = {"sigma_5min": 0.01}
 
+        # Bug #3 fix (Phase 05.2 Wave 3): read sigma_others per-tick from parquet,
+        # not from the calib sentinel (-1.0). This mirrors the live CompetitionTracker
+        # and captures competition pool drift across the replay window.
+        sigma_others = self._read_sigma_others_from_parquet_at_ts(
+            chain_ts=current_chain_ts,
+            q_me_pendle=order.q_me_pendle,
+        )
+
         return EvaluateInput(
             order_id=order.order_id,
             market_id=order.market_id,
@@ -594,13 +602,134 @@ class ReplayEngine:
             time_to_maturity_s=86400 * 30,
             current_chain_ts=current_chain_ts,
             q_me_pendle=order.q_me_pendle,
-            sigma_others_pendle=calib["sigma_others_pendle"],
+            sigma_others_pendle=sigma_others,
             e_liq_per_epoch_pendle=calib["e_liq_per_epoch_pendle"],
             side_split=calib["side_split"],
             t_frac=order.t_frac,
             p_purge=self.config.decision.p_purge_default,
             r_me_per_epoch_pendle_accumulated_so_far=order.r_accum,
         )
+
+    def _read_sigma_others_from_parquet_at_ts(self, chain_ts: int, q_me_pendle: float) -> float:
+        """Read sigma_others from order_book_raw parquet at the latest snapshot <= chain_ts.
+
+        Bug #3 fix (Phase 05.2 Wave 3): replaces the bare-except sigma_others=0 path
+        (original relay.py:489-500) with a loud, per-tick parquet read that mirrors
+        the live CompetitionTracker._read_sigma_others_from_parquet semantics.
+
+        Empty parquet raises EmptyCompetitionPoolError — no silent zero default.
+        The sigma_others_min_pendle floor is applied AFTER the empty-pool guard
+        succeeds, never as a substitute for it.
+
+        [[backtest-sigma-others-parquet-read-2026-04-30]]
+
+        Parameters
+        ----------
+        chain_ts:
+            Current chain timestamp (int seconds). The latest snapshot at or before
+            this value is used (mirrors CompetitionTracker WITH-latest CTE).
+        q_me_pendle:
+            Our own order size in PENDLE-YU. Subtracted from the total in-range sum.
+
+        Returns
+        -------
+        float
+            sigma_others in PENDLE-YU, floored at config.reward_share_model.sigma_others_min_pendle.
+
+        Raises
+        ------
+        EmptyCompetitionPoolError
+            When no parquet partition exists for this market, or when no snapshot
+            exists at or before chain_ts.
+        """
+        # (i) Resolve MarketCalibration for this market.
+        market = next(
+            (
+                m
+                for m in self.config.markets
+                if m.market_id.endswith(self.market_id) or self.market_id.endswith(m.market_id)
+            ),
+            None,
+        )
+        if market is None:
+            raise EmptyCompetitionPoolError(
+                market_id=self.market_id,
+                chain_ts=chain_ts,
+                reason="No MarketCalibration entry in BotConfig.markets",
+            )
+
+        # (ii) CLO bounds from config (not from live clo_history — backtest uses config bounds).
+        clo_lower = float(market.clo_lower_thresh)
+        clo_upper = float(market.clo_upper_thresh)
+
+        # (iii) Lazy-load order_book_raw parquet (once per run, mirrors AMM cache pattern).
+        if self._order_book_raw_df is None:
+            raw_dir = self.parquet_root / "order_book_raw"
+
+            # Find partitions for this market (mirrors _market_specific_files in _check_amm_conservation).
+            def _market_parquet_files(base_dir: Path) -> list[str]:
+                if not base_dir.exists():
+                    return []
+                matched: list[str] = []
+                for market_dir in base_dir.iterdir():
+                    if market_dir.is_dir() and (
+                        market_dir.name.endswith(self.market_id)
+                        or self.market_id.endswith(market_dir.name.split("=", 1)[-1])
+                    ):
+                        matched.extend(str(p) for p in market_dir.rglob("*.parquet"))
+                return matched
+
+            raw_files = _market_parquet_files(raw_dir)
+            if not raw_files:
+                raise EmptyCompetitionPoolError(
+                    market_id=self.market_id,
+                    chain_ts=chain_ts,
+                    reason=f"No order_book_raw parquet for market ending {self.market_id!r}",
+                )
+
+            raw_df = pl.read_parquet(raw_files)
+
+            # Schema normalisation — archive uses sz_float; test fixtures may use sz or size.
+            col_map: dict[str, str] = {}
+            if "sz_float" in raw_df.columns and "size" not in raw_df.columns:
+                col_map["sz_float"] = "size"
+            elif "sz" in raw_df.columns and "size" not in raw_df.columns:
+                col_map["sz"] = "size"
+            if col_map:
+                raw_df = raw_df.rename(col_map)
+
+            if raw_df["snapshot_ts"].dtype == pl.String:
+                raw_df = raw_df.with_columns(pl.col("snapshot_ts").cast(pl.Int64))
+
+            self._order_book_raw_df = raw_df
+
+        df = self._order_book_raw_df
+
+        # (iv) Filter to snapshots at or before chain_ts.
+        snap_df = df.filter(pl.col("snapshot_ts") <= chain_ts)
+        if snap_df.is_empty():
+            raise EmptyCompetitionPoolError(
+                market_id=self.market_id,
+                chain_ts=chain_ts,
+                reason=f"No order_book_raw snapshot at or before chain_ts={chain_ts}",
+            )
+
+        # (v) Latest snapshot timestamp; filter to that snapshot within CLO range.
+        latest_ts = snap_df.select(pl.max("snapshot_ts")).item()
+        in_range = snap_df.filter(
+            (pl.col("snapshot_ts") == latest_ts)
+            & (pl.col("tick") >= clo_lower)
+            & (pl.col("tick") <= clo_upper)
+        )
+
+        # (vi) Sum of in-range sizes.
+        total_raw = float(in_range.select(pl.sum("size")).item() or 0.0)
+
+        # (vii) Subtract our position; apply sigma_others_multiplier (BACK-04).
+        sigma_others_raw = max(0.0, total_raw - q_me_pendle) * self.sigma_others_multiplier
+
+        # (viii) Apply floor AFTER guard — never as substitute for empty pool.
+        return max(sigma_others_raw, self.config.reward_share_model.sigma_others_min_pendle)
 
     def _maybe_anchor_snapshot(self, current_ts: int, evt: dict[str, Any]) -> None:
         """At hourly boundaries, load snapshots and assert AMM epoch conservation.
