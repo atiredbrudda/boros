@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: milestone
-status: halted_pending_phase_05_2
-stopped_at: "Phase 05.1 ship-gate FAIL caused by 5 compounding engine bugs surfaced via dapp UI probing on 2026-04-30. Bug #5 (units mismatch) fixed in commit 9625c93; bugs #1-4 (notional_per_yu_usd placeholder, backwards long_split, empty competition_history, sparse-tick) deferred to Phase 05.2. Predicted verdict at $100 collateral on binding market with all 5 bugs fixed: ~415% USD-APR PASS. Phase 05.2 directory created with full audit context — see .planning/phases/05.2-sizer-replay-reconcile-to-production/05.2-CONTEXT.md."
-last_updated: "2026-04-30T02:10:00.000Z"
-last_activity: 2026-04-30 -- Phase 05.2 scaffolded (CONTEXT.md + ROADMAP entry); 5 engine bugs catalogued; ready for /gsd-plan-phase 05.2 in fresh session
+status: planning
+stopped_at: "Phase 05.2 scaffolded after dapp UI probing surfaced 5 engine bugs explaining the 05.1 FAIL. Bug #5 (units mismatch) committed as 9625c93. Bugs #1-4 catalogued in `.planning/phases/05.2-sizer-replay-reconcile-to-production/05.2-CONTEXT.md` with empirical evidence (margin_per_yu ≈ $18.30, rate_sensitivity_per_yu ≈ $9.13, effective long pool ≈ 75 YU, predicted verdict ~415% USD-APR PASS at $100 collateral). Operator fetching Wave 0 evidence (E1 cross-market probe, E2 Daily Volatility, E3 time stability) in parallel."
+last_updated: "2026-04-30T03:25:45.386Z"
+last_activity: 2026-04-29
 progress:
-  total_phases: 10
-  completed_phases: 7
-  total_plans: 43
+  total_phases: 11
+  completed_phases: 6
+  total_plans: 50
   completed_plans: 43
-  percent: 70
+  percent: 86
 ---
 
 # Project State
@@ -183,4 +183,4 @@ Resume file: .planning/phases/05.2-sizer-replay-reconcile-to-production/05.2-CON
 
 **Next action:** In a fresh session, run `/gsd-plan-phase 05.2` to formalize the wave-decomposition (Wave 0 evidence → Wave 1 sizer schema → Wave 2 calibration refresh + n_fills audit → Wave 3 sigma_others-from-parquet → Wave 4 sparse-tick synthesis → Wave 5 re-run binding ship-gate). The CONTEXT.md is the single input the planner agent needs.
 
-**Planned Phase:** 05.2 — Sizer + Replay Reconcile-to-Production. ~5-6 working days plus operator's ~2-hour Wave 0 evidence session. Predicted Wave 5 verdict: ~415% USD-APR PASS, halt lifted, Phase 6 unblocked.
+**Planned Phase:** 05.2 (sizer-replay-reconcile-to-production) — 7 plans — 2026-04-30T03:25:45.376Z
