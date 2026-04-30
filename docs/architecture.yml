@@ -2116,6 +2116,37 @@ edges:
     type: writes
     notes: "Verdict JSON with n_crossings + min/max/mean APR + verdict_label"
 
+  # ── E6 OI-vs-maturity proxy audit (05.2-W0) ──────────────────────────────
+  - id: scripts.audit_oi_vs_maturity
+    kind: cli_command
+    path: scripts/audit_oi_vs_maturity.py
+    notes: "Phase 05.2 Wave 0 E6 audit — loads market-data NDJSON for ETH markets at 3 maturities, plots daily mean notionalOI vs calendar + days-to-expiry, emits verdict (oi_ramps_toward_expiry|oi_flat_across_maturity|inconclusive). Tests maturity-decay hypothesis as proxy for unobservable reward-budget history."
+
+  - id: var.audit.oi_vs_maturity_png
+    type: storage
+    path: var/audit/oi_vs_maturity.png
+    notes: "E6 audit visual artifact — Panel A (OI over calendar time, 6 markets) + Panel B (OI vs days-to-expiry, all maturities overlapped)"
+
+  - id: var.reports.oi_vs_maturity_verdict
+    type: storage
+    path: var/reports/oi_vs_maturity_verdict.json
+    notes: "E6 audit verdict JSON: per-market OI growth rates, level snapshots, verdict_label"
+
+  - from: scripts.audit_oi_vs_maturity
+    to: data.ndjson
+    type: reads
+    notes: "Reads market-data/{market}/*.ndjson via pl.read_ndjson; aggregates hourly→daily mean notionalOI"
+
+  - from: scripts.audit_oi_vs_maturity
+    to: var.audit.oi_vs_maturity_png
+    type: writes
+    notes: "PNG artifact of OI time-series + days-to-expiry overlap"
+
+  - from: scripts.audit_oi_vs_maturity
+    to: var.reports.oi_vs_maturity_verdict
+    type: writes
+    notes: "Verdict JSON with per-market growth rates + verdict_label"
+
   # ── DATA-05 AMM conservation assertion (01-10) ───────────────────────────
   - from: brain.data.ingester.order_book
     to: brain.data.ingester.exceptions
