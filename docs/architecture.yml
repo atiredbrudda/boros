@@ -1527,6 +1527,14 @@ nodes:
     path: python/src/boros_brain/backtest/run_manifest.py
     public_functions: [emit_backtest_manifest, assert_manifest_contains_all_botconfig_leaves]
 
+  # ── Phase 05.2 Wave 3: Bug #3 fix — sigma_others from parquet ──────────────
+  - id: brain.backtest.exceptions
+    type: module
+    process: brain
+    path: python/src/boros_brain/backtest/exceptions.py
+    public_functions: []   # EmptyCompetitionPoolError is a class (not a fn)
+    notes: "Phase 05.2 W3 (Bug #3 fix): EmptyCompetitionPoolError replaces silent bare-except sigma_others=0 in replay.py:489-500. [[backtest-sigma-others-parquet-read-2026-04-30]]"
+
 edges:
   # ── brain internal wiring ──────────────────────────────────────────────
   - from: brain
@@ -2929,3 +2937,8 @@ edges:
 
   - {from: scripts.backfill_reward_budget_history, to: brain.state.writers.reward_budget_history, type: calls, notes: "insert_reward_budget_row(data_source='synthetic_current') — preserves PROTO-02 single-writer discipline"}
   - {from: scripts.backfill_reward_budget_history, to: state.reward_budget_history, type: writes, notes: "One synthetic_current row per market discovered in data/parquet/market_trades/. Idempotent via existence pre-check."}
+
+  # ── Phase 05.2 Wave 3 edges ─────────────────────────────────────────────────
+  - {from: brain.backtest.replay, to: brain.backtest.exceptions, type: calls, notes: "Phase 05.2 W3: _read_sigma_others_from_parquet_at_ts raises EmptyCompetitionPoolError on empty partition or no snapshot <= chain_ts. [[backtest-sigma-others-parquet-read-2026-04-30]]"}
+  - {from: brain.backtest.replay, to: parquet.order_book_raw, type: reads, notes: "Phase 05.2 W3: _read_sigma_others_from_parquet_at_ts lazy-loads order_book_raw once per run; snapshot_ts <= chain_ts filter mirrors live CompetitionTracker"}
+  - {from: brain.backtest.replay, to: config.reward_share_model.sigma_others_min_pendle, type: depends-on-config, notes: "Phase 05.2 W3: floor applied AFTER empty-pool guard succeeds, never as fallback substitute"}
