@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import itertools
 from collections.abc import Iterator
+from datetime import UTC
 from pathlib import Path
 from typing import Any, Literal
 
@@ -173,6 +174,15 @@ class ReplayEngine:
         self.last_tick_ts: int | None = None
         self.last_anchor_ts: int | None = None
         self.output = ReplayOutput()
+
+        # Phase 05.2 Bug #6 fix: chain_ts-aware calibration lookup. Loaded lazily on
+        # first _calibration_at_chain_ts call, then reused for all ticks. Each entry
+        # carries effective_at_unix (int seconds, parsed from effective_at_utc) so
+        # per-tick lookup is a simple bisect against chain_ts (also int seconds).
+        # Entries are sorted by effective_at_unix ASC.
+        # [[ship-gate-bug-6-epoch-keyed-calibration]]
+        self._calibration_history: list[dict[str, Any]] | None = None
+        self._calibration_pre_history_warned: bool = False
 
     # ─────────────────────────────────────────────────────────────────────────
     # Public API
@@ -593,6 +603,152 @@ class ReplayEngine:
             "source": str(row["source"]),
         }
 
+    def _load_operator_calibration_history(self) -> list[dict[str, Any]]:
+        """Load all operator calibration rows for this market, sorted by effective_at_utc ASC.
+
+        Phase 05.2 Bug #6 fix. Each row carries an extra ``effective_at_unix`` int
+        (seconds since epoch, parsed from ``effective_at_utc``) so per-tick lookup
+        against ``chain_ts`` is a direct integer comparison.
+
+        Returns
+        -------
+        list[dict]
+            Sorted ASC by ``effective_at_unix``. Empty if the table is missing,
+            unreadable, or contains no operator rows for this market.
+
+        [[ship-gate-bug-6-epoch-keyed-calibration]]
+        """
+        from datetime import datetime
+
+        if not self.sqlite_path.exists():
+            return []
+
+        conn = duckdb.connect(":memory:")
+        conn.install_extension("sqlite_scanner")
+        conn.load_extension("sqlite_scanner")
+        conn.execute(f"CALL sqlite_attach('{self.sqlite_path}', overwrite=true)")
+
+        try:
+            rows = conn.execute(
+                """
+                SELECT market_id, e_liq_per_epoch_pendle, long_side_split,
+                       short_side_split, calibrated_at_utc, effective_at_utc,
+                       source, data_source
+                FROM market_reward_calibration
+                WHERE data_source = 'operator'
+                  AND market_id = ?
+                  AND effective_at_utc IS NOT NULL
+                ORDER BY effective_at_utc ASC
+                """,
+                [self.market_id],
+            ).fetchall()
+        except Exception as exc:  # noqa: BLE001
+            log.debug("backtest.replay.calibration_history_query_failed", err=str(exc))
+            rows = []
+        finally:
+            conn.close()
+
+        history: list[dict[str, Any]] = []
+        for r in rows:
+            (
+                _market_id,
+                e_liq,
+                long_split,
+                short_split,
+                calibrated_at,
+                effective_at,
+                source,
+                _data_source,
+            ) = r
+            try:
+                effective_at_unix = int(
+                    datetime.fromisoformat(str(effective_at).replace("Z", "+00:00")).astimezone(UTC).timestamp()
+                )
+            except (ValueError, TypeError) as exc:
+                log.warning(
+                    "backtest.replay.calibration_effective_at_unparseable",
+                    market_id=self.market_id,
+                    effective_at_utc=str(effective_at),
+                    err=str(exc),
+                )
+                continue
+            side_split = long_split if self.side == "long" else short_split
+            history.append(
+                {
+                    "e_liq_per_epoch_pendle": float(e_liq),
+                    "side_split": float(side_split),
+                    "sigma_others_pendle": -1.0,
+                    "calibrated_at_utc": str(calibrated_at),
+                    "effective_at_utc": str(effective_at),
+                    "effective_at_unix": effective_at_unix,
+                    "source": str(source),
+                }
+            )
+        return history
+
+    def _calibration_at_chain_ts(self, chain_ts: int) -> dict[str, Any]:
+        """Pick the operator calibration row whose ``effective_at_utc <= chain_ts``.
+
+        Phase 05.2 Bug #6 fix. Prior to this method, replay loaded a single row at
+        startup (``ORDER BY calibrated_at_utc DESC LIMIT 1``) and applied it to every
+        tick — which retroactively applied current-epoch reward splits to historical
+        replay windows. The binding ship-gate run ``01KQEZ6M0SWVXX3H4G5W7RNFS8``
+        was inflated by 0.760 / 0.327 = 2.32x by exactly this mechanism.
+
+        Lookup semantics:
+
+        * Returns the row with the largest ``effective_at_unix`` that is
+          ``<= chain_ts``.
+        * If ``chain_ts`` predates all rows, falls back to the earliest row and
+          emits a one-shot warning per run (mirrors the W5-A
+          ``sigma_others_using_earliest_snapshot_fallback`` shape).
+        * If the history is empty (no operator rows for this market), returns the
+          same default-fallback dict that ``_read_operator_calibration_sql`` would.
+          This preserves test fixtures that don't seed calibration.
+
+        [[ship-gate-bug-6-epoch-keyed-calibration]]
+        """
+        if self._calibration_history is None:
+            self._calibration_history = self._load_operator_calibration_history()
+
+        if not self._calibration_history:
+            log.warning(
+                "backtest.replay.no_operator_calibration",
+                market_id=self.market_id,
+                chain_ts=chain_ts,
+            )
+            return {
+                "e_liq_per_epoch_pendle": 100.0,
+                "side_split": 0.5,
+                "sigma_others_pendle": 0.0,
+                "calibrated_at_utc": "2026-01-01T00:00:00Z",
+                "effective_at_utc": "2026-01-01T00:00:00Z",
+                "effective_at_unix": 0,
+                "source": "default_fallback",
+            }
+
+        # Linear scan from the end — calibration rows per market are typically
+        # O(epochs) (single digits in practice). Bisect would be premature here.
+        chosen: dict[str, Any] | None = None
+        for entry in reversed(self._calibration_history):
+            if entry["effective_at_unix"] <= int(chain_ts):
+                chosen = entry
+                break
+
+        if chosen is None:
+            chosen = self._calibration_history[0]
+            if not self._calibration_pre_history_warned:
+                log.warning(
+                    "backtest.replay.calibration_pre_history_fallback",
+                    market_id=self.market_id,
+                    chain_ts=int(chain_ts),
+                    earliest_effective_at_unix=chosen["effective_at_unix"],
+                    gap_s=chosen["effective_at_unix"] - int(chain_ts),
+                )
+                self._calibration_pre_history_warned = True
+
+        return chosen
+
     async def _maybe_emit_tick(self, current_ts: int, calib: dict[str, Any]) -> None:
         """1 Hz decision cadence. Drives the LIVE engine — no shortcut.
 
@@ -744,9 +900,7 @@ class ReplayEngine:
             # Rate-crossing check: long is filled when rate drops to/below lower edge;
             # short is filled when rate rises to/above upper edge.
             edge_crossed = False
-            if self.side == "long" and evt_rate <= clo_lower:
-                edge_crossed = True
-            elif self.side == "short" and evt_rate >= clo_upper:
+            if self.side == "long" and evt_rate <= clo_lower or self.side == "short" and evt_rate >= clo_upper:
                 edge_crossed = True
 
             if edge_crossed and order.queue_ahead_wei == 0:
@@ -796,6 +950,14 @@ class ReplayEngine:
             q_me_pendle=order.q_me_pendle,
         )
 
+        # Phase 05.2 Bug #6 fix: ignore the static `calib` arg (which carries the
+        # row most-recently inserted at run start) and resolve the calibration
+        # row whose effective_at_utc <= current_chain_ts. The static `calib` is
+        # still passed in by the run loop for backwards compatibility with paths
+        # that have no chain_ts (test fixtures, _finalize_output metadata) — it is
+        # NOT authoritative for per-tick reward share. See [[ship-gate-bug-6-epoch-keyed-calibration]].
+        per_tick_calib = self._calibration_at_chain_ts(int(current_chain_ts))
+
         return EvaluateInput(
             order_id=order.order_id,
             market_id=order.market_id,
@@ -808,8 +970,8 @@ class ReplayEngine:
             current_chain_ts=current_chain_ts,
             q_me_pendle=order.q_me_pendle,
             sigma_others_pendle=sigma_others,
-            e_liq_per_epoch_pendle=calib["e_liq_per_epoch_pendle"],
-            side_split=calib["side_split"],
+            e_liq_per_epoch_pendle=per_tick_calib["e_liq_per_epoch_pendle"],
+            side_split=per_tick_calib["side_split"],
             t_frac=order.t_frac,
             p_purge=self.config.decision.p_purge_default,
             r_me_per_epoch_pendle_accumulated_so_far=order.r_accum,
@@ -945,9 +1107,7 @@ class ReplayEngine:
         # (v) Latest snapshot timestamp; filter to that snapshot within CLO range.
         latest_ts = snap_df.select(pl.max("snapshot_ts")).item()
         in_range = snap_df.filter(
-            (pl.col("snapshot_ts") == latest_ts)
-            & (pl.col("tick") >= clo_lower)
-            & (pl.col("tick") <= clo_upper)
+            (pl.col("snapshot_ts") == latest_ts) & (pl.col("tick") >= clo_lower) & (pl.col("tick") <= clo_upper)
         )
 
         # (vi) Sum of in-range sizes.

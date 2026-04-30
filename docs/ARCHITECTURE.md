@@ -897,6 +897,40 @@ flowchart LR
 
 [[ship-gate-verdict-20260430-engine-corrected]]
 
+## Phase 05.2 Bug #6 Fix — Chain-ts-aware Calibration Read
+
+Bug #6 was discovered post-Wave-5 during operator verdict review: the binding ship-gate
+run (`01KQEZ6M0SWVXX3H4G5W7RNFS8`) returned `p5 = 970.6% USD-APR` vs predicted ~415%, a
+2.34× overshoot. Root cause: `_read_operator_calibration_sql` ordered by
+`calibrated_at_utc DESC LIMIT 1` and was called once at startup, so a single calibration
+row was applied to every tick across the 26-day historical replay window. The current-epoch
+`long_side_split = 0.760` was retroactively applied to historical ticks from prior epochs
+(actual split ≈ 0.327). Inflation factor: 0.760 / 0.327 = 2.32× — exact match to the observed
+overshoot. The W2a `effective_at_utc` column was added precisely to enable epoch-keyed reads
+but the read site was never converted; this fix completes the W2a contract.
+
+`_calibration_at_chain_ts(chain_ts)` loads all operator rows for the market once, sorted by
+`effective_at_utc` ASC, and returns the row whose `effective_at_utc <= chain_ts`. The earliest
+row is used (with a one-shot warning) when `chain_ts` predates all rows. `_build_evaluate_input`
+calls this method per tick instead of using the static dict from `_read_operator_calibration_sql`
+(retained for the synthetic-current warning path and `_finalize_output` metadata).
+
+```mermaid
+flowchart LR
+  subgraph phase052_bug6["Phase 05.2 Bug #6: chain_ts-aware calibration read"]
+    state_cal_b6[("state.market_reward_calibration<br/>operator rows, multiple effective_at_utc")]
+    history["_load_operator_calibration_history()<br/>ORDER BY effective_at_utc ASC"]
+    lookup["_calibration_at_chain_ts(chain_ts)<br/>pick row whose effective_at_utc &lt;= chain_ts"]
+    eval_in["_build_evaluate_input<br/>per-tick side_split + e_liq"]
+  end
+
+  state_cal_b6 -- "lazy load once" --> history
+  history -- "cached list" --> lookup
+  lookup -- "per-tick" --> eval_in
+```
+
+[[ship-gate-bug-6-epoch-keyed-calibration]]
+
 ## Related protocols
 
 - Engineering Protocol #1 — LLM Wiki. Every research / decision / postmortem
