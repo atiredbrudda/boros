@@ -213,10 +213,21 @@ def seed_market_reward_calibration(tmp_sqlite_path: Path) -> Callable:
 
         apply_migrations(tmp_sqlite_path)
         for row in rows:
+            # W2a: inject defaults for new required fields if not supplied by caller.
+            # effective_at_utc and next_refresh_at_utc default to calibrated_at_utc
+            # so existing test dicts (which omit them) keep working.
+            calibrated_at = row.get("calibrated_at_utc", "2026-04-25T00:00:00Z")
+            effective_at = row.get("effective_at_utc", calibrated_at)
+            next_refresh = row.get("next_refresh_at_utc", calibrated_at)
+            row_with_defaults = {
+                **row,
+                "effective_at_utc": effective_at,
+                "next_refresh_at_utc": next_refresh,
+            }
             insert_market_reward_calibration(
                 tmp_sqlite_path,
-                run_id=row.get("run_id", "test-001"),
-                **{k: v for k, v in row.items() if k != "run_id"},
+                run_id=row_with_defaults.get("run_id", "test-001"),
+                **{k: v for k, v in row_with_defaults.items() if k != "run_id"},
             )
         return tmp_sqlite_path
 

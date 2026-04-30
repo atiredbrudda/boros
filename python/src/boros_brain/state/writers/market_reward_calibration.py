@@ -28,6 +28,13 @@ __all__ = [
 ]
 
 
+def _looks_like_iso8601(s: str) -> bool:
+    """Minimal ISO8601 sanity check — must start with YYYY-MM-DDT."""
+    import re
+
+    return bool(re.match(r"^\d{4}-\d{2}-\d{2}T", s))
+
+
 def insert_market_reward_calibration(
     sqlite_path: Path,
     *,
@@ -36,6 +43,8 @@ def insert_market_reward_calibration(
     long_side_split: float,
     short_side_split: float,
     calibrated_at_utc: str,
+    effective_at_utc: str,
+    next_refresh_at_utc: str,
     source: Source = "dapp_ui",
     run_id: str,
 ) -> None:
@@ -44,12 +53,16 @@ def insert_market_reward_calibration(
     Raises ValueError BEFORE SQL round-trip if:
       - source not in allowed enum, OR
       - splits don't sum to 1.0 (P3-4 guard), OR
-      - e_liq_per_epoch_pendle < 0.0.
+      - e_liq_per_epoch_pendle < 0.0, OR
+      - effective_at_utc / next_refresh_at_utc not ISO8601-shaped.
 
     SQL CHECK constraints (data_source = 'operator', source enum, splits range,
     e_liq nonneg) are belt-and-braces.
 
     data_source is hardcoded to 'operator' inside the SQL — NOT a caller kwarg.
+
+    W2a (Phase 05.2): effective_at_utc and next_refresh_at_utc are now required
+    kwargs. They are persisted to the columns added by Alembic migration 0008.
     """
     if source not in _ALLOWED_SOURCES:
         raise ValueError(f"source={source!r} not in {sorted(_ALLOWED_SOURCES)}")
@@ -61,6 +74,14 @@ def insert_market_reward_calibration(
         )
     if e_liq_per_epoch_pendle < 0.0:
         raise ValueError(f"e_liq_per_epoch_pendle must be >= 0.0, got {e_liq_per_epoch_pendle}")
+    if not _looks_like_iso8601(effective_at_utc):
+        raise ValueError(
+            f"effective_at_utc must be ISO8601-shaped (YYYY-MM-DDT...), got {effective_at_utc!r}"
+        )
+    if not _looks_like_iso8601(next_refresh_at_utc):
+        raise ValueError(
+            f"next_refresh_at_utc must be ISO8601-shaped (YYYY-MM-DDT...), got {next_refresh_at_utc!r}"
+        )
 
     from boros_brain.state.db import open_connection
 
@@ -70,14 +91,17 @@ def insert_market_reward_calibration(
         conn.execute(
             "INSERT INTO market_reward_calibration "
             "(market_id, e_liq_per_epoch_pendle, long_side_split, short_side_split, "
-            " calibrated_at_utc, data_source, source, run_id) "
-            "VALUES (?, ?, ?, ?, ?, 'operator', ?, ?)",
+            " calibrated_at_utc, effective_at_utc, next_refresh_at_utc, "
+            " data_source, source, run_id) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, 'operator', ?, ?)",
             (
                 market_id,
                 e_liq_per_epoch_pendle,
                 long_side_split,
                 short_side_split,
                 calibrated_at_utc,
+                effective_at_utc,
+                next_refresh_at_utc,
                 source,
                 run_id,
             ),
@@ -88,19 +112,27 @@ def insert_market_reward_calibration(
         e_liq_per_epoch_pendle=e_liq_per_epoch_pendle,
         long_side_split=long_side_split,
         short_side_split=short_side_split,
+        effective_at_utc=effective_at_utc,
+        next_refresh_at_utc=next_refresh_at_utc,
         source=source,
         run_id=run_id,
     )
 
 
 def get_latest_market_reward_calibration(sqlite_path: Path, market_id: str) -> dict[str, Any] | None:
-    """Return most-recent calibration row for market_id as a dict, or None."""
+    """Return most-recent calibration row for market_id as a dict, or None.
+
+    W2a: Returns effective_at_utc and next_refresh_at_utc in the dict.
+    Order-by stays calibrated_at_utc DESC for backwards compat; a future plan
+    can switch to effective_at_utc DESC if epoch-keyed reads are required.
+    """
     from boros_brain.state.db import open_connection
 
     with open_connection(sqlite_path) as conn:
         row = conn.execute(
             "SELECT market_id, e_liq_per_epoch_pendle, long_side_split, "
-            "short_side_split, calibrated_at_utc, data_source, source, run_id "
+            "short_side_split, calibrated_at_utc, effective_at_utc, "
+            "next_refresh_at_utc, data_source, source, run_id "
             "FROM market_reward_calibration WHERE market_id = ? "
             "ORDER BY calibrated_at_utc DESC LIMIT 1",
             (market_id,),
@@ -113,9 +145,11 @@ def get_latest_market_reward_calibration(sqlite_path: Path, market_id: str) -> d
         "long_side_split": row[2],
         "short_side_split": row[3],
         "calibrated_at_utc": row[4],
-        "data_source": row[5],
-        "source": row[6],
-        "run_id": row[7],
+        "effective_at_utc": row[5],
+        "next_refresh_at_utc": row[6],
+        "data_source": row[7],
+        "source": row[8],
+        "run_id": row[9],
     }
 
 

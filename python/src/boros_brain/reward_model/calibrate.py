@@ -40,12 +40,20 @@ def insert_operator_calibration(
     short_side_split: float,
     source: str,
     run_id: str,
+    effective_at_utc: str | None = None,
+    next_refresh_at_utc: str | None = None,
 ) -> None:
     """Validate via Pydantic THEN persist via single-writer.
 
     Pydantic catches P3-4 (split sum != 1.0) BEFORE the DB layer.
+
+    W2a: effective_at_utc and next_refresh_at_utc are now required by the
+    MarketRewardCalibration Pydantic model and writer. If not provided, both
+    default to calibrated_at_utc (safe round-trip semantics for existing callers).
     """
     calibrated_at_utc = datetime.now(UTC).isoformat()
+    effective_at_utc = effective_at_utc or calibrated_at_utc
+    next_refresh_at_utc = next_refresh_at_utc or calibrated_at_utc
 
     # Pydantic validation (P3-4 guard fires here).
     _ = MarketRewardCalibration(
@@ -53,6 +61,8 @@ def insert_operator_calibration(
         long_side_split=long_side_split,
         short_side_split=short_side_split,
         calibrated_at_utc=calibrated_at_utc,
+        effective_at_utc=effective_at_utc,
+        next_refresh_at_utc=next_refresh_at_utc,
         source=source,  # type: ignore[arg-type]  # narrowed to Literal in writer
     )
 
@@ -64,6 +74,8 @@ def insert_operator_calibration(
         long_side_split=long_side_split,
         short_side_split=short_side_split,
         calibrated_at_utc=calibrated_at_utc,
+        effective_at_utc=effective_at_utc,
+        next_refresh_at_utc=next_refresh_at_utc,
         source=source,  # type: ignore[arg-type]
         run_id=run_id,
     )
