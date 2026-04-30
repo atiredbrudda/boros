@@ -366,7 +366,7 @@ flowchart TB
         state_comp[("state.competition_history<br/>SQLite — Alembic 0005")]
         cal_writer["state/writers/market_reward_calibration.py<br/>insert_market_reward_calibration +<br/>get_latest_market_reward_calibration"]
         calibrate["reward_model/calibrate.py<br/>insert_operator_calibration (LOCKED D-01)"]
-        state_cal[("state.market_reward_calibration<br/>SQLite — Alembic 0006<br/>data_source='operator' CHECK")]
+        state_cal[("state.market_reward_calibration<br/>SQLite — Alembic 0008<br/>+effective_at_utc +next_refresh_at_utc<br/>data_source='operator' CHECK")]
         reward_cli["reward_model/cli.py + __main__.py<br/>curve / competition-snapshot / calibrate"]
 
         pricing_cfg["pricing/config.py<br/>PricingConfig — pendle_price_usd +<br/>price_source + staleness bands"]

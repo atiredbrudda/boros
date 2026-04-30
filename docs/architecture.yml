@@ -982,7 +982,8 @@ nodes:
   - id: state.market_reward_calibration
     type: storage
     path: state/state.sqlite#market_reward_calibration
-    notes: "SQLite market_reward_calibration table (Alembic 0006 — LOCKED D-01 2026-04-24). data_source='operator' CHECK. Single writer: brain.state.writers.market_reward_calibration."
+    notes: "SQLite market_reward_calibration table (Alembic 0006/0008 — LOCKED D-01 2026-04-24). data_source='operator' CHECK. Single writer: brain.state.writers.market_reward_calibration."
+    columns: [id, market_id, e_liq_per_epoch_pendle, long_side_split, short_side_split, calibrated_at_utc, effective_at_utc, next_refresh_at_utc, data_source, source, run_id]
   - id: parquet.loss_grid_artifacts
     type: storage
     path: data/parquet/loss_grid_artifacts/**/*.parquet
