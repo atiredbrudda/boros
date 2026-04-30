@@ -1095,9 +1095,9 @@ nodes:
   - id: config.sizer.optimizer_method
     type: config_knob
     pydantic_path: BotConfig.sizer.optimizer_method
-  - id: config.sizer.notional_per_yu_usd
+  - id: config.sizer.margin_per_yu_usd
     type: config_knob
-    pydantic_path: BotConfig.sizer.notional_per_yu_usd
+    pydantic_path: BotConfig.sizer.margin_per_yu_usd
 
   # ── Phase 4 Plan 04-01 — lint scripts (scaffolding) ────────────────────
   - id: scripts.no_hardcoded_cancel_cost_lint
@@ -1328,6 +1328,18 @@ nodes:
   - id: config.markets.underlying_symbol
     type: config_knob
     pydantic_path: BotConfig.markets.underlying_symbol
+  - id: config.markets.margin_per_yu_usd
+    type: config_knob
+    pydantic_path: BotConfig.markets.margin_per_yu_usd
+    notes: "Per-market override for USD margin per 1 YU. None = inherit from sizer default. Phase 05.2 Wave 1."
+  - id: config.markets.daily_volatility_pct
+    type: config_knob
+    pydantic_path: BotConfig.markets.daily_volatility_pct
+    notes: "7DMA implied APR daily volatility from dapp UI badge. Drives liquidation_buffer floor. Phase 05.2 Wave 1."
+  - id: config.markets.liquidation_buffer_safety_n
+    type: config_knob
+    pydantic_path: BotConfig.markets.liquidation_buffer_safety_n
+    notes: "Liquidation-buffer multiplier N (default 3). Phase 05.2 Wave 1."
 
   # ── Phase 4 Wave 2A engine+gas_history — Plan 04-03 ──────────────────────
   - id: brain.decision.engine
@@ -2756,9 +2768,9 @@ edges:
     to: config.sizer.optimizer_method
     type: depends-on-config
   - from: brain.sizer.optimizer
-    to: config.sizer.notional_per_yu_usd
+    to: config.sizer.margin_per_yu_usd
     type: depends-on-config
-    notes: "operator-calibrated per-market USD↔PENDLE-YU conversion"
+    notes: "operator-calibrated USD margin per 1 YU at slider=0% (min margin)"
   - from: brain.sizer.optimizer
     to: config.pricing.pendle_price_usd
     type: depends-on-config

@@ -197,6 +197,25 @@ class MarketCalibration(StrictBase):
     look up the correct parquet partition in underlying_apr/.
     """
 
+    margin_per_yu_usd: float | None = Field(None, ge=0.01, le=10_000_000.0)
+    """Per-market USD margin per 1 YU at slider=0% (min margin). Operator-calibrated
+    from dapp UI funded trial-order panels (slider-invariant per-YU primitive).
+    None means inherit from BotConfig.sizer.margin_per_yu_usd (single-market regime
+    backwards compat). For BINANCE-ETHUSDT-25SEP2026: .30/YU at  ETH baseline.
+    See [[phase-05-2-margin-per-yu-rename]].
+    """
+
+    daily_volatility_pct: float | None = Field(None, ge=0.0, le=100.0)
+    """7DMA implied APR daily volatility from dapp UI 'Daily Volatility' badge (percent).
+    Drives liquidation_buffer floor: liquidation_buffer_pct >= liquidation_buffer_safety_n
+    × daily_volatility_pct. For BINANCE-ETHUSDT-25SEP2026: 0.34% per W0 E2.
+    """
+
+    liquidation_buffer_safety_n: int = Field(3, ge=1, le=20)
+    """Liquidation-buffer multiplier N. Default 3 means 3× daily volatility.
+    Operator tunes this knob based on fill-risk tolerance.
+    """
+
 
 class BotConfig(StrictBase):
     """Top-level config. One instance per run; frozen after load."""

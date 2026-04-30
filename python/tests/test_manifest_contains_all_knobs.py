@@ -191,7 +191,8 @@ def test_phase3_leaves_surfaced(default_config: BotConfig) -> None:
     assert "pricing.price_source" in pricing_leaves
     assert "sizer.collateral_usd" in sizer_leaves
     assert "sizer.q_min_pendle" in sizer_leaves
-    assert "sizer.notional_per_yu_usd" in sizer_leaves
+    assert "sizer.margin_per_yu_usd" in sizer_leaves  # Phase 05.2 Bug #1 rename
+    assert "sizer.notional_per_yu_usd" not in sizer_leaves  # regression guard
 
 
 def test_git_sha_and_dirty_captured(default_config: BotConfig) -> None:

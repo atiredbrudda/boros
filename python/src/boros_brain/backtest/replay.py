@@ -307,7 +307,7 @@ class ReplayEngine:
           - tick: clo_lower_thresh (long) | clo_upper_thresh (short) — outer edge
           - q_me_pendle: config.sizer.q_min_pendle (sub-cap regime fixed point;
             equals what sizer.q_me_target() returns at $100 collateral / 90k
-            notional_per_yu_usd per the optimizer.py docstring contract)
+            margin_per_yu_usd per the optimizer.py docstring contract)
           - depth_from_mark_ticks: |edge - midpoint(clo_lower, clo_upper)|
           - queue_ahead_wei: 1e22 — outer-edge orders sit behind significant queue;
             the v0.5 fill detection (replay._trade_consumes_order) is an

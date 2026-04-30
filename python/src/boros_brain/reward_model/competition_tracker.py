@@ -136,7 +136,7 @@ class CompetitionTracker:
 
         Returns Q_me in PENDLE-units (v0.5 placeholder: REST-returned size used
         directly; Plan 03-03 Sizer wires the proper YU↔PENDLE conversion via
-        notional_per_yu_usd / pendle_price_usd).
+        margin_per_yu_usd / pendle_price_usd).
         """
         last_exc: BaseException | None = None
         for delay in _BACKOFF_DELAYS:
@@ -156,7 +156,7 @@ class CompetitionTracker:
 
         v0.5: assumes REST returns sizes already in PENDLE-equivalent units via
         the wallet's accounting. If the field is in YU wei, caller converts via
-        MarketCalibration.notional_per_yu_usd / pendle_price_usd.
+        MarketCalibration.margin_per_yu_usd / pendle_price_usd.
         """
         total = 0.0
         for o in orders:

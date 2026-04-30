@@ -9,12 +9,12 @@ Contract:
       FillModelStaleFeatureError, FillModelNoFreshFitError,
       LossModelNoFreshGridError surface to the caller. The DecisionEngine
       (Phase 4) catches and routes to PLACE-suppression with last-known fallbacks.
-    - At $100 collateral with notional_per_yu_usd=90000 (ETHUSDT-29MAY2026
-      placeholder), Q_max ≈ Q_min and the optimizer returns Q_min trivially
-      via the degenerate-interval shortcut (sub_cap regime).
+    - At $100 collateral with margin_per_yu_usd=18.30 (ETHUSDT-25SEP2026
+      binding market), Q_max ≈ 4.92 and the optimizer runs the full grid
+      search in sub_cap regime (Phase 05.2 Bug #1 fix).
 
 Design-locked. Phase 4 DecisionEngine depends on this signature.
-[[sizing-optimizer-sub-cap-regime-v05]]
+[[phase-05-2-margin-per-yu-rename]]
 """
 
 from __future__ import annotations
@@ -70,7 +70,7 @@ def q_me_target(
 
     Algorithm:
       1. Q_min  = config.sizer.q_min_pendle (PENDLE).
-      2. Q_max  = collateral_usd × q_max_safety_margin / notional_per_yu_usd
+      2. Q_max  = collateral_usd × q_max_safety_margin / margin_per_yu_usd
                   (PENDLE — operator-calibrated conversion).
       3. If Q_min > Q_max → raise InsufficientCollateralError.
       4. Q_cap  = compute_q_cap(...)     (REWARD-04 algebra).
@@ -90,7 +90,7 @@ def q_me_target(
     """
     # --- Step 1-3: Q_min / Q_max + collateral guard ---
     q_min = config.sizer.q_min_pendle
-    q_max = config.sizer.collateral_usd * config.sizer.q_max_safety_margin / config.sizer.notional_per_yu_usd
+    q_max = config.sizer.collateral_usd * config.sizer.q_max_safety_margin / config.sizer.margin_per_yu_usd
     if q_min > q_max:
         raise InsufficientCollateralError(q_min, q_max)
 

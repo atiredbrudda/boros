@@ -6,9 +6,15 @@ brain.reward_model.config / brain.pricing.config).
 
 Knob inventory (PROTO-04 SSoT):
   - 6 SizerConfig knobs: collateral_usd, q_min_pendle, q_max_safety_margin,
-    optimizer_grid_points, optimizer_method, notional_per_yu_usd.
+    optimizer_grid_points, optimizer_method, margin_per_yu_usd.
 
-[[sizing-optimizer-sub-cap-regime-v05]]
+Phase 05.2 Wave 1: renamed notional_per_yu_usd → margin_per_yu_usd (Bug #1 fix).
+The old name was a placeholder hardcoded to BTC notional ($90k). Correct semantic:
+USD margin required per 1 YU at slider=0% (min margin), operator-calibrated from
+dapp UI funded trial-order panels. For BINANCE-ETHUSDT-25SEP2026 the empirical
+value is $18.30/YU at $2258 ETH. See [[phase-05-2-margin-per-yu-rename]].
+
+[[phase-05-2-margin-per-yu-rename]]
 """
 
 from __future__ import annotations
@@ -55,16 +61,19 @@ class SizerConfig(StrictBase):
       scipy_only      — skip grid; bounded scipy minimize_scalar over [q_min, upper].
     """
 
-    notional_per_yu_usd: float = Field(1.0, ge=0.01, le=10_000_000.0)
-    """Per-market USD notional per 1 PENDLE-equivalent YU. Operator-calibrated per market.
+    margin_per_yu_usd: float = Field(1.0, ge=0.01, le=10_000_000.0)
+    """Per-market USD margin required per 1 YU at slider=0% (min margin).
+    Operator-calibrated from dapp UI funded trial-order panels (slider-invariant
+    per-YU primitive). For BINANCE-ETHUSDT-25SEP2026 the empirical value is
+    $18.30/YU at $2258 ETH baseline (0.00811 ETH/YU).
 
-    At $100 collateral with notional_per_yu_usd=90000 (ETHUSDT-29MAY2026 placeholder),
-    Q_max = collateral_usd × q_max_safety_margin / notional_per_yu_usd
-          = 100 × 0.9 / 90000 ≈ 1e-3 PENDLE,
-    which equals q_min_pendle — the collateral-constrained sub-cap regime fixed point
-    that satisfies Phase 3 ROADMAP Success Criterion #3.
+    Q_max = collateral_usd × q_max_safety_margin / margin_per_yu_usd
+          = 100 × 0.9 / 18.30 ≈ 4.92 PENDLE-YU at the binding market.
 
-    Upper bound 1e7 USD/PENDLE-YU is generous; operator-calibrated values for
-    real markets sit in 1e4..1e6 range. Lower bound 0.01 USD/PENDLE-YU keeps
-    the no-conversion test path (notional_per_yu_usd=1.0) valid for unit tests.
+    Phase 05.2 Wave 1 rename from notional_per_yu_usd (Bug #1 fix).
+    The old name was a placeholder hardcoded to BTC notional ($90k), which
+    produced Q_max ≈ Q_min = 0.001 and suppressed APR by ~5000×.
+
+    Default 1.0 keeps the no-conversion unit-test path valid.
+    See [[phase-05-2-margin-per-yu-rename]] + [[ship-gate-units-bug-2026-04-30]].
     """
