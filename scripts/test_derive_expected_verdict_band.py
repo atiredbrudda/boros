@@ -141,3 +141,37 @@ def test_derive_band_deterministic_round_trip() -> None:
     assert len(out1.cells) == len(out2.cells)
     for c1, c2 in zip(out1.cells, out2.cells):
         assert c1 == c2
+
+
+def test_classification_rule_pinned_in_output() -> None:
+    """The Phase 05.4-04 T7 classifier reads classification_rule from the band JSON;
+    its presence + multipliers must be stable across runs."""
+    inputs = BandInputs(
+        market="BINANCE-ETHUSDT-25SEP2026",
+        side="long",
+        epoch="both",
+        sigma_yu_anchors={"context_md_75": 75.0, "raw_orderbook_in_range": 165.0, "dapp_estimator_implicit": 329.0},
+        side_split_prior=0.327,
+        side_split_current=0.760,
+        q_max_yu=4.92,
+        q_me_grid_yu=(4.92 * 0.8, 4.92, 4.92 * 1.2),
+        e_liq_per_epoch_pendle=309.96,
+        pendle_price_usd=1.35,
+        collateral_usd=100.0,
+        sigma_source="dapp",
+    )
+    out = derive_band(inputs, derivation_date_utc="2026-04-30")
+
+    # Required keys for Phase 05.4-04 T7 consumption
+    cr = out.classification_rule
+    assert set(cr.keys()) >= {"pass_lo", "pass_hi", "fail_lo", "pass_lo_multiplier", "pass_hi_multiplier", "rationale"}
+    # Multiplier values pinned (changing requires updating wiki + this test in same commit)
+    assert cr["pass_lo_multiplier"] == 0.5
+    assert cr["pass_hi_multiplier"] == 1.5
+    assert cr["fail_lo"] == 0.0
+    # Derived thresholds match the multipliers
+    assert math.isclose(cr["pass_lo"], 0.5 * out.low_apr, rel_tol=1e-9)
+    assert math.isclose(cr["pass_hi"], 1.5 * out.high_apr, rel_tol=1e-9)
+    # Pinned-fixture absolute values for the binding-market band
+    assert math.isclose(cr["pass_lo"], 0.420, abs_tol=5e-3), f"got pass_lo={cr['pass_lo']}"
+    assert math.isclose(cr["pass_hi"], 18.10, abs_tol=5e-2), f"got pass_hi={cr['pass_hi']}"

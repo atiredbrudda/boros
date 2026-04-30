@@ -114,7 +114,29 @@ class BandOutput:
     low_apr: float = 0.0
     mid_apr: float = 0.0
     high_apr: float = 0.0
+    classification_rule: dict[str, Any] = field(default_factory=dict)
     notes: list[str] = field(default_factory=list)
+
+
+# ── Classification multipliers ─────────────────────────────────────────────
+# These pin the verdict-classification rule referenced by Phase 05.4-04 T7
+# (binding ship-gate verdict). Persisted in the JSON output so reconstruction
+# is unambiguous and not dependent on the wiki page being up-to-date.
+#
+#   PASS_LO_MULTIPLIER × low_apr  ≤ p5 ≤ PASS_HI_MULTIPLIER × high_apr  → PASS
+#   p5 < FAIL_LO_THRESHOLD                                              → FAIL
+#   else                                                                → FLAG
+#
+# Rationale (also in [[expected-verdict-band-2026-04-30]] §"Classification rule"):
+# The [low, high] band has a ~14× spread reflecting unresolved Pendle backend
+# uncertainty (sigma_others definition: raw 165 vs eligible-population 329).
+# The 0.5× / 1.5× multipliers add ~50% operator-review margin around each
+# endpoint to absorb (a) intra-epoch sigma drift and (b) sizer-optimizer
+# placement landing off-grid. Anything outside the widened band is a
+# "sixth-bug suspected" flag — route to Phase 05.5 before lifting halt.
+PASS_LO_MULTIPLIER: float = 0.5
+PASS_HI_MULTIPLIER: float = 1.5
+FAIL_LO_THRESHOLD: float = 0.0
 
 
 # ── Pure compute (covered by smoke test) ────────────────────────────────────
@@ -218,6 +240,18 @@ def derive_band(inputs: BandInputs, derivation_date_utc: str) -> BandOutput:
         low_apr=round(low, 6),
         mid_apr=round(mid, 6),
         high_apr=round(high, 6),
+        classification_rule={
+            "pass_lo": round(PASS_LO_MULTIPLIER * low, 6),
+            "pass_hi": round(PASS_HI_MULTIPLIER * high, 6),
+            "fail_lo": FAIL_LO_THRESHOLD,
+            "pass_lo_multiplier": PASS_LO_MULTIPLIER,
+            "pass_hi_multiplier": PASS_HI_MULTIPLIER,
+            "rationale": (
+                "PASS if p5 ∈ [pass_lo, pass_hi] (= [0.5×low, 1.5×high]); "
+                "FAIL if p5 < fail_lo (negative EV after fills); "
+                "FLAG otherwise (sixth-bug suspected, route to Phase 05.5 before halt-lift)."
+            ),
+        },
     )
     return out
 
