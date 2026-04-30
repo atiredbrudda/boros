@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: milestone
-status: planning
-stopped_at: "Phase 05.2 scaffolded after dapp UI probing surfaced 5 engine bugs explaining the 05.1 FAIL. Bug #5 (units mismatch) committed as 9625c93. Bugs #1-4 catalogued in `.planning/phases/05.2-sizer-replay-reconcile-to-production/05.2-CONTEXT.md` with empirical evidence (margin_per_yu ≈ $18.30, rate_sensitivity_per_yu ≈ $9.13, effective long pool ≈ 75 YU, predicted verdict ~415% USD-APR PASS at $100 collateral). Operator fetching Wave 0 evidence (E1 cross-market probe, E2 Daily Volatility, E3 time stability) in parallel."
-last_updated: "2026-04-30T03:25:45.386Z"
-last_activity: 2026-04-29
+status: ready_to_execute
+stopped_at: Phase 05.3 plan drafted; execution to start in fresh session (2026-04-30)
+last_updated: "2026-04-30T13:00:00.000Z"
+last_activity: 2026-04-30 — Phase 05.3 plan drafted (fill-path repair); ROADMAP + STATE updated; awaiting fresh-session execution start
 progress:
-  total_phases: 11
+  total_phases: 12
   completed_phases: 6
-  total_plans: 50
-  completed_plans: 43
-  percent: 86
+  total_plans: 51
+  completed_plans: 48
+  percent: 94
 ---
 
 # Project State
@@ -21,15 +21,29 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-24)
 
 **Core value:** Earn net-positive yield on $100 collateral from the Boros Limit Order Liquidity Rewards pool that beats stablecoin alternatives, after gas and fill-loss — on a live, single-market deployment. If -EV, detect cheaply and kill; do not limp.
-**Current focus:** Phase 05.1 — HALTED
+**Current focus:** Phase 05.3 — Fill-Path Repair (drafted; ready to execute)
 
 ## Current Position
 
-Phase: 6
-Status: Ready to plan
-Last activity: 2026-04-29
+Phase: 05.3 — READY TO EXECUTE
+Plan: 05.3-01 (single-plan phase)
+Status: Plan drafted and committed; T1 (RED tests) is the next action when execution starts in a fresh session.
+Last activity: 2026-04-30 — Phase 05.3 plan drafted; Phase 05.2 Bug #6 fix landed in commit `cad821f`; W5 verdict (970.6% USD-APR) invalidated — gross-of-fills only; Bug #7/#8/#9 routed to Phase 05.3.
 
-Progress: [██████████] 100%
+Progress: [██████████░] 94%
+
+## Phase 05.3 Resume Notes
+
+**Why halted from 05.2:** Phase 05.2's Wave 5 binding ship-gate produced `p5 = 9.706` (970.6% USD-APR), 2.34× the falsifiable ~415% prediction. Operator review surfaced two distinct issue regions:
+  1. **Reward leg (Bug #6):** calibration reader was not `effective_at_utc`-keyed; current-epoch `long_side_split = 0.760` was retroactively applied to a 26-day historical window where the real-world split was the prior-epoch ~0.327. Fixed in commit `cad821f` (Phase 05.2 trailing edge).
+  2. **Fill leg (Bugs #7/#8/#9):** simulator cannot detect fills at all. `size_wei = NULL` across the binding-market parquet kills the trade handler; CLO thresholds treated as ticks via a `/10_000` rescale (they're fIndex display units); inter-event rate-crossing detection gated on `queue_ahead_wei == 0` which only the dead trade handler can clear. The W0 audit's `sim_bug_under_counting` verdict is still open. Routed to Phase 05.3.
+
+**Decisions locked for Phase 05.3** (see `05.3-01-PLAN.md`):
+  - **D1**: YU unit convention throughout the fill path (rename `queue_ahead_wei` → `queue_ahead_yu`; consume `size_float` directly).
+  - **D2**: Lift `_clo_findex_to_tick` to a shared module; both screener and replay import the same helper.
+  - **D3**: Decouple inter-event rate-crossing from the queue gate; queue uncertainty lives in `p_fill`, not as a simulator hard-gate.
+
+**Resume signal for fresh session:** start at T1 (RED tests). The plan's task ordering is T1 → T2 → T3 → T4 → T5, then pause for operator before T6 (the ~4h binding re-run). Halt remains `halted_pending_phase_05_2` until Phase 05.3 produces a clean verdict.
 
 ## Performance Metrics
 
@@ -177,9 +191,9 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-30T02:10:00.000Z
-Stopped at: Phase 05.2 scaffolded after dapp UI probing surfaced 5 engine bugs explaining the 05.1 FAIL. Bug #5 (units mismatch) committed as 9625c93. Bugs #1-4 catalogued in `.planning/phases/05.2-sizer-replay-reconcile-to-production/05.2-CONTEXT.md` with empirical evidence (margin_per_yu ≈ $18.30, rate_sensitivity_per_yu ≈ $9.13, effective long pool ≈ 75 YU, predicted verdict ~415% USD-APR PASS at $100 collateral). Operator fetching Wave 0 evidence (E1 cross-market probe, E2 Daily Volatility, E3 time stability) in parallel.
-Resume file: .planning/phases/05.2-sizer-replay-reconcile-to-production/05.2-CONTEXT.md
+Last session: 2026-04-30T04:55:25.058Z
+Stopped at: context exhaustion at 90% (2026-04-30)
+Resume file: None
 
 **Next action:** In a fresh session, run `/gsd-plan-phase 05.2` to formalize the wave-decomposition (Wave 0 evidence → Wave 1 sizer schema → Wave 2 calibration refresh + n_fills audit → Wave 3 sigma_others-from-parquet → Wave 4 sparse-tick synthesis → Wave 5 re-run binding ship-gate). The CONTEXT.md is the single input the planner agent needs.
 

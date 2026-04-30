@@ -242,7 +242,23 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] 05.2-04-PLAN.md — Wave 3: CLI `recalibrate` flags + binding-market row insert (long_split 0.784 → 0.327; depends on PLAN 03 — co-runs with PLAN 05 in wave 3)
 - [ ] 05.2-05-PLAN.md — Wave 3: Backtest sigma_others from parquet + `EmptyCompetitionPoolError` + Bug #6 xfail probe (parallel with PLAN 04)
 - [ ] 05.2-06-PLAN.md — Wave 4: 1 Hz sparse-tick synthesis (`_iter_chain_seconds`) + decision_log streaming + 0.01% reward integration
-- [ ] 05.2-07-PLAN.md — Wave 5: Fresh binding ship-gate run + verdict routing + STATE.md flip / kill-report + wiki supersedence chain
+- [ ] 05.2-07-PLAN.md — Wave 5: Fresh binding ship-gate run + verdict routing + STATE.md flip / kill-report wiki supersedence chain — **VERDICT INVALIDATED 2026-04-30** (Bug #6 fixed in commit `cad821f`; Bug #7/#8/#9 surfaced post-W5 review and routed to Phase 05.3)
+**UI hint**: no
+
+### Phase 05.3: Fill-Path Repair (INSERTED 2026-04-30) — UNBLOCKS BINDING SHIP-GATE
+**Goal**: Make the simulator's fill leg observable. Phase 05.2's Wave 5 binding ship-gate produced `n_fills = 0` not because outer-edge placement avoided fills, but because the fill-detection path is structurally broken in three coupled ways: (1) `size_wei` is null across the binding-market trade parquet (ingester correctly records null when source emits decimal-float sizes; backtest's `evt.get("size_wei") or 0` then dies silently); (2) `replay.py` treats `clo_*_thresh` as a tick coordinate and applies a `/10_000` rescale, but those thresholds are in fIndex display units that the screener already converts via `_clo_findex_to_tick`; (3) the W4 inter-event rate-crossing check is gated on `queue_ahead_wei == 0`, but the only writer of that value is the dead trade handler from (1). The W0 audit's `sim_bug_under_counting` verdict (filed 2026-04-30) was never closed; this phase closes it. Without fill detection, every ship-gate verdict measures only the gross reward leg of EV (`R_share × P(no_fill)`), with the loss leg silently zero — Phase 6 (live hands) would surface the gap on the first real fill.
+**Depends on**: Phase 05.2 (Bug #6 reward-path fix landed in `cad821f`)
+**Requirements**: BACK-07 (re-evaluation, fill-detection branch)
+**Success Criteria**:
+  1. Unit convention: queue position, trade size comparisons, and order size all expressed in YU throughout the simulator. `queue_ahead_wei` renamed to `queue_ahead_yu`. `size_float` consumed directly; `size_wei = NULL` no longer silently kills fill detection.
+  2. CLO threshold conversion: replay uses the same `_clo_findex_to_tick` helper as the screener (lifted to a shared module). Seeded order's resting tick + edge-crossing check are unit-coherent and round-trip to the binding market's incentivized rate range.
+  3. Fill-detection decoupling: inter-event rate-crossing fires unconditionally when `evt_rate ≤ clo_lower` (long) or `≥ clo_upper` (short). Queue position uncertainty handled by `p_fill` in the decision engine, not by a hard simulator gate. Double-counting prevented by the existing `_trade_consumes_order` skip-condition.
+  4. Live-path parity: `fill_model/queue_tracker.py` audited; either renamed to align (YU) or an adapter at the seam documented.
+  5. Smoke regression: synthetic 26-day fixture with K controlled rate-crossings produces `n_fills ≈ K` (latency-scheduler tolerance). RED test committed first, GREEN after T2-T4.
+  6. Re-run binding ship-gate on the fully repaired engine. `n_fills` from the new `decision_log` matches W0 audit's edge-crossing count. Verdict JSON reports gross-vs-net reward decomposition explicitly. PASS classification requires net-of-fills `p5 ≥ threshold × adequate_margin` (5× starting band); FAIL classification names the residual gap.
+
+**Plans**: 1 plan
+- [ ] 05.3-01-PLAN.md — Fill-path repair: YU unit convention + shared `_clo_findex_to_tick` + decouple rate-crossing from queue gate + smoke test + re-run verdict
 **UI hint**: no
 
 ### Phase 6: Execution Layer (TypeScript hands)
