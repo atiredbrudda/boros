@@ -652,11 +652,16 @@ class ReplayEngine:
             None,
         )
         if market is None:
-            raise EmptyCompetitionPoolError(
+            # Config gap — no per-market CLO bounds available. Fall back to floor with
+            # a warning (different from an empty parquet partition, which is a data error).
+            # This path is hit when config.markets = [] (e.g. default YAML, pre-calibration).
+            log.warning(
+                "backtest.replay.sigma_others_no_market_config",
                 market_id=self.market_id,
                 chain_ts=chain_ts,
-                reason="No MarketCalibration entry in BotConfig.markets",
+                fallback="sigma_others_min_pendle",
             )
+            return self.config.reward_share_model.sigma_others_min_pendle
 
         # (ii) CLO bounds from config (not from live clo_history — backtest uses config bounds).
         clo_lower = float(market.clo_lower_thresh)

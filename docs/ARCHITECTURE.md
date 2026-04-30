@@ -818,6 +818,27 @@ flowchart LR
 [[backtest-perturbation-grid-pydantic-reflection]] [[backtest-fragility-and-sign-flip-detection]]
 [[backtest-cli-and-run-manifest-emission]] [[backtest-architecture-manifest-delta-phase-5]]
 
+## Phase 05.2 Wave 3 — Bug #3 Fix: sigma_others from parquet (Plan 05.2-05)
+
+Bug #3 fix: the silent `bare-except sigma_others=0` at `replay.py:489-500` caused infinite
+reward share (~330,000× APR inflation). The fix reads `sigma_others` per-tick from
+`data/parquet/order_book_raw` — mirroring the live `CompetitionTracker._read_sigma_others_from_parquet`.
+Empty parquet now raises `EmptyCompetitionPoolError` (no silent zero default).
+
+```mermaid
+flowchart LR
+  subgraph phase052_wave3["Phase 05.2 Wave 3: sigma_others parquet read (Plan 05.2-05)"]
+    bt_exceptions["backtest/exceptions.py<br/>EmptyCompetitionPoolError<br/>(market_id, chain_ts, reason)"]
+    bt_read_sigma["backtest/replay.py<br/>_read_sigma_others_from_parquet_at_ts<br/>per-tick lazy-cache parquet read"]
+  end
+
+  bt_read_sigma -- "raises EmptyCompetitionPoolError on empty partition" --> bt_exceptions
+  bt_read_sigma -- "pl.read_parquet (lazy-loaded once per run)" --> parquet_ob_raw[parquet/order_book_raw]
+  bt_read_sigma -- "floor applied AFTER guard" --> config_sigma_floor[config.reward_share_model.sigma_others_min_pendle]
+```
+
+[[backtest-sigma-others-parquet-read-2026-04-30]]
+
 ## Related protocols
 
 - Engineering Protocol #1 — LLM Wiki. Every research / decision / postmortem
