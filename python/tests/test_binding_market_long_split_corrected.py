@@ -1,5 +1,5 @@
 """Integration test: after Wave 2b epoch-keyed insertion, the binding-market
-calibration table contains both prior-epoch (0.327) and current-epoch (0.760)
+calibration table contains both prior-epoch (0.327) and current-epoch (0.708)
 rows; the latest-row read returns the current epoch value.
 
 These tests SKIP if state.sqlite does not exist or the operator rows have not
@@ -15,8 +15,8 @@ from pathlib import Path
 import pytest
 
 BINDING_MARKET = "BINANCE-ETHUSDT-25SEP2026"
-CURRENT_EPOCH_LONG_SPLIT = 0.760  # from W0_evidence_packet.md (T+150 probe 2026-04-30)
-PRIOR_EPOCH_LONG_SPLIT = 0.327    # from CONTEXT.md original table (~2026-04-23 timeframe)
+CURRENT_EPOCH_LONG_SPLIT = 0.708  # from W0_evidence_packet.md (T+6h probe 2026-04-30; T+150 was 0.760)
+PRIOR_EPOCH_LONG_SPLIT = 0.327  # from CONTEXT.md original table (~2026-04-23 timeframe)
 
 
 def _get_db_path() -> Path:
@@ -25,8 +25,8 @@ def _get_db_path() -> Path:
 
 
 def test_binding_long_split_current_epoch_is_latest() -> None:
-    """After operator runs INSERT 2 (current-epoch 0.760 row), the latest calibration
-    row for the binding market must have long_split ≈ 0.760.
+    """After operator runs INSERT 2 (current-epoch 0.708 row), the latest calibration
+    row for the binding market must have long_split ≈ 0.708.
 
     NOTE: depends on operator having run BOTH CLI invocations (Wave 2b Step 2).
     """

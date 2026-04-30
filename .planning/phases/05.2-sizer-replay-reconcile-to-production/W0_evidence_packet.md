@@ -12,7 +12,7 @@
 | prior session | unfunded | unfunded | **No** — calculator output, not constraint-bound |
 | T (02:07–02:58 UTC) | unfunded | unfunded | **No** — calculator output |
 | T+150 (05:00–05:35 UTC) | **funded $14** (single ETH deposit funds *all* ETH markets — both BINANCE and HYPERLIQUID venues simultaneously, since funding is per-denomination not per-market) | unfunded (no BTC deposit) | **ETH (both venues): yes**; BTC: tag `unfunded_estimate` |
-| T+6h (pending) | TBD | TBD | TBD |
+| T+6h (~08:32 UTC) | **funded $14** (same ETH deposit) | unfunded | **ETH (both venues): yes** |
 
 All "calculator-only" margin readings still reflect the dapp's protocol formula, but the slider auto-positions differently with vs. without real collateral, so cross-session comparison of slider % is invalid. Per-YU margin and rate_sensitivity values *are* invariant to slider position and remain comparable.
 
@@ -140,12 +140,19 @@ Reading 2 (T0 + 150 min):
 - long_pendle_per_day: 33.67
 - short_pendle_per_day: 10.62
 
-Drift:
-- e3_drift_pct_long: 1.46% (= 100 × |33.67 - 34.17| / 34.17)
-- e3_drift_pct_short: 5.04% (= 100 × |10.62 - 10.11| / 10.11)
-- e3_recommended_cadence: **weekly_with_alert** (long <5% → weekly; short just over 5% → alert trigger)
+Reading 3 (T0 + ~6h, ~08:32 UTC):
+- timestamp_utc: 2026-04-30T08:32:00Z (approx)
+- long_pendle_per_day: 31.35
+- short_pendle_per_day: 12.94
+- long_side_split: 0.708 (= 31.35 / 44.29)
 
-Note: T+150 is 2.5h, not the planned 6-12h. Short drift of 5% over 2.5h implies short rewards may be more volatile; a true 6-12h reading is recommended to confirm cadence.
+Drift (T0 → T+6h):
+- e3_drift_pct_long: 8.25% (= 100 × |31.35 - 34.17| / 34.17)
+- e3_drift_pct_short: 27.99% (= 100 × |12.94 - 10.11| / 10.11)
+- e3_drift_pct_long_split: 8.4% (= 100 × |0.708 - 0.771| / 0.771)
+- e3_recommended_cadence: **every_2_to_3_days** (long >5% in 6h → weekly insufficient; short >20% → recalibrate before any epoch boundary)
+
+Note: T+150 drift was 1.46% long / 5.04% short. By T+6h the long split had drifted 8.25% from T0, confirming short rewards are volatile within-epoch. The original `weekly_with_alert` cadence is WITHDRAWN — use `every_2_to_3_days` with an alert if either side drifts >10% intra-check. Current-epoch insert uses T+6h value (0.708) as the most recent authoritative reading.
 
 ## E5 — Pendle docs URL (bonus)
 
