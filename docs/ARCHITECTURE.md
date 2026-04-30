@@ -931,6 +931,49 @@ flowchart LR
 
 [[ship-gate-bug-6-epoch-keyed-calibration]]
 
+## Phase 05.3 — Fill-Path Repair (Plan 05.3-01)
+
+Phase 05.2 Bug #6 (commit `cad821f`) corrected the reward leg of the EV
+equation. The fill leg was structurally broken in three coupled ways and
+produced `n_fills = 0` regardless of whether real-market activity reached
+the strategy's resting tick. The W0 audit's `sim_bug_under_counting`
+verdict (file: `var/reports/n_fills_audit_verdict.json`) was filed on
+2026-04-30 and never closed; this plan closes it.
+
+The plan locks three decisions that, taken together, produce a
+unit-coherent fill-detection path:
+
+| Decision | What it changes | Location |
+|----------|-----------------|----------|
+| **D1 — YU unit convention** | Rename `SyntheticOrder.queue_ahead_wei` (int wei) → `queue_ahead_yu` (float YU). Trade-handler comparison switches from `int(evt.get("size_wei") or 0)` (always 0 for the binding-market parquet — `size_wei` is null for every row) to `float(evt.get("size_float") or 0.0)`. New `BotConfig.backtest.queue_ahead_yu_default` knob (default 100.0 YU). Adapter at `_build_evaluate_input` converts YU → wei (factor 1e18) for the cross-tier IPC seam (`PredictInput.queue_ahead_wei` keeps wei semantics). | `backtest/synthetic_orders.py`, `backtest/replay.py`, `backtest/config.py` |
+| **D2 — Single source of truth for CLO conversion** | Lift `_clo_findex_to_tick` out of `screener/filter.py` into `screener/clo_conversion.py`. Both screener and replay import from there. Helper accepts an optional `scale=` kwarg so callers with per-market calibration override the screener default. Replay's prior `int(market.clo_lower_thresh)` (treating fIndex display as a tick) and `float(market.clo_lower_thresh) / 10_000.0` (rate fraction = 0.93 = 9300% APR) are both replaced by helper calls. | `screener/clo_conversion.py` (new), `screener/filter.py`, `backtest/replay.py` |
+| **D3 — Decouple inter-event detection from queue gate** | Drop the `order.queue_ahead_yu == 0` precondition in `_detect_inter_event_fills`. Queue uncertainty is encoded in the fill model's `p_fill` term (consumed via `decision.engine.evaluate`), not as a hard gate at the simulator level. Double-counting prevention lives entirely in the `_trade_consumes_order` skip-condition at the top of the loop. | `backtest/replay.py` |
+
+```mermaid
+flowchart LR
+  subgraph phase053_fill_path["Phase 05.3 — fill-path repair (T2 + T3 + T4)"]
+    parquet_trades[("parquet.market_trades<br/>size_wei = NULL<br/>size_float populated")]
+    seed["_seed_initial_synthetic_order<br/>queue_ahead_yu = config.backtest.queue_ahead_yu_default<br/>tick = clo_findex_to_tick(...)"]
+    handle["_handle_trade_event<br/>compare evt.size_float (YU) vs<br/>order.queue_ahead_yu (YU)"]
+    inter["_detect_inter_event_fills<br/>edge_crossed = rate vs clo_*_rate_fraction<br/>NO queue_ahead_yu == 0 gate (D3)"]
+    cloconv["screener.clo_conversion.<br/>clo_findex_to_tick(scale=)"]
+    resolved["_resolved_clo_rate_fractions<br/>cached tuple[float, float]"]
+    adapter["_build_evaluate_input<br/>queue_ahead_wei = queue_ahead_yu * 1e18<br/>(IPC seam adapter)"]
+    eval_engine[["decision.engine.evaluate<br/>(consumes wei semantics)"]]
+  end
+
+  parquet_trades -- "size_float (YU)" --> handle
+  parquet_trades -- "rate" --> inter
+  cloconv -- "clo_findex_to_tick" --> seed
+  cloconv -- "clo_findex_to_tick" --> resolved
+  resolved -- "(clo_lower_rate_fraction, clo_upper_rate_fraction)" --> inter
+  seed -- "queue_ahead_yu, tick" --> handle
+  handle -- "queue_ahead_yu" --> adapter
+  adapter -- "queue_ahead_wei" --> eval_engine
+```
+
+[[fill-path-repair-2026-04-30]]
+
 ## Related protocols
 
 - Engineering Protocol #1 — LLM Wiki. Every research / decision / postmortem
