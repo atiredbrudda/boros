@@ -325,6 +325,72 @@ def test_sqlite_writer_lint_still_passes(tmp_path: Path) -> None:
     )
 
 
+def test_insert_operator_calibration_with_effective_at(tmp_path: Path) -> None:
+    """W2b: insert_operator_calibration persists explicit effective_at + next_refresh kwargs."""
+    db = tmp_path / "state.sqlite"
+    db.touch()
+    _apply_migrations(db)
+
+    insert_operator_calibration(
+        db,
+        market_id="BINANCE-ETHUSDT-25SEP2026",
+        e_liq_per_epoch_pendle=309.96,
+        long_side_split=0.327,
+        short_side_split=0.673,
+        source="dapp_ui",
+        run_id="01ABC...",
+        effective_at_utc="2026-04-30T00:00:00+00:00",
+        next_refresh_at_utc="2026-05-07T00:00:00+00:00",
+    )
+
+    row = get_latest_market_reward_calibration(db, "BINANCE-ETHUSDT-25SEP2026")
+    assert row is not None
+    assert row["long_side_split"] == pytest.approx(0.327, rel=1e-3)
+    assert row["short_side_split"] == pytest.approx(0.673, rel=1e-3)
+    assert row["effective_at_utc"] == "2026-04-30T00:00:00+00:00"
+    assert row["next_refresh_at_utc"] == "2026-05-07T00:00:00+00:00"
+
+
+def test_insert_operator_calibration_default_effective_at(tmp_path: Path) -> None:
+    """W2b: when effective_at + next_refresh are omitted, defaults are applied:
+    effective_at = calibrated_at; next_refresh = effective_at + epoch_days days.
+    """
+    db = tmp_path / "state.sqlite"
+    db.touch()
+    _apply_migrations(db)
+
+    insert_operator_calibration(
+        db,
+        market_id="BINANCE-ETHUSDT-25SEP2026",
+        e_liq_per_epoch_pendle=309.96,
+        long_side_split=0.760,
+        short_side_split=0.240,
+        source="dapp_ui",
+        run_id="01DEF...",
+        # No effective_at_utc or next_refresh_at_utc
+        epoch_days=7,
+    )
+
+    row = get_latest_market_reward_calibration(db, "BINANCE-ETHUSDT-25SEP2026")
+    assert row is not None
+    # Both fields must be valid ISO8601 strings
+    import re
+    assert re.match(r"^\d{4}-\d{2}-\d{2}T", row["effective_at_utc"]), (
+        f"effective_at_utc not ISO8601: {row['effective_at_utc']!r}"
+    )
+    assert re.match(r"^\d{4}-\d{2}-\d{2}T", row["next_refresh_at_utc"]), (
+        f"next_refresh_at_utc not ISO8601: {row['next_refresh_at_utc']!r}"
+    )
+    # next_refresh must be > effective_at (7 days later)
+    from datetime import datetime, timezone
+    eff = datetime.fromisoformat(row["effective_at_utc"].replace("Z", "+00:00"))
+    nxt = datetime.fromisoformat(row["next_refresh_at_utc"].replace("Z", "+00:00"))
+    delta_days = (nxt - eff).total_seconds() / 86400
+    assert delta_days == pytest.approx(7.0, rel=0.01), (
+        f"Expected next_refresh ≈ effective_at + 7 days, got delta={delta_days:.2f} days"
+    )
+
+
 def test_cli_calibrate_split_mismatch_returns_2(tmp_path: Path) -> None:
     """Split-sum mismatch via CLI exits 2 (Pydantic ValidationError)."""
     import subprocess

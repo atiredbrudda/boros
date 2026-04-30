@@ -95,6 +95,22 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Override config.infra.sqlite_path (test fixtures)",
     )
+    cal_p.add_argument(
+        "--effective-at-utc",
+        default=None,
+        help=(
+            "ISO8601 timestamp this calibration starts being authoritative. "
+            "Default: now() at insert time. Example: 2026-04-30T00:00:00Z"
+        ),
+    )
+    cal_p.add_argument(
+        "--next-refresh-at-utc",
+        default=None,
+        help=(
+            "ISO8601 timestamp operator should re-check. "
+            "Default: effective_at + epoch_days (from config.reward_share_model.epoch_days)."
+        ),
+    )
 
     return p
 
@@ -173,6 +189,9 @@ def main(argv: list[str] | None = None) -> int:
                 short_side_split=args.short_split,
                 source=args.source,
                 run_id=manifest.run_id,
+                effective_at_utc=args.effective_at_utc,       # None → default to now()
+                next_refresh_at_utc=args.next_refresh_at_utc, # None → effective_at + epoch_days
+                epoch_days=int(config.reward_share_model.epoch_days),
             )
             log.info(
                 "reward_model.calibrate_complete",
