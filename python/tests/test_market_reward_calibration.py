@@ -168,6 +168,46 @@ def test_cli_calibrate_smoke(tmp_path: Path) -> None:
     assert row["data_source"] == "operator"
 
 
+def test_pydantic_market_reward_calibration_has_new_fields(tmp_path: Path) -> None:
+    """W2a — MarketRewardCalibration must accept effective_at_utc + next_refresh_at_utc."""
+    from pydantic import ValidationError
+
+    from boros_brain.config.schema import MarketRewardCalibration
+
+    # Valid construction with new fields
+    obj = MarketRewardCalibration(
+        e_liq_per_epoch_pendle=309.96,
+        long_side_split=0.327,
+        short_side_split=0.673,
+        calibrated_at_utc="2026-04-30T00:00:00Z",
+        effective_at_utc="2026-04-30T00:00:00Z",
+        next_refresh_at_utc="2026-05-07T00:00:00Z",
+    )
+    assert obj.effective_at_utc == "2026-04-30T00:00:00Z"
+    assert obj.next_refresh_at_utc == "2026-05-07T00:00:00Z"
+
+    # Missing effective_at_utc must raise ValidationError
+    with pytest.raises(ValidationError):
+        MarketRewardCalibration(
+            e_liq_per_epoch_pendle=309.96,
+            long_side_split=0.327,
+            short_side_split=0.673,
+            calibrated_at_utc="2026-04-30T00:00:00Z",
+            next_refresh_at_utc="2026-05-07T00:00:00Z",
+        )
+
+    # Non-ISO8601 string in effective_at_utc must raise ValueError or ValidationError
+    with pytest.raises((ValueError, ValidationError)):
+        MarketRewardCalibration(
+            e_liq_per_epoch_pendle=309.96,
+            long_side_split=0.327,
+            short_side_split=0.673,
+            calibrated_at_utc="2026-04-30T00:00:00Z",
+            effective_at_utc="not-an-iso-string",
+            next_refresh_at_utc="2026-05-07T00:00:00Z",
+        )
+
+
 def test_cli_calibrate_split_mismatch_returns_2(tmp_path: Path) -> None:
     """Split-sum mismatch via CLI exits 2 (Pydantic ValidationError)."""
     import subprocess
