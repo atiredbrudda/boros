@@ -122,19 +122,18 @@ pricing:
   eth_price_usd: 3000.0
   eth_price_usd_calibrated_at_utc: "2026-04-25T00:00:00Z"
 
-# Phase 3: Sizing optimizer (REWARD-03/04 — Plan 03-03)
-# notional_per_yu_usd=90000 is the ETHUSDT-29MAY2026 placeholder so that at
-#   collateral_usd=100, q_max_safety_margin=0.9
-#   Q_max = 100 × 0.9 / 90000 = 0.001 = q_min_pendle  (collateral-constrained
-#   sub-cap regime fixed point — Phase 3 ROADMAP Success Criterion #3).
-# Operator must re-tune notional_per_yu_usd per market at daily re-screen.
+# Phase 05.2 Wave 1: margin_per_yu_usd is per-market USD margin per 1 YU at
+#   slider=0% (min margin). Empirical for BINANCE-ETHUSDT-25SEP2026 = $18.30/YU.
+#   Q_max = 100 × 0.9 / 18.30 ≈ 4.92 PENDLE-YU.
+# Operator calibrates per market from dapp UI trial-order panel.
+# Renamed from notional_per_yu_usd (Phase 05.2 Bug #1 fix). See [[phase-05-2-margin-per-yu-rename]].
 sizer:
   collateral_usd: 100.0
   q_min_pendle: 0.001
   q_max_safety_margin: 0.9
   optimizer_grid_points: 50
   optimizer_method: grid_plus_scipy
-  notional_per_yu_usd: 90000.0
+  margin_per_yu_usd: 18.30  # binding market default; per-market override in markets[]
 
 # markets:
 #   - market_id: BINANCE-ETHUSDT-29MAY2026
