@@ -2973,3 +2973,12 @@ edges:
   - {from: brain.backtest.replay, to: brain.screener.clo_conversion, type: calls, notes: "Phase 05.3 D2: _resolved_clo_rate_fractions and _seed_initial_synthetic_order both call clo_findex_to_tick from the lifted shared helper. Replaces the prior /10_000 rescale and threshold-as-tick path. [[fill-path-repair-2026-04-30]]"}
   - {from: brain.screener.filter, to: brain.screener.clo_conversion, type: calls, notes: "Phase 05.3 D2: _clo_findex_to_tick is now imported (private alias) from screener.clo_conversion. Behavior unchanged for existing screener callers."}
   - {from: brain.backtest.replay, to: state.clo_history, type: reads, notes: "Phase 05.3 D2: _read_f_index_raw_for_market loads the latest f_index_raw for the engine's market_id so the lifted clo_findex_to_tick helper can compute the round-trip APR. Falls back to the legacy /10_000 rescale on missing/null."}
+
+  # ── Phase 05.3 Plan 01 T4 — D3 decouple inter-event detection from queue gate ─
+  # No new architecture nodes/edges introduced — the change is a behavioral
+  # narrowing within _detect_inter_event_fills (drop the queue_ahead_yu == 0
+  # precondition). Documented here in the yaml so the protocol-2 sweep makes
+  # the decision visible in the architecture file. The double-counting
+  # prevention now lives entirely in the _trade_consumes_order skip-condition
+  # at the top of the loop.
+  - {from: brain.backtest.replay, to: brain.fill_model.predict, type: depends-on, notes: "Phase 05.3 D3: queue uncertainty is encoded in the fill model's p_fill term (consumed via decision.engine.evaluate), NOT as a hard gate at _detect_inter_event_fills. Dropping the queue_ahead_yu==0 precondition removes the catch-22 that previously trapped fills behind a dead trade handler."}

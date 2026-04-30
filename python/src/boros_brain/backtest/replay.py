@@ -914,10 +914,26 @@ class ReplayEngine:
             if self.side == "long" and evt_rate <= clo_lower or self.side == "short" and evt_rate >= clo_upper:
                 edge_crossed = True
 
-            # T2 keeps the queue-gate condition (renamed wei→yu). T4 drops it
-            # to fully decouple rate-crossing from queue-position state.
-            if edge_crossed and order.queue_ahead_yu == 0.0:
-                # Our queue-in-front was already consumed; the rate crossing fills us.
+            # Phase 05.3 D3 (T4): the queue-gate `order.queue_ahead_yu == 0`
+            # precondition has been DROPPED. Rationale per [[fill-path-repair-2026-04-30]]:
+            #
+            # Pre-T4, the only writer of `queue_ahead_yu = 0` was
+            # `_handle_trade_event` — but that handler was structurally dead
+            # under the wei-comparison bug fixed in T2. Even after T2, requiring
+            # the queue to drain to exactly 0 before the rate-crossing path can
+            # fire turns the simulator into "fills happen iff the trade-handler
+            # has already fired", which double-counts the queue-position
+            # signal: queue uncertainty is already baked into the fill model's
+            # `p_fill` term consumed by the decision engine. The simulator's
+            # job is to detect when reality crossed the order's price level —
+            # not to re-encode queue-position via a hard gate.
+            #
+            # Double-counting prevention: the `_trade_consumes_order` skip-
+            # condition at the top of this loop ensures a single trade event
+            # does NOT fire BOTH `_handle_trade_event` AND this rate-crossing
+            # path. So the gate-drop is safe.
+            if edge_crossed:
+                # Rate crossed our edge — schedule a fill via the latency scheduler.
                 sc = self.latency_scheduler.schedule(
                     fill_ts=float(current_ts),
                     fill_rate=evt_rate,
@@ -925,6 +941,9 @@ class ReplayEngine:
                     fill_event_index=int(evt.get("eventIndex") or 0),
                 )
                 self._scheduled_closes.append(sc)
+                # Mark queue_ahead as 0 YU — order is now "next in line";
+                # subsequent crossings on the same order will be skipped because
+                # `_trade_consumes_order` returns True (queue 0 ≤ any size).
                 self.synthetic_orders.update_queue_ahead(order.order_id, 0.0)
                 log.debug(
                     "backtest.replay.inter_event_fill_detected",
