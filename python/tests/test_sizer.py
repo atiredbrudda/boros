@@ -1,13 +1,15 @@
-"""REWARD-03 / REWARD-04 sizer tests (Plan 03-03, Task 1).
+"""REWARD-03 / REWARD-04 sizer tests (Plan 03-03, Task 1 + Phase 05.2 Wave 1).
 
 Test IDs:
-- T-03-S-01: $100 collateral → q_me_target == q_min (sub-cap fixed point)
+- T-03-S-01: $100 collateral → q_me_target in [q_min, q_max], regime sub_cap (not degenerate)
 - T-03-S-02: $5000 collateral → q_me_target < q_cap (cap-binding regime)
 - T-03-S-03: InsufficientCollateralError (q_min > q_max)
 - T-03-S-04: FillModelNoFreshFitError propagates (no fit row)
 - T-03-S-05: LossModelNoFreshGridError propagates (no grid row)
 - T-03-S-06: optimizer-dominates-q_min property test
 - T-03-S-07: market_saturated shortcut (q_cap < q_min)
+- T-05.2-W1-S-08: q_max_uses_margin_per_yu (Phase 05.2 Bug #1 fix assertion)
+- T-05.2-W1-S-09: BotConfig rejects old knob name notional_per_yu_usd (extra='forbid')
 
 Helpers seed fill_model_fits + loss_grid_artifacts via direct INSERTs (test-only,
 matching test_fill_model_predict_contract.py pattern). No new writer modules.
@@ -198,10 +200,13 @@ def _make_sizer_input(
 
 
 def test_q_min_fixed_point_at_100_collateral(tmp_path: Path) -> None:
-    """T-03-S-01 — At $100 collateral with notional_per_yu_usd=90000, Q_max ≈ Q_min,
-    optimizer's degenerate-interval shortcut returns Q_me=Q_min trivially.
+    """T-03-S-01 — Phase 05.2 update: at $100 collateral with margin_per_yu_usd=18.30,
+    Q_max ≈ 4.918 (NOT equal to Q_min), so the optimizer lands in sub_cap regime
+    with q_me_target in [q_min, q_max].
 
-    Phase 3 ROADMAP Success Criterion #3 — sub-cap regime + collateral-constrained.
+    Phase 3 ROADMAP Success Criterion #3 holds — sub-cap regime confirmed.
+    Bug #1 fix verification: the old margin_per_yu_usd=90000 placeholder produced
+    Q_max == Q_min (degenerate fixed-point), suppressing APR by ~5000x.
     """
     db = tmp_path / "state.sqlite"
     _apply_migrations(db)
@@ -215,16 +220,17 @@ def test_q_min_fixed_point_at_100_collateral(tmp_path: Path) -> None:
             q_max_safety_margin=0.9,
             optimizer_grid_points=50,
             optimizer_method="grid_plus_scipy",
-            notional_per_yu_usd=90_000.0,
+            margin_per_yu_usd=18.30,  # binding market empirical value (2026-04-30 dapp probe)
         )
     )
 
     out = q_me_target(_make_sizer_input(), sqlite_path=db, config=config)
     assert isinstance(out, SizerOutput)
-    # Q_max = 100 × 0.9 / 90000 = 0.001 = Q_min — degenerate-interval shortcut.
-    assert out.q_me_target_pendle == pytest.approx(0.001, rel=1e-3)
-    assert out.q_min_pendle == 0.001
-    # Sub-cap regime expected (uncapped curve below cap_budget at this Q_me).
+    # Q_max = 100 × 0.9 / 18.30 ≈ 4.918, NOT the old 0.001 degenerate fixed-point.
+    assert out.q_min_pendle == pytest.approx(0.001, rel=1e-3)
+    assert out.q_max_pendle == pytest.approx(100.0 * 0.9 / 18.30, rel=1e-2)
+    # q_me_target is in sub_cap regime between [q_min, q_max].
+    assert out.q_min_pendle <= out.q_me_target_pendle <= out.q_max_pendle
     assert out.regime == "sub_cap"
     # Intermediate values populated.
     assert 0.0 <= out.p_fill_at_target <= 1.0
@@ -233,7 +239,7 @@ def test_q_min_fixed_point_at_100_collateral(tmp_path: Path) -> None:
 
 
 def test_scale_up_to_5k_cap_binding(tmp_path: Path) -> None:
-    """T-03-S-02 — At $5000 collateral with notional_per_yu_usd=1, Q_max = 4500
+    """T-03-S-02 — At $5000 collateral with margin_per_yu_usd=1, Q_max = 4500
     PENDLE; Q_cap from REWARD-04 algebra is much smaller, so cap binds.
 
     Optimizer should return Q_me_target ≤ Q_cap; regime in {sub_cap, cap_binding,
@@ -251,7 +257,7 @@ def test_scale_up_to_5k_cap_binding(tmp_path: Path) -> None:
             q_max_safety_margin=0.9,
             optimizer_grid_points=50,
             optimizer_method="grid_plus_scipy",
-            notional_per_yu_usd=1.0,
+            margin_per_yu_usd=1.0,
         )
     )
 
@@ -275,7 +281,7 @@ def test_raises_insufficient_collateral(tmp_path: Path) -> None:
     _seed_fill_model_fit(db)
     _seed_loss_grid_artifact(db, tmp_path / "parquet")
 
-    # collateral_usd=10 (min), notional_per_yu_usd=10000000 (max), q_min=1.0
+    # collateral_usd=10 (min), margin_per_yu_usd=10000000 (max), q_min=1.0
     # → Q_max = 10 × 0.9 / 1e7 = 9e-7 < q_min=1.0. (using max-bounds for the
     # tightest pinch within validation bounds).
     config = _make_config(
@@ -285,7 +291,7 @@ def test_raises_insufficient_collateral(tmp_path: Path) -> None:
             q_max_safety_margin=0.9,
             optimizer_grid_points=50,
             optimizer_method="grid_plus_scipy",
-            notional_per_yu_usd=10_000_000.0,
+            margin_per_yu_usd=10_000_000.0,
         )
     )
 
@@ -344,7 +350,7 @@ def test_optimizer_dominates_q_min(tmp_path: Path, sigma_others: float) -> None:
             q_max_safety_margin=0.9,
             optimizer_grid_points=50,
             optimizer_method="grid_plus_scipy",
-            notional_per_yu_usd=1.0,
+            margin_per_yu_usd=1.0,
         )
     )
 
@@ -405,7 +411,7 @@ def test_market_saturated_shortcut(tmp_path: Path) -> None:
             q_max_safety_margin=0.9,
             optimizer_grid_points=50,
             optimizer_method="grid_plus_scipy",
-            notional_per_yu_usd=10.0,  # Q_max = 9.0 PENDLE — generous
+            margin_per_yu_usd=10.0,  # Q_max = 9.0 PENDLE — generous
         )
     )
 
@@ -424,3 +430,61 @@ def test_market_saturated_shortcut(tmp_path: Path) -> None:
         f"expected market_saturated; got regime={out.regime}, " f"q_cap={out.q_cap_pendle}, q_min={out.q_min_pendle}"
     )
     assert out.q_me_target_pendle == pytest.approx(out.q_min_pendle)
+
+
+def test_q_max_uses_margin_per_yu(tmp_path: Path) -> None:
+    """T-05.2-W1-S-08 — Phase 05.2 Bug #1 fix: margin_per_yu_usd drives q_max correctly.
+
+    At binding-market values (margin_per_yu_usd=18.30, collateral=100, safety=0.9):
+      q_max = 100 × 0.9 / 18.30 ≈ 4.918 PENDLE-YU
+
+    This is NOT the degenerate q_min=0.001 that the old margin_per_yu_usd=90000
+    placeholder produced (which was the dominant ~5000x APR suppression bug).
+    """
+    db = tmp_path / "state.sqlite"
+    _apply_migrations(db)
+    _seed_fill_model_fit(db)
+    _seed_loss_grid_artifact(db, tmp_path / "parquet")
+
+    config = _make_config(
+        sizer_config=SizerConfig(
+            collateral_usd=100.0,
+            q_min_pendle=0.001,
+            q_max_safety_margin=0.9,
+            optimizer_grid_points=50,
+            optimizer_method="grid_plus_scipy",
+            margin_per_yu_usd=18.30,
+        )
+    )
+
+    out = q_me_target(_make_sizer_input(), sqlite_path=db, config=config)
+    assert isinstance(out, SizerOutput)
+    # q_max = 100 × 0.9 / 18.30 ≈ 4.918
+    assert out.q_max_pendle == pytest.approx(100.0 * 0.9 / 18.30, rel=1e-2)
+    # q_me_target must be within [q_min, q_max] (sub-cap regime, NOT degenerate)
+    assert out.q_min_pendle <= out.q_me_target_pendle <= out.q_max_pendle
+    assert out.regime == "sub_cap"
+
+
+def test_botconfig_rejects_old_knob_name(tmp_path: Path) -> None:
+    """T-05.2-W1-S-09 — BotConfig with notional_per_yu_usd raises ValidationError.
+
+    extra='forbid' on StrictBase means the old knob name is rejected after rename.
+    This is the regression guard for the Phase 05.2 Bug #1 rename.
+    """
+    import pydantic
+
+    with pytest.raises(pydantic.ValidationError) as excinfo:
+        _make_config(
+            sizer_config=SizerConfig(  # type: ignore[call-arg]
+                collateral_usd=100.0,
+                q_min_pendle=0.001,
+                q_max_safety_margin=0.9,
+                optimizer_grid_points=50,
+                optimizer_method="grid_plus_scipy",
+                notional_per_yu_usd=90000.0,  # OLD name — must be rejected
+            )
+        )
+    err_str = str(excinfo.value)
+    assert "notional_per_yu_usd" in err_str
+    assert "extra" in err_str.lower() or "forbidden" in err_str.lower() or "not permitted" in err_str.lower()
