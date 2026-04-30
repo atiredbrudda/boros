@@ -235,7 +235,14 @@ Decimal phases appear between their surrounding integers in numeric order.
   5. n_fills audit (Wave 0 E4): implied APR series plotted against edge placements; either confirms n_fills=0 is real or surfaces the simulator's edge-fill detection bug.
   6. Fresh end-to-end ship-gate run on units + sizing + sigma + tick all corrected; verdict in defensible USD-APR units; if PASS, halt is lifted and Phase 6 unblocked; if FAIL, kill-report names the residual gap and the missing 6th-bug investigation.
 
-**Plans**: TBD (run `/gsd-plan-phase 05.2` to break down)
+**Plans**: 7 plans
+- [ ] 05.2-01-PLAN.md — Wave 0: Pre-flight evidence (operator E1/E2/E3/E5 + Claude E4 n_fills audit script)
+- [ ] 05.2-02-PLAN.md — Wave 1: Sizer schema rename `notional_per_yu_usd` → `margin_per_yu_usd` + per-market overrides + YAMLs + architecture
+- [ ] 05.2-03-PLAN.md — Wave 2a: Alembic 0008 (`effective_at_utc` + `next_refresh_at_utc` columns) + writer schema bump + Pydantic
+- [ ] 05.2-04-PLAN.md — Wave 3: CLI `recalibrate` flags + binding-market row insert (long_split 0.784 → 0.327; depends on PLAN 03 — co-runs with PLAN 05 in wave 3)
+- [ ] 05.2-05-PLAN.md — Wave 3: Backtest sigma_others from parquet + `EmptyCompetitionPoolError` + Bug #6 xfail probe (parallel with PLAN 04)
+- [ ] 05.2-06-PLAN.md — Wave 4: 1 Hz sparse-tick synthesis (`_iter_chain_seconds`) + decision_log streaming + 0.01% reward integration
+- [ ] 05.2-07-PLAN.md — Wave 5: Fresh binding ship-gate run + verdict routing + STATE.md flip / kill-report + wiki supersedence chain
 **UI hint**: no
 
 ### Phase 6: Execution Layer (TypeScript hands)
