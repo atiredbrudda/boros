@@ -16,7 +16,7 @@ See [[market-reward-calibration-operator-workflow]] for the operator runbook.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import structlog
@@ -42,18 +42,27 @@ def insert_operator_calibration(
     run_id: str,
     effective_at_utc: str | None = None,
     next_refresh_at_utc: str | None = None,
+    epoch_days: int = 7,
 ) -> None:
     """Validate via Pydantic THEN persist via single-writer.
 
     Pydantic catches P3-4 (split sum != 1.0) BEFORE the DB layer.
 
-    W2a: effective_at_utc and next_refresh_at_utc are now required by the
-    MarketRewardCalibration Pydantic model and writer. If not provided, both
-    default to calibrated_at_utc (safe round-trip semantics for existing callers).
+    W2a: effective_at_utc and next_refresh_at_utc are optional kwargs:
+      - effective_at_utc defaults to calibrated_at_utc (now).
+      - next_refresh_at_utc defaults to effective_at_utc + epoch_days days.
+
+    W2b: epoch_days kwarg (default 7) controls the default refresh window.
+    Callers passing config.reward_share_model.epoch_days make this config-driven.
     """
     calibrated_at_utc = datetime.now(UTC).isoformat()
-    effective_at_utc = effective_at_utc or calibrated_at_utc
-    next_refresh_at_utc = next_refresh_at_utc or calibrated_at_utc
+
+    # W2b defaults: effective_at = calibrated_at; next_refresh = effective_at + epoch_days
+    if effective_at_utc is None:
+        effective_at_utc = calibrated_at_utc
+    if next_refresh_at_utc is None:
+        eff = datetime.fromisoformat(effective_at_utc.replace("Z", "+00:00"))
+        next_refresh_at_utc = (eff + timedelta(days=epoch_days)).isoformat()
 
     # Pydantic validation (P3-4 guard fires here).
     _ = MarketRewardCalibration(
