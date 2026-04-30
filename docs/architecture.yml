@@ -603,6 +603,14 @@ nodes:
     path: python/src/boros_brain/screener/metrics.py
     public_functions: [compute_inter_arrival_cv, compute_realized_vol, compute_reversal_count, compute_depth_at_clo_edge, compute_outside_range_wall_ratio, compute_days_to_maturity]
 
+  # ── Phase 05.3 D2 — shared CLO fIndex→tick conversion (lifted from filter) ─
+  - id: brain.screener.clo_conversion
+    type: module
+    process: brain
+    path: python/src/boros_brain/screener/clo_conversion.py
+    public_functions: [clo_findex_to_tick]
+    notes: "Phase 05.3 D2 single source of truth: lifted _clo_findex_to_tick out of screener/filter.py so backtest/replay.py can import the same conversion. New scale= kwarg for per-market calibration override. [[fill-path-repair-2026-04-30]]"
+
   # ── DATA-08 SCALE calibration (01-11 Task 2) ───────────────────────────────
   - id: brain.screener.scale_calibration
     type: module
@@ -2960,3 +2968,8 @@ edges:
   # ── Phase 05.3 Plan 01 T2 — D1 YU unit convention (queue_ahead rename) ─────
   - {from: brain.backtest.replay, to: config.backtest.queue_ahead_yu_default, type: depends-on-config, notes: "Phase 05.3 D1: _seed_initial_synthetic_order uses YU-denominated default for queue_ahead (was wei-denominated 10**18 constant). Knob lives on BacktestConfig (PROTO-04 SSoT). [[fill-path-repair-2026-04-30]]"}
   - {from: brain.backtest.replay, to: parquet.market_trades, type: reads, notes: "Phase 05.3 D1: _handle_trade_event reads size_float (YU) instead of size_wei (NULL across the binding-market parquet — ingester correctly emits null when source is the float column). Comparison vs SyntheticOrder.queue_ahead_yu (also YU). [[fill-path-repair-2026-04-30]]"}
+
+  # ── Phase 05.3 Plan 01 T3 — D2 single-source-of-truth helper edges ────────
+  - {from: brain.backtest.replay, to: brain.screener.clo_conversion, type: calls, notes: "Phase 05.3 D2: _resolved_clo_rate_fractions and _seed_initial_synthetic_order both call clo_findex_to_tick from the lifted shared helper. Replaces the prior /10_000 rescale and threshold-as-tick path. [[fill-path-repair-2026-04-30]]"}
+  - {from: brain.screener.filter, to: brain.screener.clo_conversion, type: calls, notes: "Phase 05.3 D2: _clo_findex_to_tick is now imported (private alias) from screener.clo_conversion. Behavior unchanged for existing screener callers."}
+  - {from: brain.backtest.replay, to: state.clo_history, type: reads, notes: "Phase 05.3 D2: _read_f_index_raw_for_market loads the latest f_index_raw for the engine's market_id so the lifted clo_findex_to_tick helper can compute the round-trip APR. Falls back to the legacy /10_000 rescale on missing/null."}

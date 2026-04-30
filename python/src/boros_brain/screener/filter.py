@@ -58,7 +58,6 @@ r_apr_potential source (LOCKED D-01 migration):
 from __future__ import annotations
 
 import json
-import math
 import re
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -69,6 +68,12 @@ from typing import Any
 import polars as pl
 import structlog
 
+from .clo_conversion import (
+    _CLO_S_DEFAULT,
+    _CLO_SCALE_DEFAULT,
+    _CLO_TICK_SIZE_DEFAULT,
+)
+from .clo_conversion import clo_findex_to_tick as _clo_findex_to_tick
 from .economics_gate import EPOCHS_PER_YEAR
 from .metrics import (
     compute_days_to_maturity,
@@ -79,6 +84,17 @@ from .metrics import (
     compute_reversal_count,
 )
 from .scale_calibration import InsufficientCalibrationData, calibrate_scale, get_calibration_pairs
+
+# Phase 05.3 D2 re-exports — preserve constants in this module for any caller
+# that imports them from `screener.filter` directly (e.g. test fixtures).
+__all__ = [
+    "MarketScreeningResult",
+    "_CLO_S_DEFAULT",
+    "_CLO_SCALE_DEFAULT",
+    "_CLO_TICK_SIZE_DEFAULT",
+    "_clo_findex_to_tick",
+    "apply_screener_filters",
+]
 
 log = structlog.get_logger(__name__)
 
@@ -93,25 +109,6 @@ _SHORTLIST_MAX = 4
 # Do NOT replace 100.0 with a USD value without also fixing the unit mismatch.
 # TODO(Phase-3): replace COLLATERAL_PHASE1_PROXY with config.screener.required_collateral_pendle
 COLLATERAL_PHASE1_PROXY = 100.0  # noqa: N816 — intentional placeholder, not a constant
-
-# ── CLO fIndex→APR→tick conversion defaults ──────────────────────────────────
-# cloLowerThresh / cloUpperThresh in clo_history are in fIndex display units
-# (NOT integer tick indices). Converting to the order-book tick grid requires:
-#   fIndex_display = 10000 + f_index_raw / SCALE
-#   APR = (cloThresh - fIndex_display) / timeToMaturity_years / S
-#   tick = round(APR / TICK_SIZE)
-#
-# SCALE and S are calibrated per market (boros_bot_guide.md §ETHUSDT calibration:
-#   SCALE ≈ 5.591e12, S ≈ 402648 for ETHUSDT Binance).  When only one
-# clo_history observation is available (Wave-1 single UAT snapshot) the two-point
-# calibration in scale_calibration.py raises InsufficientCalibrationData, so we
-# fall back to the ETHUSDT-derived defaults.  These defaults are coarse for
-# non-ETHUSDT markets but are better than always returning None from Filter 4.
-# TODO(Phase-7): replace defaults with per-market SCALE/S sourced from operator
-#     calibration CLI once two or more clo_history observations per market exist.
-_CLO_SCALE_DEFAULT: float = 5.591e12  # boros_bot_guide.md §L508: SCALE for ETHUSDT
-_CLO_S_DEFAULT: float = 402_648.0  # boros_bot_guide.md §L509: S for ETHUSDT APR formula
-_CLO_TICK_SIZE_DEFAULT: float = 0.01  # All Wave-1 markets use 0.01 tick_size
 
 # ── Identifier resolution (canonical ↔ archive) ─────────────────────────────
 # Wave-1 fetcher writes ``var/fetcher/market_id_mapping.json`` with shape:
@@ -216,36 +213,10 @@ def _derive_maturity_ts_from_name(mid: str) -> int:
     return int(dt.timestamp())
 
 
-def _clo_findex_to_tick(
-    clo_thresh: float,
-    f_index_raw: int | None,
-    ttm_days: float,
-) -> int | None:
-    """Convert a CLO threshold (fIndex display units) to an order-book tick integer.
-
-    Formula (boros_bot_guide.md §"Converting CLO Values to APR")::
-
-        fIndex_display = 10000 + f_index_raw / SCALE
-        APR = (clo_thresh - fIndex_display) / timeToMaturity_years / S
-        tick = round(APR / TICK_SIZE)
-
-    Falls back to ``_CLO_SCALE_DEFAULT`` / ``_CLO_S_DEFAULT`` when SCALE
-    calibration is unavailable (single-observation clo_history — Phase 5.1
-    Wave-1 UAT snapshot has exactly one row per market).
-
-    Returns ``None`` when:
-    - ``f_index_raw`` is None (column missing or null in old schema rows).
-    - ``ttm_days`` <= 0 (market already expired or no TTM data).
-    - Computed APR is non-finite (overflow / NaN guard).
-    """
-    if f_index_raw is None or ttm_days <= 0:
-        return None
-    ttm_years = ttm_days / 365.0
-    findex_display = 10000.0 + f_index_raw / _CLO_SCALE_DEFAULT
-    apr = (clo_thresh - findex_display) / ttm_years / _CLO_S_DEFAULT
-    if not math.isfinite(apr):
-        return None
-    return round(apr / _CLO_TICK_SIZE_DEFAULT)
+# Phase 05.3 D2: ``_clo_findex_to_tick`` is now imported at the top of this
+# module from ``screener.clo_conversion`` (single source of truth). The prior
+# inline definition has been removed; behavior is preserved for callers that
+# don't pass ``scale=`` explicitly.
 
 
 @dataclass

@@ -128,12 +128,15 @@ def test_seeded_tick_round_trip() -> None:
         f"[-0.02, 0.05] — unit-handling bug suspected"
     )
 
-    # Sanity: upper >= lower in raw-tick order. With per-market SCALE chosen
-    # so findex_display ≈ clo_lower, lower rounds to 0 and upper > 0.
-    # Both rounding to 0 indicates SCALE mismatch.
-    assert tick_upper > tick_lower or tick_upper > 0, (
-        f"upper tick {tick_upper} ≤ lower tick {tick_lower} — sign error or "
-        f"degenerate scale (both rounded to 0 indicates SCALE mismatch)"
+    # Sanity: upper >= lower (display thresholds 9500 ≥ 9300 → APR_upper ≥ APR_lower).
+    # For the binding market with per-market SCALE chosen so findex_display ≈
+    # clo_lower, the round-trip APRs are both sub-tick (< 1% APR ≈ 1 tick at
+    # TICK_SIZE=0.01) so both can legitimately round to tick 0 — that's the
+    # regime where the strategy is at-the-money. The unit-coherence guarantee
+    # exercised by the band assertion above is what closes the pre-T3 bug
+    # (rate-fraction = 0.93 i.e. 9300% APR).
+    assert tick_upper >= tick_lower, (
+        f"upper tick {tick_upper} < lower tick {tick_lower} — sign error in " f"clo_findex_to_tick"
     )
 
 

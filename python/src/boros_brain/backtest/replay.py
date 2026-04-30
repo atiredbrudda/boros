@@ -892,20 +892,13 @@ class ReplayEngine:
         if market is None:
             return  # no market config — skip inter-event detection gracefully
 
-        # T2 NOTE: the /10_000 rescale below is unit-broken — clo_lower_thresh
-        # is in fIndex display units, not order-book ticks. T3 replaces this
-        # with the shared clo_findex_to_tick helper. Tests that rely on the
-        # corrected behavior either inject `clo_lower_rate_fraction` directly
-        # via attribute (post-T3 hook) or wait for T3 to land.
-        clo_lower = float(market.clo_lower_thresh) / 10_000.0  # ticks to rate fraction
-        clo_upper = float(market.clo_upper_thresh) / 10_000.0
-        # Test/T3 override hook — see clo_lower_rate_fraction attribute on engine.
-        override_lower = getattr(self, "clo_lower_rate_fraction", None)
-        override_upper = getattr(self, "clo_upper_rate_fraction", None)
-        if override_lower is not None:
-            clo_lower = float(override_lower)
-        if override_upper is not None:
-            clo_upper = float(override_upper)
+        # Phase 05.3 D2 (T3): edge rate-fractions resolved via the shared
+        # `clo_findex_to_tick` helper. Cached on the engine after first
+        # successful resolution. Falls back to the legacy /10_000 rescale
+        # only when the helper rejects the inputs (e.g. test fixture without
+        # clo_history rows). Tests can override via the
+        # `clo_lower_rate_fraction` / `clo_upper_rate_fraction` attributes.
+        clo_lower, clo_upper = self._resolved_clo_rate_fractions(market, current_ts)
 
         for order in list(self.synthetic_orders.in_flight()):
             # Phase 05.3 D1: trade size now in YU (size_float). Null size_float
@@ -941,6 +934,119 @@ class ReplayEngine:
                     side=self.side,
                     edge="lower" if self.side == "long" else "upper",
                 )
+
+    def _resolved_clo_rate_fractions(self, market: Any, current_ts: int) -> tuple[float, float]:
+        """Phase 05.3 D2 — convert ``market.clo_lower_thresh / clo_upper_thresh``
+        (fIndex display units) → APR rate fractions via the shared
+        ``clo_findex_to_tick`` helper. Cached on the engine via
+        ``self._clo_rate_fractions_cache`` so the conversion runs at most once
+        per run regardless of how many trade events invoke
+        ``_detect_inter_event_fills``.
+
+        Falls back to the legacy ``threshold / 10_000`` rescale ONLY when the
+        helper rejects the inputs (e.g. fixtures without clo_history). The
+        fallback emits a one-shot warning so the operator notices the missing
+        calibration.
+
+        Test override hook: tests may set ``clo_lower_rate_fraction`` /
+        ``clo_upper_rate_fraction`` attributes on the engine directly to inject
+        synthetic edges (used by ``test_rate_crossing_produces_fill``). Those
+        overrides take precedence over both the helper and the legacy fallback.
+
+        ``current_ts`` is used to compute TTM (chain-time, NEVER ``time.time()``).
+
+        See [[fill-path-repair-2026-04-30]] for the unit-coherence narrative.
+        """
+        from ..screener.clo_conversion import clo_findex_to_tick
+
+        cached: tuple[float, float] | None = getattr(self, "_clo_rate_fractions_cache", None)
+        if cached is not None:
+            return cached
+
+        f_index_raw = self._read_f_index_raw_for_market()
+        ttm_days = max(0.001, (int(market.maturity_ts) - current_ts) / 86400.0)
+        scale = float(market.scale) if market.scale else None
+
+        tick_lower = clo_findex_to_tick(float(market.clo_lower_thresh), f_index_raw, ttm_days, scale=scale)
+        tick_upper = clo_findex_to_tick(float(market.clo_upper_thresh), f_index_raw, ttm_days, scale=scale)
+
+        if tick_lower is None or tick_upper is None:
+            # Legacy fallback — preserve previous behavior for fixtures without
+            # clo_history seeding. Emits a one-shot warning so the operator
+            # notices the missing calibration.
+            log.warning(
+                "backtest.replay.clo_rate_fraction_fallback_threshold_div_10k",
+                market_id=self.market_id,
+                f_index_raw=f_index_raw,
+                ttm_days=ttm_days,
+                scale=scale,
+            )
+            clo_lower_frac = float(market.clo_lower_thresh) / 10_000.0
+            clo_upper_frac = float(market.clo_upper_thresh) / 10_000.0
+        else:
+            # APR fraction = tick * TICK_SIZE (TICK_SIZE = 0.01 per tick).
+            clo_lower_frac = tick_lower * 0.01
+            clo_upper_frac = tick_upper * 0.01
+
+        # Test override hook — engine attribute set directly by test fixtures.
+        override_lower = getattr(self, "clo_lower_rate_fraction", None)
+        override_upper = getattr(self, "clo_upper_rate_fraction", None)
+        if override_lower is not None:
+            clo_lower_frac = float(override_lower)
+        if override_upper is not None:
+            clo_upper_frac = float(override_upper)
+
+        log.info(
+            "backtest.replay.clo_rate_fractions_resolved",
+            market_id=self.market_id,
+            clo_lower_rate_fraction=clo_lower_frac,
+            clo_upper_rate_fraction=clo_upper_frac,
+            f_index_raw=f_index_raw,
+            ttm_days=ttm_days,
+            scale=scale,
+        )
+        self._clo_rate_fractions_cache = (clo_lower_frac, clo_upper_frac)
+        return self._clo_rate_fractions_cache
+
+    def _read_f_index_raw_for_market(self) -> int | None:
+        """Read the latest ``f_index_raw`` from clo_history for self.market_id.
+
+        Returns None when:
+          - sqlite_path doesn't exist (test fixtures with no SQLite spine);
+          - the clo_history table is missing or has no rows for this market;
+          - the f_index_raw column is null in the latest row.
+
+        The caller falls back to the legacy ``threshold / 10_000`` rescale on None.
+        """
+        if not self.sqlite_path.exists():
+            return None
+
+        try:
+            conn = duckdb.connect(":memory:")
+            conn.install_extension("sqlite_scanner")
+            conn.load_extension("sqlite_scanner")
+            conn.execute(f"CALL sqlite_attach('{self.sqlite_path}', overwrite=true)")
+            row = conn.execute(
+                """
+                SELECT f_index_raw FROM clo_history
+                WHERE market_id = ?
+                ORDER BY snapshot_ts DESC
+                LIMIT 1
+                """,
+                [self.market_id],
+            ).fetchone()
+            conn.close()
+        except Exception as exc:  # noqa: BLE001 — table missing in fixtures
+            log.debug(
+                "backtest.replay.f_index_raw_query_failed",
+                market_id=self.market_id,
+                err=str(exc),
+            )
+            return None
+
+        if row is None or row[0] is None:
+            return None
+        return int(row[0])
 
     def _build_evaluate_input(
         self,
