@@ -2906,6 +2906,7 @@ edges:
   - {from: brain.backtest.cli, to: brain.backtest.ship_gate, type: calls}
   - {from: brain.backtest.cli, to: brain.backtest.report, type: calls}
   - {from: brain.backtest.cli, to: brain.backtest.run_manifest, type: calls, notes: "PROTOCOL 3 sidecar JSON"}
+  - {from: brain.backtest.cli, to: brain.manifest.writer, type: calls, notes: "cli flag --parent-run-id passed as parent_run_id to build_run_manifest (W5 parent chain)"}
   - {from: brain.backtest.run_manifest, to: brain.backtest.perturbation, type: calls, notes: "reflection lockstep — assert_manifest_contains_all_botconfig_leaves reuses enumerate_perturbable_leaves"}
 
   # ── Phase 05.1 historical-data fetcher — Plan 05.1-01 (Wave 0) ──────────

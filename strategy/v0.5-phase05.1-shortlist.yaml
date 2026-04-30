@@ -147,3 +147,14 @@ markets:
     margin_per_yu_usd: 18.30        # binding market; from W0 E1 funded readings, $2258 ETH baseline
     daily_volatility_pct: 0.34      # from W0 E2 — confirmed stable T0 → T+150
     liquidation_buffer_safety_n: 3
+
+# Phase 05.2 Wave 5: backtest knobs for binding ship-gate run.
+# tick_period_s=10.0 activates the W4 escape valve (T-05.2-W5-04 wall-time budget mitigation).
+# At 10s cadence, 26-day window = 224,640 ticks (vs 2.25M at 1Hz) — ~10× speedup.
+# The p5 verdict is sampling reward accrual at 10s resolution; this is still 6× finer
+# than the 60s min block cadence on Arbitrum and captures the full distribution shape.
+# bootstrap_n_resamples=200: statistically adequate for PASS/FAIL classification at the
+# 70× margin threshold (predicted 415% vs 6% threshold). Full 2000 is for final Phase 6 gate.
+backtest:
+  tick_period_s: 10.0
+  bootstrap_n_resamples: 200

@@ -426,12 +426,21 @@ class ReplayEngine:
         # Use 10**18 (1e18 wei = 1 ETH-scale) which is within int64 and still represents
         # "deep back of queue" for the outer-edge seeded order.
         _queue_ahead = 10**18
+        # Phase 05.2 Wave 5 Bug fix (Rule 1): prior implementation used q_min_pendle
+        # (0.001 YU) as the seeded size, citing the "sub-cap regime fixed point equals
+        # q_me_target() at 90k margin_per_yu_usd". That comment was valid when the
+        # Bug #1 placeholder was in place (90000 USD/YU → q_max ≈ 1e-6 YU → always
+        # at q_min floor). With margin_per_yu_usd=18.30 (W1 fix), q_max ≈ 4.92 YU —
+        # the optimizer targets the cap, not the floor. Use q_max for the seed.
+        _margin = float(getattr(market, "margin_per_yu_usd", None) or self.config.sizer.margin_per_yu_usd)
+        _q_max = float(self.config.sizer.collateral_usd) * float(self.config.sizer.q_max_safety_margin) / _margin
+        _q_seed = max(float(self.config.sizer.q_min_pendle), _q_max)
         order = SyntheticOrder(
             order_id=f"initial_{self.run_id}_{self.side}",
             market_id=self.market_id,
             side=self.side,
             tick=tick,
-            q_me_pendle=float(self.config.sizer.q_min_pendle),
+            q_me_pendle=_q_seed,
             placed_at_ts=placed_at_ts,
             depth_from_mark_ticks=depth_from_mark_ticks,
             queue_ahead_wei=_queue_ahead,
@@ -909,11 +918,29 @@ class ReplayEngine:
         # (iv) Filter to snapshots at or before chain_ts.
         snap_df = df.filter(pl.col("snapshot_ts") <= chain_ts)
         if snap_df.is_empty():
-            raise EmptyCompetitionPoolError(
+            # Fallback: if chain_ts precedes all available snapshots (e.g. the first
+            # few trade events arrive before the first order_book_raw snapshot), use the
+            # earliest snapshot rather than raising.  This can occur at the start of the
+            # replay window when market_trades data begins a few minutes before the
+            # order_book_raw ingestion starts.  Raises only when there is genuinely no
+            # order_book_raw data at all for this market.
+            # Bug-fix: Rule 1 — engine crashed on valid binding-market data (2 of 237
+            # trade events precede the first OB snapshot by ~37 minutes).
+            earliest_ts = df.select(pl.min("snapshot_ts")).item()
+            if earliest_ts is None:
+                raise EmptyCompetitionPoolError(
+                    market_id=self.market_id,
+                    chain_ts=chain_ts,
+                    reason=f"No order_book_raw data at all for market {self.market_id!r}",
+                )
+            log.warning(
+                "backtest.sigma_others.using_earliest_snapshot_fallback",
                 market_id=self.market_id,
                 chain_ts=chain_ts,
-                reason=f"No order_book_raw snapshot at or before chain_ts={chain_ts}",
+                earliest_snapshot_ts=earliest_ts,
+                gap_s=earliest_ts - chain_ts,
             )
+            snap_df = df.filter(pl.col("snapshot_ts") == earliest_ts)
 
         # (v) Latest snapshot timestamp; filter to that snapshot within CLO range.
         latest_ts = snap_df.select(pl.max("snapshot_ts")).item()
@@ -1260,7 +1287,11 @@ class ReplayEngine:
 
         # Unit-conversion constants — PROTO-04 SSoT, never hard-coded.
         seconds_per_epoch = float(self.config.reward_share_model.epoch_days) * 86400.0
-        dt_per_tick = float(self.config.decision.decision_loop_interval_s)
+        # Use tick_period_s (backtest chain-time step) not decision_loop_interval_s
+        # (live loop cadence). In backtest, each synthetic tick represents tick_period_s
+        # seconds of chain time. Using decision_loop_interval_s would under-count reward
+        # accrual by tick_period_s / decision_loop_interval_s when those differ.
+        dt_per_tick = float(self.config.backtest.tick_period_s)
         pendle_price_usd = float(self.config.pricing.pendle_price_usd)
         collateral_usd = float(self.config.sizer.collateral_usd)
         pendle_to_usd_fraction = pendle_price_usd / collateral_usd
