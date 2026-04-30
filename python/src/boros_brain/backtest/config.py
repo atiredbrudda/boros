@@ -50,5 +50,19 @@ class BacktestConfig(StrictBase):
     output_parquet_root: str = "data/parquet/backtest_results"
     voluntary_cancel_divergence_warn_pct: float = Field(0.10, ge=0.0, le=1.0)
 
+    tick_period_s: float = Field(1.0, ge=0.1, le=60.0)
+    """Synthesised reward-accrual tick period in seconds (Phase 05.2 Wave 4 / Bug #4 fix).
+
+    1.0 = 1 Hz semantic (default) — one decision tick per chain-time second between
+    consecutive real trade events. Raising to 10.0 trades fidelity (~10,000 fewer ticks
+    per 26d run) for wall-time if backtest exceeds the 10-minute budget.
+
+    See [[backtest-1hz-tick-synthesis-2026-04-30]] for the algorithm narrative and
+    performance budget analysis (2.25M ticks ≈ 4.5s pure compute target at 1.0s).
+
+    Valid range: [0.1, 60.0] seconds. Sub-second periods are truncated to 1 in
+    _iter_chain_seconds (int cast), so values in [0.1, 1.0) behave identically to 1.0.
+    """
+
 
 __all__ = ["BacktestConfig"]

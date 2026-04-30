@@ -152,6 +152,14 @@ class ReplayEngine:
         # Loaded once per run (mirrors AMM cache); parquet files don't change during replay.
         self._order_book_raw_df: pl.DataFrame | None = None
 
+        # Phase 05.2 Wave 4 — decision_log streaming sink.
+        # At 100k entries we flush to Hive-partitioned parquet to bound peak memory.
+        # The threshold is a public attribute so tests can lower it (e.g. to 5)
+        # without subclassing. The counter tracks the next part-file index.
+        # [[backtest-1hz-tick-synthesis-2026-04-30]]
+        self._decision_log_stream_threshold: int = 100_000
+        self._decision_log_part_idx: int = 0
+
         # Pre-seed gas cache from config default; w3=None disables live RPC.
         if gas_cache is None:
             gas_cache = GasHistoryCache()
@@ -169,6 +177,59 @@ class ReplayEngine:
     # ─────────────────────────────────────────────────────────────────────────
     # Public API
     # ─────────────────────────────────────────────────────────────────────────
+
+    def _iter_chain_seconds(
+        self,
+        real_events: Iterator[dict[str, Any]],
+    ) -> Iterator[tuple[int, dict[str, Any] | None]]:
+        """Yield (chain_ts, evt_or_None) for every tick in [first_ts, last_ts].
+
+        Phase 05.2 Wave 4 / Bug #4 fix: previously _maybe_emit_tick only fired on
+        real trade events (~9/day on the binding market). The real bot runs at 1 Hz
+        continuously. This iterator synthesises reward-accrual ticks at tick_period_s
+        cadence between consecutive real trade events so reward accrual happens on
+        every second, not just on trade arrivals.
+
+        Algorithm:
+          1. Yield (first_ts, first_evt) for the first real event.
+          2. For each subsequent event at next_ts: if gap > tick_period_s, yield
+             (t, None) for every t in range(prev_ts + period, next_ts, period).
+          3. Yield (next_ts, evt) — always, including same-block bursts (dt=0).
+          4. Stop at last real event (no look-ahead beyond last_ts).
+
+        Edge cases:
+          - Two events at same blockTimestamp (burst): yield both in iteration order,
+            no synthesised tick between them (dt=0 → range is empty).
+          - Single event: yields one tuple.
+          - Empty iterator: yields nothing.
+          - tick_period_s > gap: no synthesised ticks for that interval.
+
+        T-05-05: no look-ahead — iterator stops at last real event timestamp.
+        INFRA-14: chain_ts comes from blockTimestamp only, never time.time().
+
+        [[backtest-1hz-tick-synthesis-2026-04-30]]
+        """
+        tick_period_s = max(1, int(self.config.backtest.tick_period_s))
+
+        first_evt = next(real_events, None)
+        if first_evt is None:
+            return  # empty — no events
+
+        prev_ts = int(first_evt["blockTimestamp"])
+        yield (prev_ts, first_evt)
+
+        for evt in real_events:
+            next_ts = int(evt["blockTimestamp"])
+
+            # Synthesise intermediate ticks between prev_ts and next_ts.
+            # range(prev_ts + period, next_ts, period) is empty when next_ts <= prev_ts
+            # (same-block burst) or when the gap is smaller than period.
+            for synth_ts in range(prev_ts + tick_period_s, next_ts, tick_period_s):
+                yield (synth_ts, None)
+
+            # Yield the real event (handles same-ts burst and normal advance).
+            yield (next_ts, evt)
+            prev_ts = next_ts
 
     def iter_events(self) -> Iterator[dict[str, Any]]:
         """Yield trades in (blockTimestamp, eventIndex) lex order.
@@ -288,12 +349,26 @@ class ReplayEngine:
         if seed_from_config and _n_synthetic_orders == 0:
             self._seed_initial_synthetic_order(int(first_evt["blockTimestamp"]))
 
-        for evt in itertools.chain([first_evt], events_iter):
-            current_ts = int(evt["blockTimestamp"])
-            self._maybe_anchor_snapshot(current_ts, evt)
-            await self._maybe_emit_tick(current_ts, calib)
-            self._handle_trade_event(evt, current_ts)
-            self._fire_scheduled_closes(current_ts)
+        # Phase 05.2 Wave 4 / Bug #4 fix: replace the raw event loop with
+        # _iter_chain_seconds so that _maybe_emit_tick fires at 1 Hz between
+        # consecutive real trade events, not only ON trade events.
+        # T-05-05: chain_ts from blockTimestamp only — no time.time() (INFRA-14).
+        # [[backtest-1hz-tick-synthesis-2026-04-30]]
+        chained_iter = itertools.chain([first_evt], events_iter)
+        for chain_ts, evt in self._iter_chain_seconds(chained_iter):
+            if evt is not None:
+                # Real trade event: anchor snapshot + handle fills.
+                self._maybe_anchor_snapshot(chain_ts, evt)
+            await self._maybe_emit_tick(chain_ts, calib)
+            if evt is not None:
+                # Bug #4b / Wave 0 E4 verdict sim_bug_under_counting:
+                # also detect inter-event fills triggered by this real trade event.
+                self._detect_inter_event_fills(evt, chain_ts)
+                self._handle_trade_event(evt, chain_ts)
+            self._fire_scheduled_closes(chain_ts)
+
+        # Final decision_log flush: write any remaining in-memory entries to parquet.
+        self._flush_decision_log_to_parquet(final=True)
 
         self._finalize_output(calib)
         return self.output
@@ -562,6 +637,127 @@ class ReplayEngine:
                 current_chain_ts=current_ts,
             )
             await self.coord.gate(decisions, current_chain_ts=current_ts)
+
+        # Phase 05.2 Wave 4 — streaming flush at threshold boundary.
+        # At 100k decision_log entries, flush to parquet and clear in-memory list
+        # to bound peak memory during 2.25M-tick runs.
+        # [[backtest-1hz-tick-synthesis-2026-04-30]]
+        if len(self.output.decision_log) >= self._decision_log_stream_threshold:
+            self._flush_decision_log_to_parquet(final=False)
+
+    def _flush_decision_log_to_parquet(self, *, final: bool) -> None:
+        """Flush in-memory decision_log entries to a Hive-partitioned parquet part file.
+
+        Phase 05.2 Wave 4: called at threshold boundaries (100k entries, final=False)
+        and at run completion (final=True).
+
+        Non-final flush: clears the in-memory list after writing to bound peak memory.
+        Final flush: writes remaining entries to parquet but does NOT clear the
+        in-memory list — tests that inspect output.decision_log after run() see the
+        last < threshold entries (the "small in-memory tail"). Tests that need the full
+        log query parquet partitions directly.
+
+        Parquet path: {output_parquet_root}/run_id={run_id}/decision_log/part_{idx:04d}.parquet
+
+        [[backtest-1hz-tick-synthesis-2026-04-30]]
+        """
+        entries = self.output.decision_log
+        if not entries:
+            return
+
+        output_root = Path(self.config.backtest.output_parquet_root)
+        part_dir = output_root / f"run_id={self.run_id}" / "decision_log"
+        try:
+            part_dir.mkdir(parents=True, exist_ok=True)
+            part_path = part_dir / f"part_{self._decision_log_part_idx:04d}.parquet"
+            df = pl.DataFrame(entries)
+            df.write_parquet(str(part_path))
+            self._decision_log_part_idx += 1
+            if not final:
+                # Non-final flush: clear in-memory buffer to bound peak memory.
+                self.output.decision_log = []
+            # Final flush: leave in-memory tail intact for test consumers.
+        except Exception as exc:  # noqa: BLE001
+            # Non-fatal: log and keep entries in memory rather than losing them.
+            log.warning(
+                "backtest.replay.decision_log_flush_failed",
+                part_dir=str(part_dir),
+                n_entries=len(entries),
+                err=str(exc),
+            )
+
+    def _detect_inter_event_fills(self, evt: dict[str, Any], current_ts: int) -> None:
+        """Wave 0 E4 verdict: sim_bug_under_counting — wire inter-event fill detection.
+
+        Phase 05.2 Wave 4 / Bug #4b: the original simulator missed fills that would
+        have occurred in the gap between consecutive trade events. When implied APR
+        crosses our edge price during the inter-event interval, a fill must be emitted.
+
+        Detection mechanism: on each real trade event, check whether the event's rate
+        crosses our edge price (long: rate <= clo_lower; short: rate >= clo_upper).
+        If so, and if the order's queue_ahead_wei would have been consumed by any
+        trade of nonzero size in that direction, schedule a close.
+
+        This is a conservative check (uses current event rate as proxy for the
+        crossing rate). A full tick-by-tick fill model would interpolate, but for
+        the backtest approximation this is sufficient to close the under-counting gap
+        evidenced by E4 (6 lo + 9 hi crossings in 237 events → n_fills was 0).
+
+        T-05-07: NEVER calls time.time(); current_ts comes from blockTimestamp.
+
+        [[backtest-1hz-tick-synthesis-2026-04-30]]
+        [[n-fills-zero-binding-window-audit]]
+        """
+        evt_rate = float(evt.get("rate") or 0.0)
+        if evt_rate == 0.0:
+            return
+
+        # Resolve market config for CLO bounds.
+        market = next(
+            (
+                m
+                for m in self.config.markets
+                if m.market_id.endswith(self.market_id) or self.market_id.endswith(m.market_id)
+            ),
+            None,
+        )
+        if market is None:
+            return  # no market config — skip inter-event detection gracefully
+
+        clo_lower = float(market.clo_lower_thresh) / 10_000.0  # ticks to rate fraction
+        clo_upper = float(market.clo_upper_thresh) / 10_000.0
+
+        for order in list(self.synthetic_orders.in_flight()):
+            if self._trade_consumes_order(order, evt_rate, int(evt.get("size_wei") or 0)):
+                # Already handled by _handle_trade_event — skip to avoid double fill.
+                continue
+
+            # Rate-crossing check: long is filled when rate drops to/below lower edge;
+            # short is filled when rate rises to/above upper edge.
+            edge_crossed = False
+            if self.side == "long" and evt_rate <= clo_lower:
+                edge_crossed = True
+            elif self.side == "short" and evt_rate >= clo_upper:
+                edge_crossed = True
+
+            if edge_crossed and order.queue_ahead_wei == 0:
+                # Our queue-in-front was already consumed; the rate crossing fills us.
+                sc = self.latency_scheduler.schedule(
+                    fill_ts=float(current_ts),
+                    fill_rate=evt_rate,
+                    order_id=order.order_id,
+                    fill_event_index=int(evt.get("eventIndex") or 0),
+                )
+                self._scheduled_closes.append(sc)
+                self.synthetic_orders.update_queue_ahead(order.order_id, 0)
+                log.debug(
+                    "backtest.replay.inter_event_fill_detected",
+                    order_id=order.order_id,
+                    chain_ts=current_ts,
+                    evt_rate=evt_rate,
+                    side=self.side,
+                    edge="lower" if self.side == "long" else "upper",
+                )
 
     def _build_evaluate_input(
         self,

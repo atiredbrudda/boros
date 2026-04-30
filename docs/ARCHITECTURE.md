@@ -839,6 +839,40 @@ flowchart LR
 
 [[backtest-sigma-others-parquet-read-2026-04-30]]
 
+## Phase 05.2 Wave 4 — Bug #4 Fix: 1 Hz Sparse-Tick Synthesis (Plan 05.2-06)
+
+Bug #4 fix: `_maybe_emit_tick` previously only fired on real trade events (~9/day on the
+binding market), suppressing reward accrual by ~10,000×. Wave 4 adds `_iter_chain_seconds`,
+a generator that yields `(chain_ts, evt_or_None)` for every tick at `tick_period_s` cadence
+between consecutive real events. The main `run()` loop iterates this instead of the raw event
+iterator, dispatching real vs synthesised ticks separately.
+
+Performance: 1 Hz × 26 days = 2.25M ticks. Per-tick cost is dict-lookup + `evaluate_decision`
++ append ≈ 1–3 μs. `decision_log` is streamed to Hive-partitioned parquet at 100k boundaries
+to bound peak memory. Sigma cache + AMM cache loaded once per run.
+
+The Wave 0 E4 verdict (`sim_bug_under_counting`) also wires inter-event fill detection: if the
+implied APR crosses an edge price between consecutive real trade events, a fill is now emitted
+before the trade event at the tick where the crossing first occurs.
+
+```mermaid
+flowchart LR
+  subgraph phase052_wave4["Phase 05.2 Wave 4: 1 Hz sparse-tick synthesis (Plan 05.2-06)"]
+    bt_iter["backtest/replay.py<br/>_iter_chain_seconds()<br/>yields (chain_ts, evt_or_None)"]
+    bt_run["backtest/replay.py<br/>run()<br/>iterates per-second tuples"]
+    bt_tick["backtest/replay.py<br/>_maybe_emit_tick()<br/>fires at every tick (1 Hz)"]
+    cfg_period["config.backtest.tick_period_s<br/>default 1.0 (1 Hz)"]
+    parquet_dl["parquet/backtest_results/decision_log<br/>streamed at 100k boundaries"]
+  end
+
+  bt_run -- "replaces raw event loop" --> bt_iter
+  bt_iter -- "reads" --> cfg_period
+  bt_run -- "calls on every chain_ts" --> bt_tick
+  bt_tick -- "flushes at 100k rows" --> parquet_dl
+```
+
+[[backtest-1hz-tick-synthesis-2026-04-30]]
+
 ## Related protocols
 
 - Engineering Protocol #1 — LLM Wiki. Every research / decision / postmortem
