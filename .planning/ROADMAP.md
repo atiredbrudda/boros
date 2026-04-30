@@ -257,8 +257,9 @@ Decimal phases appear between their surrounding integers in numeric order.
   5. Smoke regression: synthetic 26-day fixture with K controlled rate-crossings produces `n_fills ≈ K` (latency-scheduler tolerance). RED test committed first, GREEN after T2-T4.
   6. Re-run binding ship-gate on the fully repaired engine. `n_fills` from the new `decision_log` matches W0 audit's edge-crossing count. Verdict JSON reports gross-vs-net reward decomposition explicitly. PASS classification requires net-of-fills `p5 ≥ threshold × adequate_margin` (5× starting band); FAIL classification names the residual gap.
 
-**Plans**: 1 plan
+**Plans**: 2 plans (one engineering, one research; runnable in parallel)
 - [ ] 05.3-01-PLAN.md — Fill-path repair: YU unit convention + shared `_clo_findex_to_tick` + decouple rate-crossing from queue gate + smoke test + re-run verdict
+- [ ] 05.3-02-PLAN.md — Reward-path research: source Pendle's LO reward formula + reconcile dapp 489% LONG APR + derive expected-verdict band (consumed by Plan 01 T7)
 **UI hint**: no
 
 ### Phase 6: Execution Layer (TypeScript hands)

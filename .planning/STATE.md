@@ -43,7 +43,11 @@ Progress: [██████████░] 94%
   - **D2**: Lift `_clo_findex_to_tick` to a shared module; both screener and replay import the same helper.
   - **D3**: Decouple inter-event rate-crossing from the queue gate; queue uncertainty lives in `p_fill`, not as a simulator hard-gate.
 
-**Resume signal for fresh session:** start at T1 (RED tests). The plan's task ordering is T1 → T2 → T3 → T4 → T5, then pause for operator before T6 (the ~4h binding re-run). Halt remains `halted_pending_phase_05_2` until Phase 05.3 produces a clean verdict.
+**Two parallel tracks:**
+  - **Plan 01 (engineering, `05.3-01-PLAN.md`)**: fill-path repair. T1–T7. Blocking for verdict.
+  - **Plan 02 (research, `05.3-02-PLAN.md`)**: source Pendle's LO reward formula (closes W0 E5), reconcile dapp's 489% LONG APR vs our model, derive an expected-verdict band as `var/reports/expected_verdict_band_2026-04-30.json` consumed by Plan 01 T7. Read-only; no engine code changes; runnable entirely in parallel with Plan 01 T1–T5. Resolves the open question of whether our reward formula is even the right shape — if T1 surfaces a discrepancy, that's a category-different problem requiring a follow-up plan.
+
+**Resume signal for fresh session:** start Plan 01 at T1 (RED tests) and Plan 02 at T1 (formula source) in parallel. Plan 01's task ordering is T1 → T2 → T3 → T4 → T5, then pause for operator before T6 (the ~4h binding re-run). Plan 02 must complete before Plan 01 T7 (verdict classification) so the verdict can be classified against the band, not a single-point guess. Halt remains `halted_pending_phase_05_2` until Phase 05.3 produces a clean verdict.
 
 ## Performance Metrics
 
