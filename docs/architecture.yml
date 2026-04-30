@@ -1477,6 +1477,11 @@ nodes:
     path: data/parquet/backtest_results
     notes: "Hive-partitioned by run_id / sweep_axis / sweep_value (BACK-05)"
 
+  - id: parquet.backtest_results_decision_log
+    type: storage
+    path: data/parquet/backtest_results/run_id=<ulid>/decision_log
+    notes: "Phase 05.2 W4: decision_log Hive-partitioned streaming sink. Flushed at 100k-entry boundaries by ReplayEngine._maybe_emit_tick to bound peak memory during 1 Hz sparse-tick runs. [[backtest-1hz-tick-synthesis-2026-04-30]]"
+
   # ── Phase 5 Wave 2 voluntary-cancel sensitivity — Plan 05-06 ───────────
   - id: brain.backtest.sweeps.forfeit_branch
     type: module
@@ -2942,3 +2947,8 @@ edges:
   - {from: brain.backtest.replay, to: brain.backtest.exceptions, type: calls, notes: "Phase 05.2 W3: _read_sigma_others_from_parquet_at_ts raises EmptyCompetitionPoolError on empty partition or no snapshot <= chain_ts. [[backtest-sigma-others-parquet-read-2026-04-30]]"}
   - {from: brain.backtest.replay, to: parquet.order_book_raw, type: reads, notes: "Phase 05.2 W3: _read_sigma_others_from_parquet_at_ts lazy-loads order_book_raw once per run; snapshot_ts <= chain_ts filter mirrors live CompetitionTracker"}
   - {from: brain.backtest.replay, to: config.reward_share_model.sigma_others_min_pendle, type: depends-on-config, notes: "Phase 05.2 W3: floor applied AFTER empty-pool guard succeeds, never as fallback substitute"}
+
+  # ── Phase 05.2 Wave 4 edges — Bug #4 sparse-tick synthesis ────────────────
+  - {from: brain.backtest.replay, to: brain.backtest.replay, type: calls, notes: "Phase 05.2 W4: run() calls _iter_chain_seconds() to synthesise 1 Hz reward-accrual ticks between trade events. [[backtest-1hz-tick-synthesis-2026-04-30]]"}
+  - {from: brain.backtest.replay, to: config.backtest.tick_period_s, type: depends-on-config, notes: "Phase 05.2 W4: _iter_chain_seconds reads tick_period_s to control synthesised tick cadence (1.0 = 1 Hz default)"}
+  - {from: brain.backtest.replay, to: parquet.backtest_results_decision_log, type: writes, notes: "Phase 05.2 W4: decision_log streamed to Hive-partitioned parquet at 100k boundaries to bound peak memory"}

@@ -170,6 +170,59 @@ class ReplayEngine:
     # Public API
     # ─────────────────────────────────────────────────────────────────────────
 
+    def _iter_chain_seconds(
+        self,
+        real_events: Iterator[dict[str, Any]],
+    ) -> Iterator[tuple[int, dict[str, Any] | None]]:
+        """Yield (chain_ts, evt_or_None) for every tick in [first_ts, last_ts].
+
+        Phase 05.2 Wave 4 / Bug #4 fix: previously _maybe_emit_tick only fired on
+        real trade events (~9/day on the binding market). The real bot runs at 1 Hz
+        continuously. This iterator synthesises reward-accrual ticks at tick_period_s
+        cadence between consecutive real trade events so reward accrual happens on
+        every second, not just on trade arrivals.
+
+        Algorithm:
+          1. Yield (first_ts, first_evt) for the first real event.
+          2. For each subsequent event at next_ts: if gap > tick_period_s, yield
+             (t, None) for every t in range(prev_ts + period, next_ts, period).
+          3. Yield (next_ts, evt) — always, including same-block bursts (dt=0).
+          4. Stop at last real event (no look-ahead beyond last_ts).
+
+        Edge cases:
+          - Two events at same blockTimestamp (burst): yield both in iteration order,
+            no synthesised tick between them (dt=0 → range is empty).
+          - Single event: yields one tuple.
+          - Empty iterator: yields nothing.
+          - tick_period_s > gap: no synthesised ticks for that interval.
+
+        T-05-05: no look-ahead — iterator stops at last real event timestamp.
+        INFRA-14: chain_ts comes from blockTimestamp only, never time.time().
+
+        [[backtest-1hz-tick-synthesis-2026-04-30]]
+        """
+        tick_period_s = max(1, int(self.config.backtest.tick_period_s))
+
+        first_evt = next(real_events, None)
+        if first_evt is None:
+            return  # empty — no events
+
+        prev_ts = int(first_evt["blockTimestamp"])
+        yield (prev_ts, first_evt)
+
+        for evt in real_events:
+            next_ts = int(evt["blockTimestamp"])
+
+            # Synthesise intermediate ticks between prev_ts and next_ts.
+            # range(prev_ts + period, next_ts, period) is empty when next_ts <= prev_ts
+            # (same-block burst) or when the gap is smaller than period.
+            for synth_ts in range(prev_ts + tick_period_s, next_ts, tick_period_s):
+                yield (synth_ts, None)
+
+            # Yield the real event (handles same-ts burst and normal advance).
+            yield (next_ts, evt)
+            prev_ts = next_ts
+
     def iter_events(self) -> Iterator[dict[str, Any]]:
         """Yield trades in (blockTimestamp, eventIndex) lex order.
 
