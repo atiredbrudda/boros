@@ -140,12 +140,17 @@ class MarketRewardCalibration(StrictBase):
     response; the operator pastes values from Pendle docs / dApp UI / team
     announcements. See [[e-liq-per-epoch-source-decision]] for the full evidence
     log and [[market-reward-calibration-operator-workflow]] for the runbook.
+
+    W2a (Phase 05.2): Added `effective_at_utc` and `next_refresh_at_utc` to
+    support epoch-keyed calibration rows. See [[phase-05-2-alembic-0008]].
     """
 
     e_liq_per_epoch_pendle: float = Field(..., ge=0.0)
     long_side_split: float = Field(..., ge=0.0, le=1.0)
     short_side_split: float = Field(..., ge=0.0, le=1.0)
     calibrated_at_utc: str  # ISO8601
+    effective_at_utc: str  # ISO8601 — when this calibration becomes authoritative (W2a)
+    next_refresh_at_utc: str  # ISO8601 — when operator should re-check (W2a)
     source: Literal["dapp_ui", "team_statement", "pendle_docs"] = "dapp_ui"
 
     @field_validator("short_side_split")
@@ -158,6 +163,18 @@ class MarketRewardCalibration(StrictBase):
                 f"long_side_split + short_side_split must == 1.0 "
                 f"(got {long} + {v} = {long + v}). "
                 "P3-4 operator-error guard."
+            )
+        return v
+
+    @field_validator("effective_at_utc", "next_refresh_at_utc")
+    @classmethod
+    def _must_look_like_iso8601(cls, v: str) -> str:
+        """Minimal ISO8601 sanity check — must start with YYYY-MM-DDT."""
+        import re
+
+        if not re.match(r"^\d{4}-\d{2}-\d{2}T", v):
+            raise ValueError(
+                f"expected ISO8601 string (YYYY-MM-DDT...), got {v!r}"
             )
         return v
 

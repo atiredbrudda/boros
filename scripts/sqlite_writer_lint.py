@@ -70,7 +70,13 @@ def _write_pattern(table: str) -> re.Pattern[str]:
 
 
 def _all_sources(root: Path) -> list[Path]:
-    """All python/src and ts/src files (skipping node_modules, .venv, __pycache__, dist)."""
+    """All python/src and ts/src files (skipping node_modules, .venv, __pycache__, dist, migrations).
+
+    migrations/ is excluded because Alembic migration scripts may contain DDL-level
+    UPDATE/INSERT for data backfills (e.g. 0008 backfills effective_at_utc).
+    Migrations are not application writers — they are one-time schema migration ops
+    that run inside Alembic's DDL transaction and are exempt from PROTO-05.
+    """
     py = list((root / "python" / "src").rglob("*.py")) if (root / "python" / "src").exists() else []
     ts = list((root / "ts" / "src").rglob("*.ts")) if (root / "ts" / "src").exists() else []
     return [
@@ -78,7 +84,7 @@ def _all_sources(root: Path) -> list[Path]:
         for p in (py + ts)
         if not any(
             skip in p.parts
-            for skip in (".venv", "node_modules", "__pycache__", "dist", ".pnpm")
+            for skip in (".venv", "node_modules", "__pycache__", "dist", ".pnpm", "migrations")
         )
     ]
 

@@ -168,6 +168,163 @@ def test_cli_calibrate_smoke(tmp_path: Path) -> None:
     assert row["data_source"] == "operator"
 
 
+def test_pydantic_market_reward_calibration_has_new_fields(tmp_path: Path) -> None:
+    """W2a — MarketRewardCalibration must accept effective_at_utc + next_refresh_at_utc."""
+    from pydantic import ValidationError
+
+    from boros_brain.config.schema import MarketRewardCalibration
+
+    # Valid construction with new fields
+    obj = MarketRewardCalibration(
+        e_liq_per_epoch_pendle=309.96,
+        long_side_split=0.327,
+        short_side_split=0.673,
+        calibrated_at_utc="2026-04-30T00:00:00Z",
+        effective_at_utc="2026-04-30T00:00:00Z",
+        next_refresh_at_utc="2026-05-07T00:00:00Z",
+    )
+    assert obj.effective_at_utc == "2026-04-30T00:00:00Z"
+    assert obj.next_refresh_at_utc == "2026-05-07T00:00:00Z"
+
+    # Missing effective_at_utc must raise ValidationError
+    with pytest.raises(ValidationError):
+        MarketRewardCalibration(
+            e_liq_per_epoch_pendle=309.96,
+            long_side_split=0.327,
+            short_side_split=0.673,
+            calibrated_at_utc="2026-04-30T00:00:00Z",
+            next_refresh_at_utc="2026-05-07T00:00:00Z",
+        )
+
+    # Non-ISO8601 string in effective_at_utc must raise ValueError or ValidationError
+    with pytest.raises((ValueError, ValidationError)):
+        MarketRewardCalibration(
+            e_liq_per_epoch_pendle=309.96,
+            long_side_split=0.327,
+            short_side_split=0.673,
+            calibrated_at_utc="2026-04-30T00:00:00Z",
+            effective_at_utc="not-an-iso-string",
+            next_refresh_at_utc="2026-05-07T00:00:00Z",
+        )
+
+
+def test_writer_round_trip_with_effective_at(tmp_path: Path) -> None:
+    """W2a — writer persists effective_at_utc + next_refresh_at_utc; read-back returns them."""
+    from boros_brain.state.writers.market_reward_calibration import (
+        get_latest_market_reward_calibration,
+        insert_market_reward_calibration,
+    )
+
+    db = tmp_path / "state.sqlite"
+    db.touch()
+    _apply_migrations(db)
+
+    insert_market_reward_calibration(
+        db,
+        market_id="BINANCE-ETHUSDT-25SEP2026",
+        e_liq_per_epoch_pendle=309.96,
+        long_side_split=0.760,
+        short_side_split=0.240,
+        calibrated_at_utc="2026-04-30T05:18:54Z",
+        effective_at_utc="2026-04-30T00:00:00Z",
+        next_refresh_at_utc="2026-05-07T00:00:00Z",
+        source="dapp_ui",
+        run_id="test-w2a",
+    )
+
+    row = get_latest_market_reward_calibration(db, "BINANCE-ETHUSDT-25SEP2026")
+    assert row is not None
+    assert row["effective_at_utc"] == "2026-04-30T00:00:00Z"
+    assert row["next_refresh_at_utc"] == "2026-05-07T00:00:00Z"
+    assert row["long_side_split"] == 0.760
+    assert row["data_source"] == "operator"
+
+
+def test_writer_rejects_missing_effective_at(tmp_path: Path) -> None:
+    """W2a — insert_market_reward_calibration requires effective_at_utc (TypeError if missing)."""
+    from boros_brain.state.writers.market_reward_calibration import insert_market_reward_calibration
+
+    db = tmp_path / "state.sqlite"
+    db.touch()
+    _apply_migrations(db)
+
+    with pytest.raises(TypeError):
+        insert_market_reward_calibration(  # type: ignore[call-arg]
+            db,
+            market_id="M",
+            e_liq_per_epoch_pendle=100.0,
+            long_side_split=0.5,
+            short_side_split=0.5,
+            calibrated_at_utc="2026-04-30T00:00:00Z",
+            # effective_at_utc deliberately omitted
+            next_refresh_at_utc="2026-05-07T00:00:00Z",
+            source="dapp_ui",
+            run_id="r",
+        )
+
+
+def test_writer_validates_iso8601(tmp_path: Path) -> None:
+    """W2a — non-ISO8601 effective_at_utc raises ValueError BEFORE DB connection."""
+    from boros_brain.state.writers.market_reward_calibration import insert_market_reward_calibration
+
+    db = tmp_path / "state.sqlite"
+    # Note: do NOT call _apply_migrations — ValueError must fire before any DB open.
+    # (The DB doesn't even need to exist for this test.)
+
+    with pytest.raises(ValueError, match="ISO8601"):
+        insert_market_reward_calibration(
+            db,
+            market_id="M",
+            e_liq_per_epoch_pendle=100.0,
+            long_side_split=0.5,
+            short_side_split=0.5,
+            calibrated_at_utc="2026-04-30T00:00:00Z",
+            effective_at_utc="not-an-iso-string",
+            next_refresh_at_utc="2026-05-07T00:00:00Z",
+            source="dapp_ui",
+            run_id="r",
+        )
+
+
+def test_writer_split_validation_still_holds(tmp_path: Path) -> None:
+    """REGRESSION — split-sum validation still fires after adding new kwargs."""
+    from boros_brain.state.writers.market_reward_calibration import insert_market_reward_calibration
+
+    db = tmp_path / "state.sqlite"
+
+    with pytest.raises(ValueError, match="must == 1.0"):
+        insert_market_reward_calibration(
+            db,
+            market_id="M",
+            e_liq_per_epoch_pendle=100.0,
+            long_side_split=0.327,
+            short_side_split=0.674,  # 0.327 + 0.674 = 1.001, != 1.0
+            calibrated_at_utc="2026-04-30T00:00:00Z",
+            effective_at_utc="2026-04-30T00:00:00Z",
+            next_refresh_at_utc="2026-05-07T00:00:00Z",
+            source="dapp_ui",
+            run_id="r",
+        )
+
+
+def test_sqlite_writer_lint_still_passes(tmp_path: Path) -> None:
+    """REGRESSION — PROTO-05 single-writer lint must exit 0 after writer extension."""
+    import subprocess
+    import sys
+
+    repo_root = Path(__file__).resolve().parents[2]
+    result = subprocess.run(
+        [sys.executable, "scripts/sqlite_writer_lint.py"],
+        cwd=str(repo_root),
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, (
+        f"sqlite_writer_lint.py failed (PROTO-05 single-writer violation):\n"
+        f"STDOUT: {result.stdout}\nSTDERR: {result.stderr}"
+    )
+
+
 def test_cli_calibrate_split_mismatch_returns_2(tmp_path: Path) -> None:
     """Split-sum mismatch via CLI exits 2 (Pydantic ValidationError)."""
     import subprocess

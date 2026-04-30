@@ -67,6 +67,8 @@ async def test_replay_filters_synthetic_current_rows_via_sql(
         long_side_split=0.5,
         short_side_split=0.5,
         calibrated_at_utc="2026-04-25T00:00:00Z",
+        effective_at_utc="2026-04-25T00:00:00Z",
+        next_refresh_at_utc="2026-04-25T00:00:00Z",
         source="dapp_ui",
         run_id="test-001",
     )
