@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: milestone
-status: halted
-stopped_at: "Phase 5.1 ship-gate units-corrected FAIL — run_id=01KQDQG0D3TZNZS2QQAPTEAPYJ, p5=0.0334% USD-APR vs threshold 6.00% USD-APR (delta −5.97 ppt). Replay aggregator was producing PENDLE-per-year quantities mislabeled as % APR; fix multiplies daily PENDLE by pendle_price_usd / collateral_usd. Prior verdicts (01KQB9C..., 01KQDMC...) were unit-incoherent — FAIL direction stood but margin was wrong. See docs/kill-report-20260430-units-corrected.md and [[ship-gate-units-bug-2026-04-30]]."
-last_updated: "2026-04-30T00:15:00.000Z"
-last_activity: 2026-04-30 -- Phase 05.1 ship-gate units-corrected FAIL (run_id 01KQDQG0..., 0.0334% USD-APR)
+status: halted_pending_phase_05_2
+stopped_at: "Phase 05.1 ship-gate FAIL caused by 5 compounding engine bugs surfaced via dapp UI probing on 2026-04-30. Bug #5 (units mismatch) fixed in commit 9625c93; bugs #1-4 (notional_per_yu_usd placeholder, backwards long_split, empty competition_history, sparse-tick) deferred to Phase 05.2. Predicted verdict at $100 collateral on binding market with all 5 bugs fixed: ~415% USD-APR PASS. Phase 05.2 directory created with full audit context — see .planning/phases/05.2-sizer-replay-reconcile-to-production/05.2-CONTEXT.md."
+last_updated: "2026-04-30T02:10:00.000Z"
+last_activity: 2026-04-30 -- Phase 05.2 scaffolded (CONTEXT.md + ROADMAP entry); 5 engine bugs catalogued; ready for /gsd-plan-phase 05.2 in fresh session
 progress:
   total_phases: 10
   completed_phases: 7
@@ -169,7 +169,7 @@ None yet.
 
 ### Blockers/Concerns
 
-- **[2026-04-30 HALT, UPDATED by units fix] Phase 5.1 ship-gate FAIL (all three runs)** — Run 1 `01KQB9CPQAQS31P2ZSY14DHYH6` (input-stale + units-incoherent, reported 0.49% PENDLE/year mislabeled "% APR"); Run 2 `01KQDMC1DC3JW07VG2VMKKXM6T` (corrected inputs, units-incoherent, reported 2.44% PENDLE/year mislabeled "% APR"); Run 3 (binding) `01KQDQG0D3TZNZS2QQAPTEAPYJ` (units-corrected, p5=**0.0334% USD-APR** vs 6.00% USD-APR threshold, delta **−5.97 ppt**). Market: BINANCE-ETHUSDT-25SEP2026 long. Phase 6 is BLOCKED. See `docs/kill-report-20260430-units-corrected.md` and wiki [[ship-gate-units-bug-2026-04-30]]. The "−3.56 ppt residual gap → close with sparse-tick fix" path is no longer viable: in defensible USD-APR units the gap is −5.97 ppt and a 10× engine-completeness multiplier only reaches 0.33% USD-APR (still 18× below threshold). Operator decision required: (A) investigate the dapp-dashboard ~1000% USD-APR claim — definition mismatch (per-position vs per-collateral, before-fees, fresh-market boost) OR backtest `q_me / sigma_others` mis-estimate — both cheap; (B) accept FAIL — strategy not viable at $100 collateral / $1.35 PENDLE on this shortlist. DATA-10 daily re-screen cadence deferred until operator decision.
+- **[2026-04-30 HALT — pending Phase 05.2 fix] Phase 05.1 FAIL caused by 5 engine bugs** (not strategy non-viability). Forensic audit on 2026-04-30 via dapp UI probing surfaced: (1) `notional_per_yu_usd = 90,000` placeholder hardcoded to BTC value, semantically should be `margin_per_yu_usd ≈ $18.30` for binding market — ~5,000× APR suppression; (2) `long_side_split = 0.784` should be 0.327 (operator entered backward) — 2.4×; (3) `competition_history` empty in backtest sqlite → `sigma_others = 0` via silent bare-except — 330,000× inflation; (4) sparse-tick under-counting (already documented) — 10,000× suppression; (5) units bug — 22× inflation, **fixed in commit 9625c93**. Net of (3)+(4)+(5) ≈ cancel. Bug (1) alone explains the 5,000× APR suppression that produced the FAIL. **Predicted verdict at $100 collateral on binding market with all 5 bugs fixed: ~415% USD-APR PASS.** Phase 05.2 directory created with full audit context — see `.planning/phases/05.2-sizer-replay-reconcile-to-production/05.2-CONTEXT.md`. Next session: `/gsd-plan-phase 05.2` to formalize.
 - ~~Phase 0 P0-02 (minimum order size) is existential~~ **Resolved 2026-04-23** — no protocol minimum. Existential halt-condition is off the table.
 - ~~Phase 0 P0-01 (voluntary-cancel forfeit behavior) may drive material divergence in Phase 5 backtest sensitivity; if so, Phase 7 paper is blocked until P0-01 is resolved.~~ **Resolved 2026-04-23** — `voluntary_cancel_forfeits_accumulated = False`; sensitivity row demoted to sanity check, no longer a blocker.
 - ~~P0-04 PARTIAL~~ **Resolved 2026-04-23** — Send Txs Bot is the mandatory submission lane; direct-submit ruled out. Latency budget closes on ~1–3s typical, <5s worst, with pre-signed calldata + Send Txs Bot. [[Sign-only cancel primitive]], [[Send Txs Bot integration]].
@@ -177,10 +177,10 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-30T00:15:00.000Z
-Stopped at: Phase 5.1 ship-gate units-corrected FAIL — run_id=01KQDQG0D3TZNZS2QQAPTEAPYJ, p5=0.0334% USD-APR vs threshold 6.00% USD-APR (delta −5.97 ppt). Replay aggregator was returning PENDLE/year quantities mislabeled as % APR; fix multiplies daily PENDLE by pendle_price_usd / collateral_usd. See docs/kill-report-20260430-units-corrected.md.
-Resume file: None
+Last session: 2026-04-30T02:10:00.000Z
+Stopped at: Phase 05.2 scaffolded after dapp UI probing surfaced 5 engine bugs explaining the 05.1 FAIL. Bug #5 (units mismatch) committed as 9625c93. Bugs #1-4 catalogued in `.planning/phases/05.2-sizer-replay-reconcile-to-production/05.2-CONTEXT.md` with empirical evidence (margin_per_yu ≈ $18.30, rate_sensitivity_per_yu ≈ $9.13, effective long pool ≈ 75 YU, predicted verdict ~415% USD-APR PASS at $100 collateral). Operator fetching Wave 0 evidence (E1 cross-market probe, E2 Daily Volatility, E3 time stability) in parallel.
+Resume file: .planning/phases/05.2-sizer-replay-reconcile-to-production/05.2-CONTEXT.md
 
-**Next action:** Project halted. Sparse-tick recovery path is no longer viable in USD-APR units. Operator decision required: (A) investigate the dapp-dashboard ~1000% USD-APR claim before any further engineering — likely either definition mismatch (per-position vs per-collateral, before-fees, fresh-market boost) or `q_me / sigma_others` mis-estimate (both cheap, ~hours each); (B) accept FAIL — strategy not viable at $100 collateral / $1.35 PENDLE on this shortlist. See [[ship-gate-units-bug-2026-04-30]].
+**Next action:** In a fresh session, run `/gsd-plan-phase 05.2` to formalize the wave-decomposition (Wave 0 evidence → Wave 1 sizer schema → Wave 2 calibration refresh + n_fills audit → Wave 3 sigma_others-from-parquet → Wave 4 sparse-tick synthesis → Wave 5 re-run binding ship-gate). The CONTEXT.md is the single input the planner agent needs.
 
-**Planned Phase:** 05.1 units-corrected re-run complete — next phase depends on operator decision above.
+**Planned Phase:** 05.2 — Sizer + Replay Reconcile-to-Production. ~5-6 working days plus operator's ~2-hour Wave 0 evidence session. Predicted Wave 5 verdict: ~415% USD-APR PASS, halt lifted, Phase 6 unblocked.

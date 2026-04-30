@@ -223,6 +223,21 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: TBD (run `/gsd-plan-phase 05.1` to break down)
 **UI hint**: no
 
+### Phase 05.2: Sizer + Replay Reconcile-to-Production (INSERTED 2026-04-30) — UNBLOCKS 05.1 HALT
+**Goal**: Reconcile the v0.5 backtest engine to the live Pendle Boros protocol's actual margin/sizing model. Phase 05.1's binding ship-gate FAIL was caused by 5 compounding engine bugs surfaced via dapp UI probing on 2026-04-30 — sizing knob (`notional_per_yu_usd = 90,000` placeholder hardcoded to BTC value, semantically should be `margin_per_yu_usd ≈ $18.30`), backwards-entered `long_side_split` (0.784 vs actual 0.327), empty `competition_history` table silently producing `sigma_others = 0`, sparse-event tick under-counting, and the units bug fixed in commit 9625c93. With all five fixed, predicted verdict for $100 collateral on BINANCE-ETHUSDT-25SEP2026 long is ~415% USD-APR (vs reported 0.0334%). Falsifiable: if Wave 5 re-run lands materially below the prediction, a sixth bug exists.
+**Depends on**: Phase 05.1 (artifacts), Phase 5 (replay engine)
+**Requirements**: BACK-07 (re-evaluation), DATA-09 (re-evaluation)
+**Success Criteria**:
+  1. `notional_per_yu_usd` renamed to `margin_per_yu_usd` in `sizer/config.py`; per-market values entered from operator dapp probes; `q_max` formula updated; full test suite green.
+  2. `market_reward_calibration.long_side_split` for binding market corrected to 0.327; schema gains `effective_at_utc` + refresh policy; CLI for re-entry from dapp UI exists.
+  3. Backtest reads `sigma_others` from `order_book_raw` parquet at each tick (mirroring live `CompetitionTracker`); empty pool raises `EmptyCompetitionPoolError`, no silent zero-default; `sigma_others_min_pendle` floor applied.
+  4. `_maybe_emit_tick` synthesizes 1 Hz reward-accrual ticks between trade events; full-epoch integration test passes to 0.01% relative tolerance.
+  5. n_fills audit (Wave 0 E4): implied APR series plotted against edge placements; either confirms n_fills=0 is real or surfaces the simulator's edge-fill detection bug.
+  6. Fresh end-to-end ship-gate run on units + sizing + sigma + tick all corrected; verdict in defensible USD-APR units; if PASS, halt is lifted and Phase 6 unblocked; if FAIL, kill-report names the residual gap and the missing 6th-bug investigation.
+
+**Plans**: TBD (run `/gsd-plan-phase 05.2` to break down)
+**UI hint**: no
+
 ### Phase 6: Execution Layer (TypeScript hands)
 **Goal**: Build the TypeScript `hands` process that owns the hot path (WS fill → pre-signed cancel calldata → Send Txs Bot submit with no IPC hop). This phase has the highest concentration of non-obvious engineering pitfalls (C1–C7); the nonce model must be documented in `docs/ARCHITECTURE.md` before any cancel code is written. Target software cancel latency <500ms; end-to-end budget 2–5s. Build in parallel with Phases 4–5 where possible.
 **Depends on**: Phase 4 (decision engine + breakers produce commands it must execute; Phase 5 can run in parallel)
