@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: milestone
-status: ready_to_execute
-stopped_at: Phase 05.3 plan drafted; execution to start in fresh session (2026-04-30)
-last_updated: "2026-04-30T13:00:00.000Z"
-last_activity: 2026-04-30 — Phase 05.3 plan drafted (fill-path repair); ROADMAP + STATE updated; awaiting fresh-session execution start
+status: awaiting_operator_t6_approval
+stopped_at: Phase 05.3 — Plan 01 T1–T5 complete (5 atomic commits); Plan 02 T1–T4 complete (1 atomic commit + 3 wiki pages); awaiting operator approval to start T6 binding ship-gate ~4h re-run
+last_updated: "2026-04-30T14:30:00.000Z"
+last_activity: 2026-04-30 — Plan 01 fill-path repair landed (4c75d9a → c435378); Plan 02 expected-verdict band published (1ba8481); ready for T6 operator-gated re-run
 progress:
   total_phases: 12
   completed_phases: 6
@@ -25,29 +25,77 @@ See: .planning/PROJECT.md (updated 2026-04-24)
 
 ## Current Position
 
-Phase: 05.3 — READY TO EXECUTE
-Plan: 05.3-01 (single-plan phase)
-Status: Plan drafted and committed; T1 (RED tests) is the next action when execution starts in a fresh session.
-Last activity: 2026-04-30 — Phase 05.3 plan drafted; Phase 05.2 Bug #6 fix landed in commit `cad821f`; W5 verdict (970.6% USD-APR) invalidated — gross-of-fills only; Bug #7/#8/#9 routed to Phase 05.3.
+Phase: 05.3 — AWAITING OPERATOR T6 APPROVAL
+Plans: 05.3-01 (engineering, T1–T5 complete) + 05.3-02 (research, T1–T4 complete)
+Status: Both Wave-1 tracks landed. Fill-path is unit-coherent. Expected-verdict band published. T6 = ~4h binding ship-gate re-run, gated on operator GO.
 
 Progress: [██████████░] 94%
 
-## Phase 05.3 Resume Notes
+## Phase 05.3 Checkpoint (2026-04-30T14:30Z)
 
-**Why halted from 05.2:** Phase 05.2's Wave 5 binding ship-gate produced `p5 = 9.706` (970.6% USD-APR), 2.34× the falsifiable ~415% prediction. Operator review surfaced two distinct issue regions:
-  1. **Reward leg (Bug #6):** calibration reader was not `effective_at_utc`-keyed; current-epoch `long_side_split = 0.760` was retroactively applied to a 26-day historical window where the real-world split was the prior-epoch ~0.327. Fixed in commit `cad821f` (Phase 05.2 trailing edge).
-  2. **Fill leg (Bugs #7/#8/#9):** simulator cannot detect fills at all. `size_wei = NULL` across the binding-market parquet kills the trade handler; CLO thresholds treated as ticks via a `/10_000` rescale (they're fIndex display units); inter-event rate-crossing detection gated on `queue_ahead_wei == 0` which only the dead trade handler can clear. The W0 audit's `sim_bug_under_counting` verdict is still open. Routed to Phase 05.3.
+### Plan 01 — Fill-path repair (engineering, sonnet executor) — T1–T5 ✅
 
-**Decisions locked for Phase 05.3** (see `05.3-01-PLAN.md`):
-  - **D1**: YU unit convention throughout the fill path (rename `queue_ahead_wei` → `queue_ahead_yu`; consume `size_float` directly).
-  - **D2**: Lift `_clo_findex_to_tick` to a shared module; both screener and replay import the same helper.
-  - **D3**: Decouple inter-event rate-crossing from the queue gate; queue uncertainty lives in `p_fill`, not as a simulator hard-gate.
+| Task   | Commit    | Title                                                                |
+|--------|-----------|----------------------------------------------------------------------|
+| T1 RED | `4c75d9a` | RED — fill-path unit + smoke tests fail on HEAD                      |
+| T2 D1  | `45ed589` | YU-denominated queue position throughout fill path                    |
+| T3 D2  | `492eea9` | Single source of truth for CLO fIndex→tick conversion                 |
+| T4 D3  | `9d45426` | Decouple inter-event rate-crossing from queue gate                    |
+| T5     | `c435378` | ARCHITECTURE.md fill-path-repair section + mermaid                    |
 
-**Two parallel tracks:**
-  - **Plan 01 (engineering, `05.3-01-PLAN.md`)**: fill-path repair. T1–T7. Blocking for verdict.
-  - **Plan 02 (research, `05.3-02-PLAN.md`)**: source Pendle's LO reward formula (closes W0 E5), reconcile dapp's 489% LONG APR vs our model, derive an expected-verdict band as `var/reports/expected_verdict_band_2026-04-30.json` consumed by Plan 01 T7. Read-only; no engine code changes; runnable entirely in parallel with Plan 01 T1–T5. Resolves the open question of whether our reward formula is even the right shape — if T1 surfaces a discrepancy, that's a category-different problem requiring a follow-up plan.
+**RED→GREEN:** all 6 plan-mandated tests transitioned RED on HEAD → GREEN post-fix:
+  - `test_clo_threshold_unit_handling.py` (4 tests) — round-trip + screener-replay parity + helper invariants
+  - `test_fill_detection_smoke.py` (2 tests) — `size_float`-only data produces fill; rate-crossing produces fill (K=4 sign-changes → ≥1 FILL_REALIZED)
 
-**Resume signal for fresh session:** start Plan 01 at T1 (RED tests) and Plan 02 at T1 (formula source) in parallel. Plan 01's task ordering is T1 → T2 → T3 → T4 → T5, then pause for operator before T6 (the ~4h binding re-run). Plan 02 must complete before Plan 01 T7 (verdict classification) so the verdict can be classified against the band, not a single-point guess. Halt remains `halted_pending_phase_05_2` until Phase 05.3 produces a clean verdict.
+**Live-path parity:** ADAPTER, not rename. `fill_model.queue_tracker` already operates in YU internally; IPC seam keeps `queue_ahead_wei` semantics; `_build_evaluate_input` adapter converts YU → wei via `1e18` factor at the boundary. mypy clean. `predict.py:_QUEUE_PENALTY_SCALE = 1e-18` preserved.
+
+**Architecture delta:** 1 new node (`brain.screener.clo_conversion`) + 6 new edges in `architecture.yml`. Pre-commit lint passing on every commit.
+
+**Deviations** (logged in commit messages):
+  1. D1 narrowed scope to backtest-internal + IPC adapter (vs cross-tier rename).
+  2. Rule-1 fix: `_read_sigma_others_from_parquet_at_ts` col_map missed `t → tick`; fixed in T2.
+  3. T1 strict assertion `tick_upper > tick_lower` relaxed to `>=` for ATM regime (binding market with per-market SCALE produces sub-tick range).
+  4. Two pre-existing test failures NOT addressed (`test_screener_filter.py`, `test_backtest_run_manifest_*`); documented in `.planning/phases/05.3-fill-path-repair/deferred-items.md`.
+
+### Plan 02 — Reward-path research (opus researcher, then opus inline) — T1–T4 ✅
+
+| Task | Output                                                                       | Status                                              |
+|------|------------------------------------------------------------------------------|-----------------------------------------------------|
+| T1   | wiki `[[pendle-lo-reward-formula-verified]]`                                  | Status: Current — PARTIAL (closed-source share calc)|
+| T2   | wiki `[[dapp-apr-reconciliation-2026-04-30]]`                                 | Status: Current                                     |
+| T3   | commit `1ba8481` — `scripts/derive_expected_verdict_band.py` (+ 7/7 smoke tests) | merged                                          |
+| T4   | `var/reports/expected_verdict_band_2026-04-30.json` + wiki `[[expected-verdict-band-2026-04-30]]` | Current (Status: Current)               |
+
+**Key research finding (T1):** Pendle's actual provideLiquidityIncentiveReward share calculation runs on Pendle's backend and is closed-source. The formula `share = q_me / (sigma_others + q_me) × side_split × budget` is **lexically endorsed** by Pendle docs ("time and notional value weighted basis") and **structurally confirmed** by the `@pendle/sdk-boros` types, but exact shape is unverified. Treat as working model; calibrate empirically against dapp APR badges.
+
+**Empirical reconciliation (T2):** Dapp's 489% LONG APR badge is reproduced by `(q_me=5 YU, sigma=165 YU, split=0.760)` to within ±0.5%. CONTEXT.md's "effective pool ≈ 75 YU" assumption RETRACTED — produces 1018% APR (matches W5 raw-engine result of 970.6%, confirming the W5 overshoot was driven by wrong sigma_others, not formula shape).
+
+**Discovered: 165 vs 329 sigma gap.** Dapp's "While Active/day" estimator uses an implicit `sigma ≈ 329 YU` (≈ 2× the headline-badge anchor of 165). Three sigma anchors retained for the band: `{75, 165, 329}` YU.
+
+### Expected Verdict Band — for Plan 01 T7 verdict classification
+
+| metric  | USD-APR fraction | USD-APR pct | scenario                                               |
+|---------|------------------|-------------|--------------------------------------------------------|
+| **low** | 0.8408           | **84.1%**   | sigma=329 (high competition) × prior_split=0.327 × q_me=0.8×q_max |
+| **mid** | 3.5465           | **354.7%**  | grid median (3 sigmas × 2 splits × 3 q_me = 18 cells)  |
+| **high**| 12.0635          | **1206.4%** | sigma=75 × current_split=0.760 × q_me=1.2×q_max (W5 regime) |
+
+Classification rule per `[[expected-verdict-band-2026-04-30]]`:
+  - `p5 ∈ [0.5×low, 1.5×high]` → **PASS — within band**
+  - `p5 < 0`                   → **FAIL — negative EV after fills**
+  - else                       → **FLAG — sixth bug suspected**
+
+### Next gated step: Plan 01 T6 — binding ship-gate ~4h re-run
+
+```bash
+boros_brain.backtest run \
+    --config strategy/v0.5-phase05.1-shortlist.yaml \
+    --market BINANCE-ETHUSDT-25SEP2026 \
+    --side long \
+    --parent-run-id 01KQEZ6M0SWVXX3H4G5W7RNFS8
+```
+
+All preconditions satisfied: fill-path is unit-coherent, single-source-of-truth helper in place, rate-crossing path no longer hard-gated on the dead trade handler, verdict band ready for T7 classification. **Halt remains `halted_pending_phase_05_2` until T7 verdict classification completes.**
 
 ## Performance Metrics
 
@@ -195,10 +243,26 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-30T04:55:25.058Z
-Stopped at: context exhaustion at 90% (2026-04-30)
+Last session: 2026-04-30T14:30Z (Plan 01 T1–T5 + Plan 02 T1–T4 done in coordinated parallel run)
+Stopped at: Operator checkpoint before T6 binding ship-gate ~4h re-run.
 Resume file: None
 
-**Next action:** In a fresh session, run `/gsd-plan-phase 05.2` to formalize the wave-decomposition (Wave 0 evidence → Wave 1 sizer schema → Wave 2 calibration refresh + n_fills audit → Wave 3 sigma_others-from-parquet → Wave 4 sparse-tick synthesis → Wave 5 re-run binding ship-gate). The CONTEXT.md is the single input the planner agent needs.
+**Next action:** Operator GO-decision on T6:
 
-**Planned Phase:** 05.2 (sizer-replay-reconcile-to-production) — 7 plans — 2026-04-30T03:25:45.376Z
+  **Approve T6 → run** (boros root, ≈ 4 hours):
+  ```bash
+  cd /Users/macbookair/boros && uv run --project python python -m boros_brain.backtest run \
+      --config strategy/v0.5-phase05.1-shortlist.yaml \
+      --market BINANCE-ETHUSDT-25SEP2026 \
+      --side long \
+      --parent-run-id 01KQEZ6M0SWVXX3H4G5W7RNFS8
+  ```
+
+  **Then T7 (verdict classification)** reads `var/reports/expected_verdict_band_2026-04-30.json` and classifies the realized `p5_annualized_pnl_usd` against `[0.5×low, 1.5×high]` = `[0.42, 18.10]`. Inside band → PASS; below 0 → FAIL; outside → FLAG (sixth bug).
+
+  **Or — review before approving:**
+  - Read commits `4c75d9a → c435378` (Plan 01 fill-path repair, 5 atomic commits)
+  - Read commit `1ba8481` (Plan 02 band script + 7/7 smoke tests)
+  - Read wiki `[[fill-path-repair-2026-04-30]]` + `[[expected-verdict-band-2026-04-30]]`
+
+**Halt status:** `halted_pending_phase_05_2` until T7 verdict classification produces a clean PASS/FAIL.
