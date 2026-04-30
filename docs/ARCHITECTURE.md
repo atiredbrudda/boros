@@ -873,6 +873,30 @@ flowchart LR
 
 [[backtest-1hz-tick-synthesis-2026-04-30]]
 
+## Phase 05.2 Wave 5 — Binding Ship-Gate Re-Run + parent_run_id Chain (Plan 05.2-07)
+
+Wave 5 adds `--parent-run-id` to the `boros_brain.backtest` CLI `run` subcommand. The flag
+passes a predecessor ULID directly into `build_run_manifest(config, parent_run_id=...)` so
+the resulting sidecar JSON carries an unbroken audit trail across successive re-runs after
+engine fixes (PROTO-01 mid-run knob-change semantics, D2 anti-pattern guard).
+
+The manifest schema already had `parent_run_id: str | None = None` (INFRA-06). Wave 5 wires
+the flag so an operator can stamp a successor run with its predecessor's ULID from the CLI.
+
+```mermaid
+flowchart LR
+  subgraph phase052_wave5["Phase 05.2 Wave 5: binding ship-gate re-run (Plan 05.2-07)"]
+    cli_flag["backtest CLI<br/>--parent-run-id &lt;ULID&gt;<br/>(new flag)"]
+    manifest_builder["manifest/writer.py<br/>build_run_manifest()<br/>parent_run_id=args.parent_run_id"]
+    sidecar["var/backtest/&lt;run_id&gt;/&lt;run_id&gt;.manifest.json<br/>parent_run_id field"]
+  end
+
+  cli_flag -- "passed as kwarg" --> manifest_builder
+  manifest_builder -- "writes" --> sidecar
+```
+
+[[ship-gate-verdict-20260430-engine-corrected]]
+
 ## Related protocols
 
 - Engineering Protocol #1 — LLM Wiki. Every research / decision / postmortem

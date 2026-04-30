@@ -48,6 +48,15 @@ def build_parser() -> argparse.ArgumentParser:
     run_p = sub.add_parser("run", help="Run full backtest grid + ship-gate verdict.")
     run_p.add_argument("--market", required=True, help="market_id")
     run_p.add_argument("--side", required=True, choices=["long", "short"])
+    run_p.add_argument(
+        "--parent-run-id",
+        default=None,
+        help=(
+            "ULID of predecessor run (parent_run_id chain). "
+            "Used when re-running after engine fixes so the audit trail is unbroken. "
+            "Stored in the RUN_MANIFEST sidecar as parent_run_id."
+        ),
+    )
 
     plot_p = sub.add_parser("plot", help="Re-render plots from existing run_id parquet output.")
     plot_p.add_argument("--run-id", required=True, help="ULID of an existing run")
@@ -245,7 +254,8 @@ def main(argv: list[str] | None = None) -> int:
     _logs_dir_abs = (_repo_root_main / config.infra.logs_dir).resolve()
     _sqlite_abs = (_repo_root_main / config.infra.sqlite_path).resolve()
     _var_backtest_abs = (_repo_root_main / "var/backtest").resolve()
-    manifest = build_run_manifest(config)
+    parent_run_id = getattr(args, "parent_run_id", None)
+    manifest = build_run_manifest(config, parent_run_id=parent_run_id)
     configure_logging(
         run_id=manifest.run_id,
         tier="backtest-cli",
