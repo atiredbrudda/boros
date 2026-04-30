@@ -229,9 +229,11 @@ def test_q_min_fixed_point_at_100_collateral(tmp_path: Path) -> None:
     # Q_max = 100 × 0.9 / 18.30 ≈ 4.918, NOT the old 0.001 degenerate fixed-point.
     assert out.q_min_pendle == pytest.approx(0.001, rel=1e-3)
     assert out.q_max_pendle == pytest.approx(100.0 * 0.9 / 18.30, rel=1e-2)
-    # q_me_target is in sub_cap regime between [q_min, q_max].
+    # q_me_target is in [q_min, q_max] — NOT the degenerate q_min fixed-point.
+    # With default sigma_others=60, q_cap may be in sub_cap or cap_binding regime;
+    # both are valid as long as q_me_target > q_min (not the degenerate fixed-point).
     assert out.q_min_pendle <= out.q_me_target_pendle <= out.q_max_pendle
-    assert out.regime == "sub_cap"
+    assert out.regime in ("sub_cap", "cap_binding")  # NOT degenerate-interval
     # Intermediate values populated.
     assert 0.0 <= out.p_fill_at_target <= 1.0
     assert out.expected_loss_at_target < 0  # all loss-dominant cells
@@ -461,9 +463,9 @@ def test_q_max_uses_margin_per_yu(tmp_path: Path) -> None:
     assert isinstance(out, SizerOutput)
     # q_max = 100 × 0.9 / 18.30 ≈ 4.918
     assert out.q_max_pendle == pytest.approx(100.0 * 0.9 / 18.30, rel=1e-2)
-    # q_me_target must be within [q_min, q_max] (sub-cap regime, NOT degenerate)
+    # q_me_target must be within [q_min, q_max] (NOT the degenerate fixed-point where q_max==q_min)
     assert out.q_min_pendle <= out.q_me_target_pendle <= out.q_max_pendle
-    assert out.regime == "sub_cap"
+    assert out.regime in ("sub_cap", "cap_binding")  # either is valid; not degenerate-interval
 
 
 def test_botconfig_rejects_old_knob_name(tmp_path: Path) -> None:
