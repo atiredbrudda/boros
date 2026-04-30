@@ -2085,6 +2085,37 @@ edges:
     type: writes
     notes: "feasible/infeasible verdict JSON — filed once as operator one-shot"
 
+  # ── E4 n_fills=0 audit (05.2-W0) ────────────────────────────────────────
+  - id: scripts.audit_n_fills_against_edges
+    kind: cli_command
+    path: scripts/audit_n_fills_against_edges.py
+    notes: "Phase 05.2 Wave 0 E4 audit — loads binding-market trade tape, plots APR vs CLO edges, emits verdict (real_no_fills|sim_bug_under_counting|inconclusive)"
+
+  - id: var.audit.n_fills_audit_png
+    type: storage
+    path: var/audit/n_fills_audit_<DATE>.png
+    notes: "E4 audit visual artifact — implied APR series vs long/short edge placements"
+
+  - id: var.reports.n_fills_audit_verdict
+    type: storage
+    path: var/reports/n_fills_audit_verdict.json
+    notes: "E4 audit verdict JSON: n_crossings, APR stats, verdict_label"
+
+  - from: scripts.audit_n_fills_against_edges
+    to: data.parquet.market_trades
+    type: reads
+    notes: "pl.scan_parquet on market_trades/**/*.parquet filtered to BINANCE-ETHUSDT-25SEP2026"
+
+  - from: scripts.audit_n_fills_against_edges
+    to: var.audit.n_fills_audit_png
+    type: writes
+    notes: "PNG artifact of APR series vs CLO edges"
+
+  - from: scripts.audit_n_fills_against_edges
+    to: var.reports.n_fills_audit_verdict
+    type: writes
+    notes: "Verdict JSON with n_crossings + min/max/mean APR + verdict_label"
+
   # ── DATA-05 AMM conservation assertion (01-10) ───────────────────────────
   - from: brain.data.ingester.order_book
     to: brain.data.ingester.exceptions

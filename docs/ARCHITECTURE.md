@@ -185,6 +185,12 @@ flowchart TB
     spike_a6 -- "eth_getLogs distributor events (live only)" --> ext_rpc
     spike_a6 -- writes --> verdict_a6
 
+    %% E4 n_fills=0 audit (05.2-W0)
+    audit_n_fills["scripts/audit_n_fills_against_edges.py<br/>E4 audit — implied APR vs CLO edges<br/>verdict: real_no_fills|sim_bug_under_counting|inconclusive"]
+    verdict_n_fills[("var/reports/n_fills_audit_verdict.json<br/>n_crossings + APR stats + verdict_label")]
+    audit_n_fills -- "pl.scan_parquet on market_trades" --> parquet_mt
+    audit_n_fills -- writes --> verdict_n_fills
+
     %% DATA-08 screener metrics (01-11 Task 1)
     screener_metrics["screener/metrics.py<br/>compute_inter_arrival_cv, compute_realized_vol,<br/>compute_reversal_count, compute_depth_at_clo_edge,<br/>compute_outside_range_wall_ratio, compute_days_to_maturity<br/>(DATA-08, 01-11)"]
     screener_metrics -- "reads market_trades (CV, vol, reversal)" --> parquet_mt

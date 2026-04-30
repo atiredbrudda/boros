@@ -66,9 +66,11 @@ If found, quote the LO Liquidity Reward formula here:
 See `var/reports/n_fills_audit_verdict.json` and `[[n-fills-zero-binding-window-audit]]` wiki page.
 
 Summary:
-- n_crossings_lo (0.74%): TBD
-- n_crossings_hi (1.26%): TBD
-- max_apr_pct: TBD
-- min_apr_pct: TBD
-- mean_apr_pct: TBD
-- verdict_label: TBD (real_no_fills | sim_bug_under_counting | inconclusive)
+- n_crossings_lo (0.74%): 6
+- n_crossings_hi (1.26%): 9
+- max_apr_pct: 2.2039
+- min_apr_pct: 0.3908
+- mean_apr_pct: 1.4101
+- verdict_label: sim_bug_under_counting
+
+**Implication for Wave 4:** n_fills=0 is a simulator bug (APR crosses edges 15 times in 26 days). Wave 4 must NOT assume n_fills=0 is a valid real-market outcome — the 1 Hz tick synthesis plan should be paired with proper fill detection scope verification.
