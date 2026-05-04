@@ -513,6 +513,8 @@ See [[fill-model-library-decision-tick-vs-statsmodels]], [[covariate-selection-v
 [[fill-model-goodness-of-fit-rosenblatt-time-change]], and
 [[rolling-14-day-refit-cadence-and-staleness]].
 
+- **Bug C fix (Phase 05.4-03):** `fill_model.refit_loop.refit_once` accepts `current_chain_ts: int | None = None` keyword. Backtest replay passes the current tick's chain_ts to bound `window_end_ts <= current_chain_ts`. Live-mode callers pass `None` (unchanged behavior). Read-side guard at `fill_model/predict.py:91-106` becomes dormant in backtest mode. See [[phase-05-4-bug-c-look-ahead-fix]].
+
 ## What's declared in `docs/architecture.yml`
 
 The YAML manifest enumerates:

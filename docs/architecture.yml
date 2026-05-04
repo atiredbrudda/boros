@@ -835,6 +835,7 @@ nodes:
     process: brain
     path: python/src/boros_brain/fill_model/refit_loop.py
     public_functions: [refit_once, run_fill_model_refit_loop]
+    summary: "FILL-06 rolling refit loop. refit_once accepts optional current_chain_ts (None=live mode, int=backtest mode bounding window_end_ts to prevent look-ahead bias — Phase 05.4-03 Bug C)."
 
   - id: brain.fill_model.report
     type: module
