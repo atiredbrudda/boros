@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Fill Model (NHPP v0.5)** - Calibrated `P(fill | δ, side, queue_ahead, features)` with queue tracker and AMM consumption model. **COMPLETE 2026-04-24** — 4/4 plans, 12/12 verified; 1 minor PROTO-01 cosmetic carry (first-log-event field naming).
 - [x] **Phase 3: Loss & Reward-Share Models + Sizing** - Empirical `E[loss|fill]`, capped pro-rata reward share with operator-manual `E_liq_per_epoch` calibration (LOCKED D-01 supersedes live-polling assumption A5), sizing optimizer. **COMPLETE 2026-04-25** — 4/4 plans, 7/7 verified.
 - [x] **Phase 4: Decision Engine + Predictive Circuit Breakers** - EV cancel rule wired over the three input models; ten predictive breakers with exclusive KILL authority. **COMPLETE 2026-04-26** — 8/8 plans (6 original + 2 gap-closure 04-07/04-08), 7/7 verified after re-verification; full Phase-4 pytest greenrun captured (311 passed). One known-flake hang carried to Phase 5 Wave 0 (test-fixture issue, not regression).
-- [ ] **Phase 5: Event-Driven Backtest (Ship-Gate)** - `eventIndex`-ordered, queue-aware, AMM-aware replay with cancel-latency sweep; bootstrap 5th-percentile ship-gate against alt-yield. Wave-0 prerequisite: fix carried ZMQ test-fixture hang + add `pytest-timeout`.
+- [x] **Phase 5: Event-Driven Backtest (Ship-Gate)** - `eventIndex`-ordered, queue-aware, AMM-aware replay with cancel-latency sweep; bootstrap 5th-percentile ship-gate against alt-yield. Wave-0 prerequisite: fix carried ZMQ test-fixture hang + add `pytest-timeout`. (completed 2026-05-04)
 - [ ] **Phase 6: Execution Layer (TypeScript hands)** - Dual-wallet + pre-signed cancel calldata + WebSocket fill listener + gas monitor; hot path stays in-process.
 - [ ] **Phase 7: Paper Trading (2–4 Weeks)** - Live feeds, no capital; phantom fills logged, backtest reconciled; divergence > 1σ blocks live promotion.
 - [ ] **Phase 8: Live Rollout** - $100 collateral, one market, one side, protocol-minimum order size, 2-week observation window; weekly P&L reconciliation.
@@ -279,7 +279,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Plans**: 4 plans (sequential dependency where bugs may cascade; parallel where independent)
 - [x] 05.4-01-PLAN.md — Fix Bug A: apply Alembic 0008 migration + insert prior/current epoch operator calibration rows for binding market. Sequential (must precede 05.4-02).
-- [ ] 05.4-02-PLAN.md — Investigate Bug B against the A-fixed engine. May reduce to "no-op, was a cascade — document". Investigation budget 2 hours; if root cause not found, route to Phase 05.5.
+- [x] 05.4-02-PLAN.md — Investigate Bug B against the A-fixed engine. May reduce to "no-op, was a cascade — document". Investigation budget 2 hours; if root cause not found, route to Phase 05.5.
 - [ ] 05.4-03-PLAN.md — Fix Bug C (look-ahead in fill/loss fits) AND Bug D (persist pnl_pendle to decision_log parquet). Wave-parallel with 05.4-02.
 - [ ] 05.4-04-PLAN.md — Inherit-and-execute T6+T7: binding ship-gate ~4h re-run + verdict classification against `var/reports/expected_verdict_band_2026-04-30.json` (consumed UNCHANGED from Phase 05.3 Plan 02 T4). Includes explicit escape valve to Phase 05.5 if `p5` outside band.
 
@@ -383,7 +383,7 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 →
 | 2. Fill Model (NHPP v0.5) | 4/4 | **Complete** (verified 12/12, 1 minor PROTO-01 violation on first-log-event) | 2026-04-24 |
 | 3. Loss & Reward-Share Models + Sizing | 4/4 | **Complete** (verified 7/7) | 2026-04-25 |
 | 4. Decision Engine + Predictive Circuit Breakers | 8/8 (6 original + 2 gap-closure) | **Complete** (re-verified 7/7 after 04-07/04-08) | 2026-04-26 |
-| 5. Event-Driven Backtest (Ship-Gate) | 0/TBD | Not started | - |
+| 5. Event-Driven Backtest (Ship-Gate) | 9/9 | Complete   | 2026-05-04 |
 | 6. Execution Layer (TypeScript hands) | 0/TBD | Not started | - |
 | 7. Paper Trading (2–4 Weeks) | 0/TBD | Not started | - |
 | 8. Live Rollout | 0/TBD | Not started | - |

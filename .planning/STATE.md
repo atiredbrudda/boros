@@ -4,13 +4,13 @@ milestone: v0.5
 milestone_name: milestone
 status: executing
 stopped_at: Phase 05.4 ready to plan. CONTEXT.md pins inherited artifacts from 05.3 + bug catalog + sequential plan structure (01 → 02 → 03 parallel → 04 verdict + escape valve to 05.5).
-last_updated: "2026-05-04T21:49:06.313Z"
+last_updated: "2026-05-04T22:25:37.685Z"
 progress:
   total_phases: 11
   completed_phases: 7
   total_plans: 44
-  completed_plans: 41
-  percent: 93
+  completed_plans: 42
+  percent: 95
 ---
 
 # Project State
@@ -25,11 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-24)
 ## Current Position
 
 Phase: 05.4 (verdict-prerequisites-and-binding-rerun) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Plans: 0 of 4 drafted. CONTEXT.md scaffolded with inherited artifacts from Phase 05.3 + sequential plan structure (05.4-01 → 05.4-02 → 05.4-03 → 05.4-04).
 Status: Ready to execute
 
-Progress: [█████████░] 93%
+Progress: [██████████] 95%
 
 ## Phase 05.4 Resume Notes (entry point)
 
@@ -171,6 +171,7 @@ All 4 routed to Phase 05.4 with sequential dependency structure + escape valve t
 | Phase 05-event-driven-backtest-ship-gate P07 | 5 | 4 tasks | 5 files |
 | Phase 05-event-driven-backtest-ship-gate P09 | 35 | 7 tasks | 10 files |
 | Phase 05.1 P01 | 0 | 5 tasks | 8 files |
+| Phase 05.4 P02 | 35 | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -256,6 +257,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - URL pattern Branch A: files.json master manifest + per-file static GET (no server-side folder ZIP); market-ID numeric-prefix divergence requires Wave 1 GET /markets cross-reference
 - data.ndjson declared as new storage node in architecture.yml; Wave 1 plan adds reads edges from ingester
 - scripts/__init__.py + pythonpath='..' added so python/tests can import scripts.fetch_historical_data as a package
+- [Phase ?]: Bug B verdict: cascade — T6 baseline ran all 237 trades in 3.5min; decision_log span = active-order lifespan not replay coverage; no replay.py changes
+- [Phase ?]: Corrected diagnostic metric for replay coverage: use cancel_latency_sweep_start event in backtest-cli.log, not decision_log span alone
 
 ### Roadmap Evolution
 
@@ -275,7 +278,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-04T21:49:06.306Z
+Last session: 2026-05-04T22:25:28.037Z
 Stopped at: Phase 05.4 ready to plan. CONTEXT.md pins inherited artifacts from 05.3 + bug catalog + sequential plan structure (01 → 02 → 03 parallel → 04 verdict + escape valve to 05.5).
 Resume file: None
 
