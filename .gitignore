@@ -27,6 +27,7 @@ data/parquet/order_book_raw
 data/parquet/order_book_combined
 data/parquet/underlying_apr
 var/phase05.2-wave5-run.log
+var/phase054-bug-b-bisect.log
 # Per-tier runtime dirs (var/ for reports, python/{state,data,var,docs} for brain runtime)
 # python/docs/ holds runtime-generated kill-reports — canonical reports live at docs/.
 # Note: var/fetcher/manifest.json and var/fetcher/market_id_mapping.json are NOT
