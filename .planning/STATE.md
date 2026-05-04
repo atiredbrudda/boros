@@ -2,16 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: milestone
-status: ready_to_plan
-stopped_at: Phase 05.3 closed (Plan 01 T1–T5 + Plan 02 T1–T4 done; T6/T7 routed to Phase 05.4 due to 4 prerequisite bugs surfaced during T6 dry-run); Phase 05.4 scaffolded with CONTEXT.md
-last_updated: "2026-04-30T15:30:00.000Z"
-last_activity: 2026-04-30 — Phase 05.3 SUMMARYs filed; LLM Wiki pages committed in 2 batches (4b079ad, 7aac48a); Phase 05.4 ROADMAP entry + CONTEXT.md scaffolded; classification_rule pinned in band JSON
+status: executing
+stopped_at: Phase 05.4 ready to plan. CONTEXT.md pins inherited artifacts from 05.3 + bug catalog + sequential plan structure (01 → 02 → 03 parallel → 04 verdict + escape valve to 05.5).
+last_updated: "2026-05-04T21:32:27.431Z"
 progress:
-  total_phases: 13
-  completed_phases: 6
-  total_plans: 55
-  completed_plans: 49
-  percent: 89
+  total_phases: 11
+  completed_phases: 7
+  total_plans: 44
+  completed_plans: 40
+  percent: 91
 ---
 
 # Project State
@@ -27,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-24)
 
 Phase: 05.4 — READY TO PLAN
 Plans: 0 of 4 drafted. CONTEXT.md scaffolded with inherited artifacts from Phase 05.3 + sequential plan structure (05.4-01 → 05.4-02 → 05.4-03 → 05.4-04).
-Status: Phase 05.3 closed honestly (both plan SUMMARYs filed; LLM Wiki pages committed with supersedence). 4 prerequisite bugs (A/B/C/D) catalogued in [[phase-05-3-bugs-discovered-during-t6]]. Band JSON + classification_rule pinned and consumed unchanged by 05.4-04 T7.
+Status: Ready to execute
 
 Progress: [█████████░░] 89% (denominator increased by Phase 05.4 4 plans)
 
@@ -36,12 +35,14 @@ Progress: [█████████░░] 89% (denominator increased by Phas
 **Why this phase exists:** Phase 05.3 Plan 01 T6 (binding ship-gate ~4h re-run) was attempted on 2026-04-30 as run_id `01KQFABR9VNPMKKQYPTQGRJMDR` and surfaced 4 separate prerequisite bugs that block a clean verdict regardless of engine repair. The dry-run validated Plan 01's fill-path fix empirically (11 FILL_REALIZED entries vs Phase 05.2 W5's 0; reconstructed reward-leg-only p5 = 894% USD-APR, inside the band [42%, 1810%], directional PASS) but did not produce a binding verdict. Phase 05.4 closes the verdict loop by fixing the 4 bugs (sequentially where dependent, parallel where independent) and re-running T6/T7 against the unchanged classification rule.
 
 **4 prerequisite bugs** (full diagnosis in `[[phase-05-3-bugs-discovered-during-t6]]`):
+
   - **A** Alembic 0008 migration never applied → `_load_operator_calibration_history` returns []. Independent (load-bearing first).
   - **B** Replay loop terminates at trade #65 of 237 (7.72/25.74 days). May cascade from A.
   - **C** Look-ahead bias in fill_model + loss_model fits — empirical 30× p_fill underestimate. Independent.
   - **D** `pnl_pendle` column missing from persisted decision_log parquet schema. Independent.
 
 **Plan structure** (sequential 01 → 02; parallel 02‖03 → 04):
+
   - **05.4-01** Fix Bug A — apply migration, insert prior+current epoch operator rows
   - **05.4-02** Investigate Bug B against A-fixed engine; may reduce to no-op
   - **05.4-03** Fix Bug C + Bug D (parallel with 02)
@@ -64,6 +65,7 @@ Progress: [█████████░░] 89% (denominator increased by Phas
 | T5     | `c435378` | ARCHITECTURE.md fill-path-repair section + mermaid                    |
 
 **RED→GREEN:** all 6 plan-mandated tests transitioned RED on HEAD → GREEN post-fix:
+
   - `test_clo_threshold_unit_handling.py` (4 tests) — round-trip + screener-replay parity + helper invariants
   - `test_fill_detection_smoke.py` (2 tests) — `size_float`-only data produces fill; rate-crossing produces fill (K=4 sign-changes → ≥1 FILL_REALIZED)
 
@@ -72,6 +74,7 @@ Progress: [█████████░░] 89% (denominator increased by Phas
 **Architecture delta:** 1 new node (`brain.screener.clo_conversion`) + 6 new edges in `architecture.yml`. Pre-commit lint passing on every commit.
 
 **Deviations** (logged in commit messages):
+
   1. D1 narrowed scope to backtest-internal + IPC adapter (vs cross-tier rename).
   2. Rule-1 fix: `_read_sigma_others_from_parquet_at_ts` col_map missed `t → tick`; fixed in T2.
   3. T1 strict assertion `tick_upper > tick_lower` relaxed to `>=` for ATM regime (binding market with per-market SCALE produces sub-tick range).
@@ -101,6 +104,7 @@ Progress: [█████████░░] 89% (denominator increased by Phas
 | **high**| 12.0635          | **1206.4%** | sigma=75 × current_split=0.760 × q_me=1.2×q_max (W5 regime) |
 
 Classification rule per `[[expected-verdict-band-2026-04-30]]`:
+
   - `p5 ∈ [0.5×low, 1.5×high]` → **PASS — within band**
   - `p5 < 0`                   → **FAIL — negative EV after fills**
   - else                       → **FLAG — sixth bug suspected**
@@ -110,11 +114,13 @@ Classification rule per `[[expected-verdict-band-2026-04-30]]`:
 T6 was launched on 2026-04-30T13:48Z as run_id `01KQFABR9VNPMKKQYPTQGRJMDR` and killed at 19:02Z mid-perturbation-grid after surfacing 4 prerequisite bugs. The dry-run completed: baseline + 6× cancel_latency_sweep + 6× competition_sweep + 2× forfeit_branch_sweep (sanity_check_pass) + 26 of N perturbation_grid rows. Did NOT reach `evaluate_ship_gate`, so no `ship_gate_verdict.json` was written.
 
 **Empirical signals (load-bearing for Phase 05.4):**
+
   - **11 FILL_REALIZED** entries in baseline decision_log over partial 7.72-day window — confirms Plan 01's fill-path fix works (vs Phase 05.2 W5's 0 fills)
   - Reconstructed p5 (reward leg only, no fill losses) = **894% USD-APR** — inside the band [42%, 1810%], directional PASS
   - Diagnostic data preserved at `data/parquet/backtest_results/run_id=01KQFABR9VNPMKKQYPTQGRJMDR/` (gitignored runtime artifact, useful for Phase 05.4-02 Bug B investigation)
 
 **Why the dry-run produced no binding verdict (4 prerequisite bugs):**
+
   - **Bug A** (Alembic 0008 not applied): 4.5M `no_operator_calibration` warnings; engine uses default fallback `e_liq=100, side_split=0.5`
   - **Bug B** (replay truncates at trade #65/237): only 7.72 of 25.74 days replayed; may cascade from A
   - **Bug C** (look-ahead in fill/loss fits): 30× p_fill underestimate empirically
@@ -273,6 +279,7 @@ Stopped at: Phase 05.4 ready to plan. CONTEXT.md pins inherited artifacts from 0
 Resume file: None
 
 **Next action:** Run `/gsd-plan-phase 05.4` to draft 4 plans:
+
   - **05.4-01** Fix Bug A (Alembic 0008 + operator calibration rows). Sequential, must precede 02.
   - **05.4-02** Investigate Bug B against A-fixed engine. May reduce to no-op (cascade of A); 2-hour investigation budget then route to 05.5.
   - **05.4-03** Fix Bug C (look-ahead in fill/loss fits) + Bug D (persist `pnl_pendle`). Wave-parallel with 02.
@@ -283,6 +290,7 @@ Resume file: None
 **Halt status:** `halted_pending_phase_05_4` until T7 verdict classification (against pinned band JSON) produces a clean PASS / FAIL / FLAG verdict.
 
 **Inherited artifacts (consumed unchanged by Phase 05.4):**
+
   - `var/reports/expected_verdict_band_2026-04-30.json` — band + `classification_rule` block (pass_lo=0.42, pass_hi=18.10, fail_lo=0)
   - boros commits `4c75d9a → c435378` (Plan 01 T1–T5) + `1ba8481` (Plan 02 T3)
   - LLM Wiki commits `4b079ad` (Phase 05.3 outputs + supersedence) + `7aac48a` (bugs catalog)
