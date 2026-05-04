@@ -28,19 +28,35 @@ log = structlog.get_logger(__name__)
 __all__ = ["refit_once", "run_fill_model_refit_loop"]
 
 
-async def refit_once(config: BotConfig, run_id: str) -> None:
+async def refit_once(
+    config: BotConfig,
+    run_id: str,
+    *,
+    current_chain_ts: int | None = None,
+) -> None:
     """One refit across all (market_id, side) in config.markets.
 
     Uses `await chain_time.now_cached()` for the window end-timestamp per
     CLAUDE.md INFRA-14 (all time comparisons go through the chain_time cache —
     wall-clock is forbidden in brain/decision/data/screener/fill_model).
+
+    Args:
+        config: BotConfig
+        run_id: ULID
+        current_chain_ts: Optional chain_ts upper-bound for the fit window. None = live mode
+            (uses chain_time.now_cached). Backtest replay MUST pass the current tick's
+            chain_ts to prevent look-ahead bias (Bug C — Phase 05.4-03).
     """
     if not config.markets:
         log.info("fill_model.refit_skipped_no_markets", run_id=run_id)
         return
 
-    now_s = await chain_time.now_cached()
-    window_end_ts = now_s
+    if current_chain_ts is None:
+        now_s = await chain_time.now_cached()
+        window_end_ts = int(now_s)
+    else:
+        window_end_ts = int(current_chain_ts)
+
     window_start_ts = window_end_ts - int(config.fill_model.window_days * 86400)
 
     for mkt in config.markets:
@@ -59,7 +75,7 @@ async def refit_once(config: BotConfig, run_id: str) -> None:
                 fit_market_side(
                     features_df=df,
                     market_id=mkt.market_id,
-                    side=side,  # type: ignore[arg-type]
+                    side=side,  # type: ignore[arg-type]  # str → Literal["long","short"]
                     config=config,
                     run_id=run_id,
                     sqlite_path=Path(str(config.infra.sqlite_path)),
