@@ -278,7 +278,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   6. Phase 05.4 SUMMARY documents the verdict + which bugs were fixed vs deferred + whether the band was widened (if Bug C was deferred).
 
 **Plans**: 4 plans (sequential dependency where bugs may cascade; parallel where independent)
-- [ ] 05.4-01-PLAN.md — Fix Bug A: apply Alembic 0008 migration + insert prior/current epoch operator calibration rows for binding market. Sequential (must precede 05.4-02).
+- [x] 05.4-01-PLAN.md — Fix Bug A: apply Alembic 0008 migration + insert prior/current epoch operator calibration rows for binding market. Sequential (must precede 05.4-02).
 - [ ] 05.4-02-PLAN.md — Investigate Bug B against the A-fixed engine. May reduce to "no-op, was a cascade — document". Investigation budget 2 hours; if root cause not found, route to Phase 05.5.
 - [ ] 05.4-03-PLAN.md — Fix Bug C (look-ahead in fill/loss fits) AND Bug D (persist pnl_pendle to decision_log parquet). Wave-parallel with 05.4-02.
 - [ ] 05.4-04-PLAN.md — Inherit-and-execute T6+T7: binding ship-gate ~4h re-run + verdict classification against `var/reports/expected_verdict_band_2026-04-30.json` (consumed UNCHANGED from Phase 05.3 Plan 02 T4). Includes explicit escape valve to Phase 05.5 if `p5` outside band.
