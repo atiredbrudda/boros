@@ -974,6 +974,39 @@ flowchart LR
 
 [[fill-path-repair-2026-04-30]]
 
+## Phase 05.4-01 Bug A — Calibration Migration + Operator Row Insert Script
+
+Bug A was discovered during the Phase 05.3 T6 dry-run: Alembic migration 0008
+(`0008_market_reward_calibration_effective_at.py`) had been authored but never
+applied to `state/state.sqlite`. The `_load_operator_calibration_history` method
+in `replay.py` queries `effective_at_utc IS NOT NULL` — a column that did not exist
+on the live DB — causing every query to fail silently and the engine to fall through
+to default fallback values (`e_liq=100, side_split=0.5`). This produced ~4.5M
+`no_operator_calibration` warnings and a reward leg ~3-5x off.
+
+The fix applies migration 0008 via `scripts/apply_alembic_migration.py` and then
+inserts two operator calibration rows via the new one-shot script:
+
+- `scripts/insert_operator_calibration_rows_phase054.py` — Phase 05.4-01 Bug A:
+  insert prior+current operator calibration rows. Calls
+  `state.writers.market_reward_calibration.insert_market_reward_calibration`.
+
+```mermaid
+flowchart LR
+  subgraph phase054_bug_a["Phase 05.4-01 Bug A: calibration migration + row insert"]
+    insert_script["scripts/insert_operator_calibration_rows_phase054.py<br/>insert prior row (effective_at_utc=2026-03-15, split=0.327)<br/>insert current row (effective_at_utc=2026-04-23, split=0.760)<br/>idempotent via SELECT pre-check"]
+    mrc_writer["brain.state.writers.market_reward_calibration<br/>insert_market_reward_calibration()<br/>PROTO-02 single-writer (sqlite_writer_lint enforced)"]
+    mrc_table[("state.market_reward_calibration<br/>now has effective_at_utc column (Alembic 0008)<br/>3 operator rows for BINANCE-ETHUSDT-25SEP2026")]
+    history_loader["backtest/replay.py<br/>_load_operator_calibration_history()<br/>ORDER BY effective_at_utc ASC"]
+  end
+
+  insert_script -- "calls" --> mrc_writer
+  mrc_writer -- "writes" --> mrc_table
+  mrc_table -- "feeds" --> history_loader
+```
+
+[[phase-05-4-bug-a-calibration-migration]]
+
 ## Related protocols
 
 - Engineering Protocol #1 — LLM Wiki. Every research / decision / postmortem

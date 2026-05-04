@@ -2982,3 +2982,12 @@ edges:
   # prevention now lives entirely in the _trade_consumes_order skip-condition
   # at the top of the loop.
   - {from: brain.backtest.replay, to: brain.fill_model.predict, type: depends-on, notes: "Phase 05.3 D3: queue uncertainty is encoded in the fill model's p_fill term (consumed via decision.engine.evaluate), NOT as a hard gate at _detect_inter_event_fills. Dropping the queue_ahead_yu==0 precondition removes the catch-22 that previously trapped fills behind a dead trade handler."}
+
+  # ── Phase 05.4-01 Bug A — operator calibration migration + row insert script ─
+  - id: scripts.insert_operator_calibration_rows_phase054
+    type: external
+    path: scripts/insert_operator_calibration_rows_phase054.py
+    notes: "Phase 05.4-01 Bug A: idempotently insert prior+current operator calibration rows for BINANCE-ETHUSDT-25SEP2026 after applying Alembic migration 0008. Prior row: effective_at_utc=2026-03-15, long_side_split=0.327. Current row: effective_at_utc=2026-04-23, long_side_split=0.760. Idempotency via SELECT pre-check (no UNIQUE constraint on the table). [[phase-05-4-bug-a-calibration-migration]]"
+
+  - {from: scripts.insert_operator_calibration_rows_phase054, to: brain.state.writers.market_reward_calibration, type: calls, notes: "Phase 05.4-01 Bug A: calls insert_market_reward_calibration() — preserves PROTO-02 single-writer discipline; sqlite_writer_lint.py enforces no raw INSERT INTO market_reward_calibration in this file."}
+  - {from: scripts.insert_operator_calibration_rows_phase054, to: state.market_reward_calibration, type: writes, notes: "Phase 05.4-01 Bug A: inserts prior-epoch (effective_at_utc=2026-03-15) + current-epoch (effective_at_utc=2026-04-23) operator rows. Data flows into _load_operator_calibration_history -> _calibration_at_chain_ts in Plan 04 binding re-run."}
