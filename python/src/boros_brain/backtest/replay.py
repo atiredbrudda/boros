@@ -788,6 +788,7 @@ class ReplayEngine:
                     "fit_status_fill": out.fit_status_fill,
                     "fit_status_loss": out.fit_status_loss,
                     "voluntary_cancel_branch": out.voluntary_cancel_branch,
+                    "pnl_pendle": 0.0,  # Bug D fix (Phase 05.4-03): explicit zero for non-FILL rows
                 }
             )
             decisions.append(out)
@@ -835,7 +836,7 @@ class ReplayEngine:
         try:
             part_dir.mkdir(parents=True, exist_ok=True)
             part_path = part_dir / f"part_{self._decision_log_part_idx:04d}.parquet"
-            df = pl.DataFrame(entries)
+            df = pl.DataFrame(entries, schema_overrides={"pnl_pendle": pl.Float64})  # Bug D fix (Phase 05.4-03)
             df.write_parquet(str(part_path))
             self._decision_log_part_idx += 1
             if not final:
