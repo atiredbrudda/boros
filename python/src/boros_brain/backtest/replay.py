@@ -44,6 +44,9 @@ from .exceptions import EmptyCompetitionPoolError
 from .schemas import BacktestRunOutput, ReplayOutput
 from .synthetic_orders import SyntheticOrder, SyntheticOrderLedger
 
+# Fill-model refit import — lazy inside run() to avoid circular import at module load.
+# Usage: await refit_once(config, run_id, current_chain_ts=<int>)
+
 log = structlog.get_logger(__name__)
 
 # Re-export so tests can import from this module directly.
@@ -183,6 +186,14 @@ class ReplayEngine:
         # [[ship-gate-bug-6-epoch-keyed-calibration]]
         self._calibration_history: list[dict[str, Any]] | None = None
         self._calibration_pre_history_warned: bool = False
+
+        # Phase 05.4-04 Bug C end-to-end integration: fill_model refit cadence tracker.
+        # The replay engine calls refit_once(config, run_id, current_chain_ts=chain_ts)
+        # at startup and every refit_cadence_s seconds of chain-time, bounding the fit
+        # window to current_chain_ts so no future data leaks into the model.
+        # _last_refit_chain_ts = None means "not yet refitted at all".
+        # [[phase-05-4-bug-c-look-ahead-fix]]
+        self._last_refit_chain_ts: int | None = None
 
     # ─────────────────────────────────────────────────────────────────────────
     # Public API
@@ -342,6 +353,8 @@ class ReplayEngine:
         if _sim_duration_s > 0:
             for i in range(_sim_duration_s):
                 sim_ts = _base_ts + i
+                # Phase 05.4-04 Bug C integration: periodic refit in sim path too.
+                await self._maybe_refit_fill_model(sim_ts)
                 await self._maybe_emit_tick(sim_ts, calib)
             self._finalize_output(calib)
             return self.output
@@ -359,6 +372,12 @@ class ReplayEngine:
         if seed_from_config and _n_synthetic_orders == 0:
             self._seed_initial_synthetic_order(int(first_evt["blockTimestamp"]))
 
+        # Phase 05.4-04 Bug C integration: initial fill_model refit bounded to the
+        # replay window start (first event's chain_ts). Subsequent refits fire every
+        # refit_cadence_s seconds inside the loop via _maybe_refit_fill_model.
+        # [[phase-05-4-bug-c-look-ahead-fix]]
+        await self._maybe_refit_fill_model(int(first_evt["blockTimestamp"]))
+
         # Phase 05.2 Wave 4 / Bug #4 fix: replace the raw event loop with
         # _iter_chain_seconds so that _maybe_emit_tick fires at 1 Hz between
         # consecutive real trade events, not only ON trade events.
@@ -369,6 +388,11 @@ class ReplayEngine:
             if evt is not None:
                 # Real trade event: anchor snapshot + handle fills.
                 self._maybe_anchor_snapshot(chain_ts, evt)
+            # Phase 05.4-04 Bug C integration: periodic fill_model refit bounded to
+            # current chain_ts. Fires at most once per refit_cadence_s of chain-time.
+            # The initial refit (above) already set _last_refit_chain_ts, so this
+            # fires only when a full cadence window has elapsed.
+            await self._maybe_refit_fill_model(chain_ts)
             await self._maybe_emit_tick(chain_ts, calib)
             if evt is not None:
                 # Bug #4b / Wave 0 E4 verdict sim_bug_under_counting:
@@ -386,6 +410,42 @@ class ReplayEngine:
     # ─────────────────────────────────────────────────────────────────────────
     # Internal helpers
     # ─────────────────────────────────────────────────────────────────────────
+
+    async def _maybe_refit_fill_model(self, current_chain_ts: int) -> None:
+        """Refit fill_model if refit_cadence_s seconds of chain-time have passed.
+
+        Phase 05.4-04 Bug C end-to-end integration. Calls
+        ``fill_model.refit_loop.refit_once(config, run_id, current_chain_ts=<ts>)``
+        at startup and every ``config.fill_model.refit_cadence_s`` seconds of
+        chain-time so the model is never fitted on data beyond the current tick.
+
+        Errors are caught and logged — the same pattern as run_fill_model_refit_loop —
+        so a single bad fit window does not abort the replay.
+
+        [[phase-05-4-bug-c-look-ahead-fix]]
+        """
+        from ..fill_model.refit_loop import refit_once
+
+        refit_cadence_s = int(getattr(self.config.fill_model, "refit_cadence_s", 900))
+        if self._last_refit_chain_ts is None or (current_chain_ts - self._last_refit_chain_ts) >= refit_cadence_s:
+            try:
+                await refit_once(
+                    self.config,
+                    self.run_id,
+                    current_chain_ts=int(current_chain_ts),
+                )
+                self._last_refit_chain_ts = int(current_chain_ts)
+                log.debug(
+                    "backtest.replay.fill_model_refit",
+                    current_chain_ts=current_chain_ts,
+                    refit_cadence_s=refit_cadence_s,
+                )
+            except Exception as exc:  # noqa: BLE001 — do not abort replay on refit failure
+                log.warning(
+                    "backtest.replay.fill_model_refit_failed",
+                    current_chain_ts=current_chain_ts,
+                    err=str(exc),
+                )
 
     def _seed_initial_synthetic_order(self, placed_at_ts: int) -> bool:
         """Seed ONE outer-CLO-edge synthetic order from config.markets[0].
