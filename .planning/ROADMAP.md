@@ -18,6 +18,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: Loss & Reward-Share Models + Sizing** - Empirical `E[loss|fill]`, capped pro-rata reward share with operator-manual `E_liq_per_epoch` calibration (LOCKED D-01 supersedes live-polling assumption A5), sizing optimizer. **COMPLETE 2026-04-25** — 4/4 plans, 7/7 verified.
 - [x] **Phase 4: Decision Engine + Predictive Circuit Breakers** - EV cancel rule wired over the three input models; ten predictive breakers with exclusive KILL authority. **COMPLETE 2026-04-26** — 8/8 plans (6 original + 2 gap-closure 04-07/04-08), 7/7 verified after re-verification; full Phase-4 pytest greenrun captured (311 passed). One known-flake hang carried to Phase 5 Wave 0 (test-fixture issue, not regression).
 - [x] **Phase 5: Event-Driven Backtest (Ship-Gate)** - `eventIndex`-ordered, queue-aware, AMM-aware replay with cancel-latency sweep; bootstrap 5th-percentile ship-gate against alt-yield. Wave-0 prerequisite: fix carried ZMQ test-fixture hang + add `pytest-timeout`. (completed 2026-05-04)
+- [ ] **Phase 05.5: Predict-Layer Look-Ahead + Fill Multi-Close Fixes (INSERTED 2026-05-06)** - Fix two engine bugs blocking every binding ship-gate verdict: (1) predict-side look-ahead in `get_latest_fit` / `get_latest_loss_grid` (no `current_chain_ts` filter on artifact retrieval; future-dated rows from prior runs poison every prediction in a historical replay); (2) fill multi-close in `replay.py` (1 fill schedules 11 close timers in same Arbitrum block). Re-run baseline-only ship-gate; classify against the unchanged Phase 05.3 band JSON. Mini-plan: no sweep / perturbation / contour scope.
 - [ ] **Phase 6: Execution Layer (TypeScript hands)** - Dual-wallet + pre-signed cancel calldata + WebSocket fill listener + gas monitor; hot path stays in-process.
 - [ ] **Phase 7: Paper Trading (2–4 Weeks)** - Live feeds, no capital; phantom fills logged, backtest reconciled; divergence > 1σ blocks live promotion.
 - [ ] **Phase 8: Live Rollout** - $100 collateral, one market, one side, protocol-minimum order size, 2-week observation window; weekly P&L reconciliation.
@@ -291,6 +292,43 @@ Decimal phases appear between their surrounding integers in numeric order.
 - `[[pendle-lo-reward-formula-verified]]` Status: Current — PARTIAL
 - `[[dapp-apr-reconciliation-2026-04-30]]` Status: Current
 - `[[phase-05-3-bugs-discovered-during-t6]]` Status: Current — load-bearing input
+
+**UI hint**: no
+
+### Phase 05.5: Predict-Layer Look-Ahead + Fill Multi-Close Fixes (INSERTED 2026-05-06) — UNBLOCKS BINDING VERDICT
+**Goal**: Land the minimal engine fixes needed to produce a clean binding ship-gate verdict on real historical data, then re-run a baseline-only ship-gate (no sweeps, no perturbation, no contour). Two cancelled binding runs (PID 18460 / `01KQTMW2VE7HF408T4V6XV5TDW` and PID 49950 / `01KQYNPPE2CB46414WKHEGCZP5`) both produced `annualized_pnl_pct = 0.0` on every cancel_latency child because of look-ahead bias at the *predict* layer that Phase 05.4-03 (`d954bc5`) did not address — that fix bounded the *write* path of fill_model refits, but the *read* paths (`get_latest_fit`, `get_latest_loss_grid`) have no `current_chain_ts` filter and silently treat future-dated artifacts as fresh (`*_age_s = 0.0` branch in `predict.py:92-106` and `expected_loss.py:101-111`). The fill multi-close bug (`replay.py` schedules 11 closes per fill due to same-block re-firing after `queue_ahead_yu` zeroes) is co-scoped because it inflates fill loss ~11× in any prediction that does realize a fill.
+
+**Depends on**: Phase 05.4 (Bug A/B/C-write/D fixes landed); diagnosis report at `.planning/debug/phase-05-4-look-ahead-at-predict-layer.md`
+
+**Requirements**: BACK-07 (re-evaluation, fill-detection branch); inherits classification thresholds from Phase 05.3 Plan 02 T4
+
+**Success Criteria** (what must be TRUE):
+  1. **Predict-layer look-ahead fix lands at both layers.** `get_latest_fit` and `get_latest_loss_grid` accept `current_chain_ts: int | None = None`; when provided, SQL filters `WHERE *_window_end_ts <= ?`. `predict.py` and `expected_loss.py` pass `req.current_chain_ts` through. Phase-4 contract docstrings updated to declare the new bound. RED test (persist two artifacts at later windows, request prediction at earlier `current_chain_ts`, assert older artifact returned) fails on HEAD and passes after fix. Live-brain regression (`current_chain_ts=None` → unchanged behavior) passes.
+  2. **Negative-control regression: `predict_future_dated_fit` and `loss_model.future_dated_grid` warning counts drop to 0 in a baseline backtest run.** Currently 266,740 each; post-fix should be 0.
+  3. **Fill multi-close fix lands.** `replay.py._handle_trade_event` tracks `_pending_close_order_ids: set[str]` and skips orders already in the set for the rest of the block; cleared on tick boundary. RED test (single fill in a multi-event block produces exactly 1 close, not N) fails on HEAD and passes after fix.
+  4. **Baseline ship-gate re-run produces a real `ship_gate_verdict.json` with `n_fills` consistent with the engine state and `p5_annualized_pnl` non-zero.** No cancel_latency / competition / forfeit_branch / perturbation children run.
+  5. **Verdict classification (read from `var/reports/expected_verdict_band_2026-04-30.json` `classification_rule` block):**
+     - `p5 ∈ [pass_lo=0.42, pass_hi=18.10]` → **PASS — within band**, halt-lift candidate.
+     - `p5 < fail_lo=0.0` → **FAIL** with kill report.
+     - else (between 0 and 0.42, or above 18.10) → **FLAG**, route to a Phase 05.6 sixth-bug investigation BEFORE lifting halt.
+  6. **Co-commit hygiene:** wiki pages filed (`[[fill-model-predict-look-ahead-read-path]]` Status: Current; superseded `[[fill-model-predict-contract]]` if affected); architecture diagram drift check passes; SUMMARY documents which sites were enumerated as part of the contamination-class scope per `feedback_contamination_class_bugs.md`.
+
+**Out of scope (explicit)**:
+  - cancel_latency, competition, forfeit_branch sweeps — not run; the verdict is baseline-only this cycle.
+  - perturbation grid — not run. The uncommitted `_PERTURBATION_WHITELIST` in `python/src/boros_brain/backtest/perturbation.py` working tree is decided in this plan: either committed with co-commits or reverted; not exercised either way.
+  - contour_2d — not run.
+  - Secondary `fill_model.refit_failed` "cannot write 'Object' datatype" empty-features-frame polars bug at `features.py:296` — non-fatal; defer to a follow-up phase unless trivially in path during the predict-fix RED→GREEN.
+
+**Plans**: TBD via `/gsd-plan-phase 05.5`. Expected shape: 2 sequential plans (predict-layer fix → multi-close fix → baseline re-run + classify), or 3 if multi-close is wave-parallel with predict-layer.
+
+**Inherited artifacts (do NOT re-derive)**:
+  - Phase 05.4 commits (Bug A/B/C-write/D): `87c677c`, `c0b3342`, `d954bc5`, `5417c93`, `eea5b7e`, `696a0e8`
+  - `.planning/debug/phase-05-4-look-ahead-at-predict-layer.md` — full diagnosis with file:line citations, log evidence (266k future-dated reads, 0 fills), TDD scaffolding
+  - `var/reports/expected_verdict_band_2026-04-30.json` — band + classification_rule (pass_lo=0.42, pass_hi=18.10, fail_lo=0.0)
+  - `[[expected-verdict-band-2026-04-30]]` Status: Current
+  - `[[fill-path-repair-2026-04-30]]` Status: Current
+  - `[[phase-05-3-bugs-discovered-during-t6]]` Status: Current — load-bearing input
+  - `feedback_contamination_class_bugs.md` (memory) — class-of-bug enumeration discipline
 
 **UI hint**: no
 
