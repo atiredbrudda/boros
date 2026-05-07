@@ -515,6 +515,8 @@ See [[fill-model-library-decision-tick-vs-statsmodels]], [[covariate-selection-v
 
 - **Bug C fix (Phase 05.4-03):** `fill_model.refit_loop.refit_once` accepts `current_chain_ts: int | None = None` keyword. Backtest replay passes the current tick's chain_ts to bound `window_end_ts <= current_chain_ts`. Live-mode callers pass `None` (unchanged behavior). Read-side guard at `fill_model/predict.py:91-106` becomes dormant in backtest mode. See [[phase-05-4-bug-c-look-ahead-fix]].
 
+- **Predict-layer look-ahead fix (Phase 05.5-01, 2026-05-07):** the chain-ts upper bound is now applied at the SQL layer of both retrievals — `state.writers.fill_model_fits.get_latest_fit` and `state.writers.loss_grid_artifacts.get_latest_loss_grid` accept a keyword-only `current_chain_ts: int | None = None` (`None` = live-mode unbounded SELECT, byte-identical to HEAD; `int` = backtest mode `AND fit_window_end_ts <= ?` / `AND window_end_ts <= ?`). Production read sites — `fill_model.predict`, `loss_model.expected_loss`, and both `decision.breakers.loss_fit_degraded` reads (the public call AND the private `_get_any_latest_loss_grid` fallback, RESEARCH §Pitfall 3 read site #4) — now plumb `req.current_chain_ts`. Operator paths (`fill_model.cli:142`, `fill_model.report:40`) keep the default `None`. Phase-4 contract amendment (Option A): the post-filter `fit_age_s < 0` / `grid_age_s < 0` branch raises `RuntimeError` (was: silent `*_age_s = 0.0` coerce). See `[[fill-model-predict-look-ahead-read-path]]` and `[[loss-model-expected-loss-look-ahead-read-path]]`.
+
 ## What's declared in `docs/architecture.yml`
 
 The YAML manifest enumerates:
