@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: milestone
 status: executing
-stopped_at: Phase 05.5 scaffolded. Two binding ship-gate runs (PID 18460 + 49950, ~46h total) returned 0.0% on every cancel_latency child due to predict-layer look-ahead bug — `get_latest_fit` / `get_latest_loss_grid` have no `current_chain_ts` filter; predict.py / expected_loss.py silently coerce future-dated artifacts to fresh. Diagnosis at `.planning/debug/phase-05-4-look-ahead-at-predict-layer.md`. Phase 05.5 is a mini-plan: fix predict-layer + fix fill multi-close + re-run baseline only. Run `/gsd-plan-phase 05.5`.
-last_updated: "2026-05-06T22:30:00.000Z"
+stopped_at: Phase 05.4 ready to plan. CONTEXT.md pins inherited artifacts from 05.3 + bug catalog + sequential plan structure (01 → 02 → 03 parallel → 04 verdict + escape valve to 05.5).
+last_updated: "2026-05-07T07:14:57.309Z"
 progress:
-  total_phases: 11
+  total_phases: 12
   completed_phases: 7
-  total_plans: 44
+  total_plans: 47
   completed_plans: 43
-  percent: 98
+  percent: 91
 ---
 
 # Project State
@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-24)
 
 **Core value:** Earn net-positive yield on $100 collateral from the Boros Limit Order Liquidity Rewards pool that beats stablecoin alternatives, after gas and fill-loss — on a live, single-market deployment. If -EV, detect cheaply and kill; do not limp.
-**Current focus:** Phase 05.5 — predict-layer-look-ahead-and-fill-multi-close (mini-plan, baseline-only re-run)
+**Current focus:** Phase 05.5 — predict-layer-look-ahead-and-fill-multi-close
 
 ## Current Position
 
-Phase: 05.4 (verdict-prerequisites-and-binding-rerun) — EXECUTING
-Plan: 4 of 4
+Phase: 05.5 (predict-layer-look-ahead-and-fill-multi-close) — EXECUTING
+Plan: 1 of 3
 Plans: 0 of 4 drafted. CONTEXT.md scaffolded with inherited artifacts from Phase 05.3 + sequential plan structure (05.4-01 → 05.4-02 → 05.4-03 → 05.4-04).
-Status: Ready to execute
+Status: Executing Phase 05.5
 
 Progress: [██████████] 98%
 
