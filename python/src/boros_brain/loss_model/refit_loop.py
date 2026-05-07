@@ -32,19 +32,41 @@ def _get_loss_model_config(config: BotConfig) -> LossModelConfig:
     return getattr(config, "loss_model", None) or LossModelConfig()
 
 
-async def refit_once(config: BotConfig, run_id: str) -> None:
+async def refit_once(
+    config: BotConfig,
+    run_id: str,
+    *,
+    current_chain_ts: int | None = None,
+) -> None:
     """One refit across all (market_id, side) in config.markets.
 
     Uses ``await chain_time.now_cached()`` for the window end-timestamp per
     CLAUDE.md INFRA-14 — wall-clock is forbidden in loss_model/ (lint extension
     lands in Plan 03-04; pre-emptive discipline).
+
+    Args:
+        config: BotConfig
+        run_id: ULID
+        current_chain_ts: Optional chain_ts upper-bound for the fit window. None = live mode
+            (uses chain_time.now_cached). Backtest replay would pass the current tick's
+            chain_ts to prevent look-ahead bias — Phase 05.5-02 mirror of d954bc5
+            (fill_model.refit_once Phase 05.4-03 Bug C). The backtest engine does NOT
+            currently invoke loss_model.refit_once (loss_model is live-mode-only today;
+            backtest uses the expected_loss read path with stored grids), but this
+            kwarg is wired now to preserve write-side discipline for future backtest
+            invocations and to prevent live-mode clock-rollback from poisoning
+            ``state.loss_grid_artifacts`` with future-dated window_end_ts.
+            See [[loss-model-expected-loss-look-ahead-read-path]].
     """
     if not config.markets:
         log.info("loss_model.refit_skipped_no_markets", run_id=run_id)
         return
 
-    now_s = await chain_time.now_cached()
-    window_end_ts = int(now_s)
+    if current_chain_ts is None:
+        now_s = await chain_time.now_cached()
+        window_end_ts = int(now_s)
+    else:
+        window_end_ts = int(current_chain_ts)
     window_start_ts = window_end_ts - int(_get_loss_model_config(config).window_days * 86400)
 
     sqlite_path = Path(str(config.infra.sqlite_path))
