@@ -70,18 +70,39 @@ def insert_loss_grid_artifact(sqlite_path: Path, artifact: LossGridArtifact) -> 
     )
 
 
-def get_latest_loss_grid(sqlite_path: Path, market_id: str, side: str) -> LossGridArtifact | None:
-    """Return the most-recent-by-window_end_ts artifact for (market_id, side)."""
+def get_latest_loss_grid(
+    sqlite_path: Path,
+    market_id: str,
+    side: str,
+    *,
+    current_chain_ts: int | None = None,
+) -> LossGridArtifact | None:
+    """Return the most-recent-by-window_end_ts artifact for (market_id, side).
+
+    Args:
+        sqlite_path: Path to state SQLite DB.
+        market_id: Market identifier (e.g. ``BINANCE-ETHUSDT-25SEP2026``).
+        side: ``"long"`` or ``"short"``.
+        current_chain_ts: Optional chain-time upper bound. ``None`` = live mode
+            (unbounded SELECT — absolute latest by ``window_end_ts DESC``).
+            Backtest replay MUST pass the current tick's ``chain_ts`` to prevent
+            look-ahead bias from cross-run artifact accumulation. See
+            ``[[loss-model-expected-loss-look-ahead-read-path]]``.
+    """
+    base_sql = (
+        "SELECT run_id, market_id, side, window_start_ts, window_end_ts, "
+        "fit_status, depth_bucket_edges, tau_bucket_edges_days, "
+        "cells_json, event_index_coverage, created_at "
+        "FROM loss_grid_artifacts "
+        "WHERE market_id = ? AND side = ?"
+    )
+    params: tuple[object, ...] = (market_id, side)
+    if current_chain_ts is not None:
+        base_sql += " AND window_end_ts <= ?"
+        params = (market_id, side, int(current_chain_ts))
+    base_sql += " ORDER BY window_end_ts DESC LIMIT 1"
     with open_connection(sqlite_path) as conn:
-        row = conn.execute(
-            """SELECT run_id, market_id, side, window_start_ts, window_end_ts,
-                      fit_status, depth_bucket_edges, tau_bucket_edges_days,
-                      cells_json, event_index_coverage, created_at
-               FROM loss_grid_artifacts
-               WHERE market_id = ? AND side = ?
-               ORDER BY window_end_ts DESC LIMIT 1""",
-            (market_id, side),
-        ).fetchone()
+        row = conn.execute(base_sql, params).fetchone()
     if row is None:
         return None
     cells_payload = json.loads(row[8])

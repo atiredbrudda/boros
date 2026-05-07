@@ -89,12 +89,25 @@ class LossFitDegradedBreaker(Breaker):
         market_id: str = config.markets[0].market_id if config.markets else ""
         side: str = getattr(config, "side", "long")
 
-        artifact = get_latest_loss_grid(sqlite_path, market_id, side)
+        # Chain-ts upper bound — Phase 05.5 look-ahead fix at read layer.
+        # Plumb the breaker's existing current_chain_ts parameter through to
+        # both the production read AND the private fallback helper. RESEARCH
+        # §Pitfall 3 — the private helper is the easy-to-miss read site #4.
+        artifact = get_latest_loss_grid(
+            sqlite_path,
+            market_id,
+            side,
+            current_chain_ts=current_chain_ts,
+        )
 
         # If no artifact exists for this market+side, try with empty market_id
         # fallback (handles test environments where markets=[] and market_id="").
         if artifact is None and market_id == "":
-            artifact = _get_any_latest_loss_grid(sqlite_path, side)
+            artifact = _get_any_latest_loss_grid(
+                sqlite_path,
+                side,
+                current_chain_ts=current_chain_ts,
+            )
 
         if artifact is None:
             log.debug(
@@ -134,27 +147,45 @@ class LossFitDegradedBreaker(Breaker):
         )
 
 
-def _get_any_latest_loss_grid(sqlite_path: Path, side: str) -> Any:
+def _get_any_latest_loss_grid(
+    sqlite_path: Path,
+    side: str,
+    *,
+    current_chain_ts: int | None = None,
+) -> Any:
     """Read latest loss_grid_artifacts row for the given side, any market.
 
     Fallback for test environments where config.markets is empty and market_id=""
     does not match any real market_id in the DB.
+
+    Args:
+        sqlite_path: Path to state SQLite DB.
+        side: ``"long"`` or ``"short"``.
+        current_chain_ts: Optional chain-time upper bound. ``None`` = unbounded
+            SELECT. Backtest replay MUST supply the current tick's ``chain_ts``
+            to prevent look-ahead bias. RESEARCH §Pitfall 3 — this is the easy-
+            to-miss read site #4. See
+            ``[[loss-model-expected-loss-look-ahead-read-path]]``.
     """
     import json
 
     from boros_brain.loss_model.schemas import LossGridArtifact, LossGridCell
     from boros_brain.state.db import open_connection
 
+    base_sql = (
+        "SELECT run_id, market_id, side, window_start_ts, window_end_ts, "
+        "fit_status, depth_bucket_edges, tau_bucket_edges_days, "
+        "cells_json, event_index_coverage, created_at "
+        "FROM loss_grid_artifacts "
+        "WHERE side = ?"
+    )
+    params: tuple[object, ...] = (side,)
+    if current_chain_ts is not None:
+        base_sql += " AND window_end_ts <= ?"
+        params = (side, int(current_chain_ts))
+    base_sql += " ORDER BY window_end_ts DESC LIMIT 1"
     with open_connection(sqlite_path) as conn:
-        row = conn.execute(
-            """SELECT run_id, market_id, side, window_start_ts, window_end_ts,
-                      fit_status, depth_bucket_edges, tau_bucket_edges_days,
-                      cells_json, event_index_coverage, created_at
-               FROM loss_grid_artifacts
-               WHERE side = ?
-               ORDER BY window_end_ts DESC LIMIT 1""",
-            (side,),
-        ).fetchone()
+        row = conn.execute(base_sql, params).fetchone()
     if row is None:
         return None
     cells_payload = json.loads(row[8])
