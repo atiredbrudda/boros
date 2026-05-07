@@ -885,6 +885,7 @@ nodes:
     process: brain
     path: python/src/boros_brain/loss_model/refit_loop.py
     public_functions: [refit_once, run_loss_model_refit_loop]
+    notes: "Phase 05.5-02: refit_once(*, current_chain_ts: int | None = None) — when set, bounds window_end_ts by current_chain_ts (write-side mirror of d954bc5 Phase 05.4-03 Bug C from fill_model.refit_loop). None default = live mode (uses chain_time.now_cached). loss_model is live-mode-only today; backtest uses the expected_loss read path with stored grids. [[loss-model-expected-loss-look-ahead-read-path]]"
   - id: brain.loss_model.ou_parametric
     type: module
     process: brain
@@ -1452,6 +1453,7 @@ nodes:
     process: brain
     path: python/src/boros_brain/backtest/replay.py
     public_functions: []
+    notes: "Phase 05.5-02: per-tick guard `_pending_close_order_ids: set[str]` on ReplayEngine prevents 1 fill from scheduling N closes when one Arbitrum block contains N trade events all satisfying the queue-zero condition (`evt_size_yu >= queue_ahead_yu`). The guard is cleared in `_handle_trade_event` on tick-boundary advance (NOT in `_maybe_emit_tick`, which runs BEFORE `_handle_trade_event` per replay.py:386-402). Both `_handle_trade_event` and `_detect_inter_event_fills` consult the set so the rate-crossing fallback path does not double-fire. [[fill-multi-close-per-tick-guard-2026-05-06]]"
 
   # ── Phase 5 Wave 2 sweep dispatchers — Plan 05-04 ──────────────────────
   # Note: brain.backtest.sweeps (__init__.py) is skipped by architecture_lint.py
