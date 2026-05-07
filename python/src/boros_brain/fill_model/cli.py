@@ -139,6 +139,9 @@ def main(argv: list[str] | None = None) -> int:
             from ..state.writers.fill_model_fits import get_latest_fit
             from .predict import FillModelNoFreshFitError, PredictInput, predict
 
+            # Operator path — current_chain_ts=None correct (wall-clock fallback per
+            # [[fill-model-predict-look-ahead-read-path]]). Site #5 in Phase 05.5
+            # read-site enumeration (default-None preserves byte-identical behavior).
             fit = get_latest_fit(Path(config.infra.sqlite_path), args.market, args.side)
             if fit is None:
                 print("FillModelNoFreshFitError: no fit exists", file=sys.stderr)

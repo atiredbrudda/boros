@@ -6,9 +6,17 @@ Contract:
     - Fit older than fit_max_staleness_s → FillModelNoFreshFitError.
     - Monotone-decreasing in depth_from_mark_ticks (via explicit depth penalty).
     - Monotone-decreasing in queue_ahead_wei (via queue penalty).
+    - Backtest replay: ``req.current_chain_ts`` is plumbed into ``get_latest_fit`` as
+      the SQL upper bound on ``fit_window_end_ts`` (Phase 05.5). Future-dated artifacts
+      from cross-run accumulation are now invisible at the read layer.
+    - Phase-4 contract amendment (Option A, Phase 05.5): the post-filter
+      ``fit_age_s < 0`` branch is unreachable from a correct backtest. If it fires,
+      it raises ``RuntimeError`` (instead of the old silent ``fit_age_s = 0.0``
+      coerce) — surfaces real clock-rollback or stored-artifact corruption.
 
-Design-locked. Any change to this signature is a Phase-4 breaking change.
-See [[fill-model-predict-contract]] and [[known-issues-nan-covariate-silent-fallback-do-not]].
+Design-locked v2 — see [[fill-model-predict-look-ahead-read-path]].
+See [[fill-model-predict-contract]] (historical) and
+[[known-issues-nan-covariate-silent-fallback-do-not]].
 """
 
 from __future__ import annotations
@@ -76,8 +84,13 @@ def predict(req: PredictInput, *, sqlite_path: Path, config: BotConfig) -> Predi
         )
         raise FillModelStaleFeatureError(missing_features=missing)
 
-    # 2. Load latest fit
-    fit = get_latest_fit(sqlite_path, req.market_id, req.side)
+    # 2. Load latest fit (chain-ts upper bound — Phase 05.5 look-ahead fix at read layer)
+    fit = get_latest_fit(
+        sqlite_path,
+        req.market_id,
+        req.side,
+        current_chain_ts=req.current_chain_ts,
+    )
     if fit is None:
         log.warning(
             "fill_model.no_fresh_fit",
@@ -90,20 +103,28 @@ def predict(req: PredictInput, *, sqlite_path: Path, config: BotConfig) -> Predi
     # 3. Staleness check
     fit_age_s = float(req.current_chain_ts - fit.fit_window_end_ts)
     if fit_age_s < 0:
-        # fit_window_end_ts is in the future relative to current_chain_ts —
-        # possible if the chain clock rolled back or a bootstrap artifact was
-        # persisted with a future window end (e.g. drifted machine clock).
-        # Log a warning and treat as age=0 (fresh). Do not raise — the operator
-        # warning is the appropriate signal here.
-        log.warning(
-            "fill_model.predict_future_dated_fit",
+        # Phase 05.5 contract amendment (Option A): post-fix this branch is
+        # unreachable from a correct backtest because the SQL filter excludes
+        # fit_window_end_ts > current_chain_ts. Remaining triggers are real
+        # bugs — live-mode clock rollback, or a bootstrap artifact persisted
+        # with a future window end. Surface them via RuntimeError instead of
+        # the old silent fit_age_s = 0.0 coerce. See
+        # [[fill-model-predict-look-ahead-read-path]].
+        log.error(
+            "fill_model.predict_negative_age_after_filter",
             market_id=req.market_id,
             side=req.side,
             fit_window_end_ts=fit.fit_window_end_ts,
             current_chain_ts=req.current_chain_ts,
             fit_age_s=fit_age_s,
         )
-        fit_age_s = 0.0
+        raise RuntimeError(
+            f"negative fit_age_s={fit_age_s} after chain-ts filter — "
+            f"clock skew or stored artifact corruption "
+            f"(market_id={req.market_id}, side={req.side}, "
+            f"fit_window_end_ts={fit.fit_window_end_ts}, "
+            f"current_chain_ts={req.current_chain_ts})"
+        )
     if fit_age_s > config.fill_model.fit_max_staleness_s:
         log.warning(
             "fill_model.no_fresh_fit",
