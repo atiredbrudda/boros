@@ -72,12 +72,18 @@ def fit_market_side(
 
     Args:
         window_end_ts: Optional epoch-seconds upper bound for the fit window.
-            When provided, the degraded artifact records this as fit_window_end_ts
-            instead of 0 (sentinel). This prevents the staleness check in predict()
-            from rejecting the degraded artifact as too old (Phase 05.5 fix —
-            the sentinel 0 causes fit_age_s ~ 56 years >> fit_max_staleness_s=3600).
-            Callers in refit_loop MUST pass this; CLI / calibration callers without
-            a bounded window can omit it (sentinel behavior preserved).
+            When provided, this value is stored as fit_window_end_ts on ALL
+            artifact paths (empty-data degraded, fit-exception degraded, and
+            successful fit). This is critical for the refit-during-replay path:
+            the backtest advances current_chain_ts each cadence tick; without
+            window_end_ts the successful-fit path uses pdf["bin_start"].max()
+            which is anchored to the last real trade bin in the historical
+            parquet and does not advance between refits. All refits would then
+            upsert onto the same fit_window_end_ts key, leaving a single stale
+            row that is always 3600+ s old by the time predict() fires, causing
+            FillModelNoFreshFitError. Callers in refit_loop MUST pass this;
+            CLI / calibration callers without a bounded window can omit it
+            (sentinel behavior preserved for the degraded paths).
 
     Note: created_at=0 is a sentinel. artifact.write_fit_artifact stamps the
     real datetime.now(UTC) timestamp before the SQLite/parquet write.
@@ -146,10 +152,19 @@ def fit_market_side(
             reason="fit_exception",
             err=str(exc),
         )
+        # Phase 05.5 fix: use window_end_ts when provided so this artifact's
+        # fit_window_end_ts advances with each refit cadence tick (same as the
+        # empty-data path). Without this, the upsert key is stuck at a historical
+        # bin_start.max() and the single DB row is always stale.
+        exc_window_end = (
+            window_end_ts
+            if window_end_ts is not None
+            else (int(pdf["bin_start"].max()) if "bin_start" in pdf.columns else 0)
+        )
         artifact = FitArtifact(
             run_id=run_id,
             fit_window_start_ts=int(pdf["bin_start"].min()) if "bin_start" in pdf.columns else 0,
-            fit_window_end_ts=int(pdf["bin_start"].max()) if "bin_start" in pdf.columns else 0,
+            fit_window_end_ts=exc_window_end,
             market_id=market_id,
             side=side,
             covariate_whitelist=whitelist,
@@ -172,7 +187,20 @@ def fit_market_side(
     fit_status: Literal["ok", "degraded"] = "ok" if passes else "degraded"
 
     fit_window_start_ts = int(pdf["bin_start"].min()) if "bin_start" in pdf.columns else 0
-    fit_window_end_ts = int(pdf["bin_start"].max()) if "bin_start" in pdf.columns else 0
+    # Phase 05.5 fix: use window_end_ts when provided instead of pdf["bin_start"].max().
+    # During backtest replay, bin_start.max() is the last real trade bin in the
+    # historical parquet — it does NOT advance between refit cadence ticks because
+    # no new trades are appended to parquet during replay. Every refit therefore
+    # upserts onto the same fit_window_end_ts key (ON CONFLICT ... DO UPDATE), leaving
+    # a single DB row whose fit_window_end_ts equals the initial T0 value. At T+3610
+    # predict() computes fit_age_s = 3610 >> fit_max_staleness_s=3600 and raises
+    # FillModelNoFreshFitError. Using window_end_ts (= current_chain_ts at each cadence
+    # tick) creates a fresh row per refit and keeps fit_age_s bounded to refit_cadence_s.
+    fit_window_end_ts = (
+        window_end_ts
+        if window_end_ts is not None
+        else (int(pdf["bin_start"].max()) if "bin_start" in pdf.columns else 0)
+    )
     artifact = FitArtifact(
         run_id=run_id,
         fit_window_start_ts=fit_window_start_ts,
