@@ -59,6 +59,7 @@ def fit_market_side(
     event_index_coverage: Literal["full", "degraded"] = "full",
     *,
     persist: bool = True,
+    window_end_ts: int | None = None,
 ) -> FitArtifact:
     """Fit log λ = β₀ + β·x via statsmodels.GLM(Poisson, log, exposure).
 
@@ -68,6 +69,15 @@ def fit_market_side(
     would pollute state.fill_model_fits and silently degrade get_latest_fit()
     lookups. Returns the FitArtifact (never raises on sparse data — tags
     fit_status='degraded' instead).
+
+    Args:
+        window_end_ts: Optional epoch-seconds upper bound for the fit window.
+            When provided, the degraded artifact records this as fit_window_end_ts
+            instead of 0 (sentinel). This prevents the staleness check in predict()
+            from rejecting the degraded artifact as too old (Phase 05.5 fix —
+            the sentinel 0 causes fit_age_s ~ 56 years >> fit_max_staleness_s=3600).
+            Callers in refit_loop MUST pass this; CLI / calibration callers without
+            a bounded window can omit it (sentinel behavior preserved).
 
     Note: created_at=0 is a sentinel. artifact.write_fit_artifact stamps the
     real datetime.now(UTC) timestamp before the SQLite/parquet write.
@@ -82,11 +92,15 @@ def fit_market_side(
     needed_cols = whitelist + ["trade_count", "bin_duration_s"] + (["bin_start"] if "bin_start" in df.columns else [])
     pdf = pd.DataFrame({col: df[col].to_numpy() for col in needed_cols if col in df.columns})
     if pdf.empty:
-        # Emit a degraded artifact rather than raising — matches RESEARCH §Common Pitfalls #3
+        # Emit a degraded artifact rather than raising — matches RESEARCH §Common Pitfalls #3.
+        # Phase 05.5 fix: use window_end_ts (not 0 sentinel) when caller provides it, so that
+        # predict() staleness check (fit_age_s = current_chain_ts - fit_window_end_ts) does not
+        # treat the degraded artifact as infinitely stale and raise FillModelNoFreshFitError.
+        degraded_window_end = window_end_ts if window_end_ts is not None else 0
         artifact = FitArtifact(
             run_id=run_id,
             fit_window_start_ts=0,
-            fit_window_end_ts=0,
+            fit_window_end_ts=degraded_window_end,
             market_id=market_id,
             side=side,
             covariate_whitelist=whitelist,

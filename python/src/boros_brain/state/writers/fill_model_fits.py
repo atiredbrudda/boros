@@ -24,6 +24,22 @@ log = structlog.get_logger(__name__)
 __all__ = ["insert_fit_artifact", "get_latest_fit"]
 
 
+def _nan_to_sentinel(v: float | None, sentinel: float = -1.0) -> float | None:
+    """Return sentinel for NaN floats (SQLite NOT NULL columns reject NaN as NULL).
+
+    Used for log_likelihood, deviance, aic in degraded fit artifacts where these
+    are set to float('nan') as a placeholder. The sentinel -1.0 is unambiguous
+    (log-likelihoods are negative; AIC/deviance are non-negative for real fits).
+    NULL-able columns (gof_ks_pval, gof_lr_vs_null) are left None — they are
+    allowed NULL in the schema and never set to NaN by the caller.
+    """
+    import math
+
+    if v is None or math.isnan(v):
+        return sentinel
+    return v
+
+
 def insert_fit_artifact(sqlite_path: Path, artifact: FitArtifact) -> None:
     """Insert one fit artifact. Self-contained — manages its own connection."""
     with open_connection(sqlite_path) as conn:
@@ -61,9 +77,11 @@ def insert_fit_artifact(sqlite_path: Path, artifact: FitArtifact) -> None:
                 json.dumps(artifact.covariate_whitelist),
                 json.dumps(artifact.beta),
                 json.dumps(artifact.beta_stderr),
-                artifact.log_likelihood,
-                artifact.deviance,
-                artifact.aic,
+                # Phase 05.5 fix: NOT NULL columns reject float('nan') as NULL.
+                # Degraded artifacts carry NaN for these stats — coerce to sentinel.
+                _nan_to_sentinel(artifact.log_likelihood),
+                _nan_to_sentinel(artifact.deviance),
+                _nan_to_sentinel(artifact.aic),
                 artifact.n_observations,
                 1 if artifact.converged else 0,
                 artifact.fit_status,

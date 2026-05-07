@@ -27,6 +27,12 @@ log = structlog.get_logger(__name__)
 
 __all__ = ["refit_once", "run_fill_model_refit_loop"]
 
+# Resolve project root from __file__ so the sqlite_path is always absolute regardless
+# of the CWD at invocation time. This mirrors features.py and artifact.py conventions
+# and prevents the write going to python/state/state.sqlite when the CLI process is
+# launched from the python/ subdirectory. Phase 05.5 fix — same-database discipline.
+_REFIT_PROJECT_ROOT = Path(__file__).resolve().parents[4]  # boros_brain/fill_model → boros/
+
 
 async def refit_once(
     config: BotConfig,
@@ -71,14 +77,20 @@ async def refit_once(
                 )
                 # Step 2: load the parquet back into memory for the fit
                 df = pl.read_parquet(fs.path)
-                # Step 3: fit
+                # Step 3: fit — use absolute sqlite_path (Phase 05.5 fix: relative path
+                # resolves to python/state/state.sqlite when launched from python/ subdir,
+                # not to boros/state/state.sqlite where predict() reads from). Pass
+                # window_end_ts so degraded artifacts record correct fit_window_end_ts
+                # (sentinel 0 → fit_age_s ~ 56 years >> fit_max_staleness_s=3600 → crash).
+                sqlite_path_abs = _REFIT_PROJECT_ROOT / config.infra.sqlite_path
                 fit_market_side(
                     features_df=df,
                     market_id=mkt.market_id,
                     side=side,  # type: ignore[arg-type]  # str → Literal["long","short"]
                     config=config,
                     run_id=run_id,
-                    sqlite_path=Path(str(config.infra.sqlite_path)),
+                    sqlite_path=sqlite_path_abs,
+                    window_end_ts=window_end_ts,
                 )
             except Exception as exc:  # noqa: BLE001 — do not halt brain on per-market fit failure
                 log.exception(
