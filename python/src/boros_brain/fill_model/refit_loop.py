@@ -76,7 +76,11 @@ async def refit_once(
                     window_end_ts=window_end_ts,
                 )
                 # Step 2: load the parquet back into memory for the fit
-                df = pl.read_parquet(fs.path)
+                # hive_partitioning=False: the empty-feature path embeds
+                # window_end_ts=N in the directory name (Hive partition look),
+                # but the parquet file itself has no window_end_ts column.
+                # Polars raises "column not present in Hive schema" without this flag.
+                df = pl.read_parquet(fs.path, hive_partitioning=False)
                 # Step 3: fit — use absolute sqlite_path (Phase 05.5 fix: relative path
                 # resolves to python/state/state.sqlite when launched from python/ subdir,
                 # not to boros/state/state.sqlite where predict() reads from). Pass
