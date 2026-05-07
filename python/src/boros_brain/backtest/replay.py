@@ -195,6 +195,22 @@ class ReplayEngine:
         # [[phase-05-4-bug-c-look-ahead-fix]]
         self._last_refit_chain_ts: int | None = None
 
+        # Phase 05.5 Bug 2: per-tick guard preventing 1 fill from scheduling N
+        # closes when one Arbitrum block contains N trade events that all
+        # satisfy ``evt_size_yu >= queue_ahead_yu`` (which becomes 0.0 after
+        # the first event of the block flips the order's queue to zero).
+        # Cleared in ``_handle_trade_event`` when ``current_ts`` differs from
+        # ``_last_handle_trade_chain_ts`` — i.e., on tick-boundary advance.
+        # NOT cleared in ``_maybe_emit_tick`` because it runs BEFORE
+        # ``_handle_trade_event`` per the run() loop (replay.py:386-402);
+        # clearing there would re-trigger the bug. Per RESEARCH §Pitfall 5.
+        # Both ``_handle_trade_event`` and ``_detect_inter_event_fills``
+        # consult and update the set so the rate-crossing fallback path does
+        # not double-fire.
+        # [[fill-multi-close-per-tick-guard-2026-05-06]]
+        self._pending_close_order_ids: set[str] = set()
+        self._last_handle_trade_chain_ts: int | None = None
+
     # ─────────────────────────────────────────────────────────────────────────
     # Public API
     # ─────────────────────────────────────────────────────────────────────────
@@ -962,6 +978,15 @@ class ReplayEngine:
         clo_lower, clo_upper = self._resolved_clo_rate_fractions(market, current_ts)
 
         for order in list(self.synthetic_orders.in_flight()):
+            # Phase 05.5 Bug 2: skip orders already scheduled this tick by the
+            # _handle_trade_event call site. Provides a second, independent dedup
+            # signal that is robust to same-tick same-order re-checks even when
+            # the queue-zero ``_trade_consumes_order`` skip-condition below would
+            # otherwise miss (per RESEARCH §Pitfall 2). Both call sites consult
+            # the same set so the rate-crossing fallback path does not double-fire.
+            # [[fill-multi-close-per-tick-guard-2026-05-06]]
+            if order.order_id in self._pending_close_order_ids:
+                continue
             # Phase 05.3 D1: trade size now in YU (size_float). Null size_float
             # is a data error — binding-market parquet always populates size_float.
             evt_size_yu = float(evt.get("size_float") or 0.0)
@@ -1006,6 +1031,11 @@ class ReplayEngine:
                 # subsequent crossings on the same order will be skipped because
                 # `_trade_consumes_order` returns True (queue 0 ≤ any size).
                 self.synthetic_orders.update_queue_ahead(order.order_id, 0.0)
+                # Phase 05.5 Bug 2: record this order as already-scheduled for the
+                # current tick so subsequent same-tick events (handled by
+                # ``_handle_trade_event`` or further ``_detect_inter_event_fills``
+                # calls within the same tick) do not re-fire.
+                self._pending_close_order_ids.add(order.order_id)
                 log.debug(
                     "backtest.replay.inter_event_fill_detected",
                     order_id=order.order_id,
@@ -1481,13 +1511,34 @@ class ReplayEngine:
         NULL`` (per the ingester schema), so the prior wei-native comparison
         was structurally dead. Per [[fill-path-repair-2026-04-30]].
 
+        Phase 05.5 Bug 2: the per-tick guard set ``_pending_close_order_ids``
+        prevents one fill from scheduling N closes when one Arbitrum block
+        contains N trade events that all satisfy the queue-zero condition
+        (``evt_size_yu >= queue_ahead_yu``). The guard is cleared on
+        tick-boundary advance (``current_ts != _last_handle_trade_chain_ts``).
+        Per RESEARCH §Pitfall 5, clearing MUST happen here (not in
+        ``_maybe_emit_tick``) because the run() loop runs ``_maybe_emit_tick``
+        BEFORE ``_handle_trade_event`` (replay.py:386-402).
+        [[fill-multi-close-per-tick-guard-2026-05-06]]
+
         T-05-07: NEVER calls time.time() — current_ts is blockTimestamp from replay.
         """
+        # Phase 05.5 Bug 2: clear per-tick guard on tick-boundary advance.
+        if self._last_handle_trade_chain_ts != current_ts:
+            self._pending_close_order_ids.clear()
+            self._last_handle_trade_chain_ts = current_ts
+
         evt_rate = float(evt.get("rate") or 0.0)
         # Phase 05.3 D1: YU comparison. size_float is populated for every row in
         # the binding-market parquet; null is treated as "no fill possible" via 0.0.
         evt_size_yu = float(evt.get("size_float") or 0.0)
         for order in list(self.synthetic_orders.in_flight()):
+            # Phase 05.5 Bug 2: skip orders already scheduled this tick — same-block
+            # re-fire guard. Without this, every event in a same-block burst
+            # schedules a redundant close after the first event flips the queue
+            # to zero.
+            if order.order_id in self._pending_close_order_ids:
+                continue
             if self._trade_consumes_order(order, evt_rate, evt_size_yu):
                 sc = self.latency_scheduler.schedule(
                     fill_ts=float(current_ts),
@@ -1498,6 +1549,9 @@ class ReplayEngine:
                 self._scheduled_closes.append(sc)
                 # Mark queue_ahead as 0 YU — order is hit; remaining fills are scheduled.
                 self.synthetic_orders.update_queue_ahead(order.order_id, 0.0)
+                # Phase 05.5 Bug 2: record this order as already-scheduled for the
+                # current tick so subsequent same-block events do not re-fire.
+                self._pending_close_order_ids.add(order.order_id)
 
     def _trade_consumes_order(self, order: SyntheticOrder, evt_rate: float, evt_size_yu: float) -> bool:
         """v0.5 fill detection: trade consumes the order's queue-in-front.
