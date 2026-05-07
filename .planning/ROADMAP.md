@@ -319,7 +319,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   - contour_2d — not run.
   - Secondary `fill_model.refit_failed` "cannot write 'Object' datatype" empty-features-frame polars bug at `features.py:296` — non-fatal; defer to a follow-up phase unless trivially in path during the predict-fix RED→GREEN.
 
-**Plans**: TBD via `/gsd-plan-phase 05.5`. Expected shape: 2 sequential plans (predict-layer fix → multi-close fix → baseline re-run + classify), or 3 if multi-close is wave-parallel with predict-layer.
+**Plans:** 3 plans
+
+Plans:
+- [ ] 05.5-01-PLAN.md — Bug 1 predict-layer look-ahead at all 6 read sites + Phase-4 contract amendment Option A (RuntimeError on negative age) + 4 wiki pages (2 new + 2 supersede) + architecture co-commit
+- [ ] 05.5-02-PLAN.md — Bug 2 fill multi-close per-tick guard in replay.py (both _handle_trade_event and _detect_inter_event_fills) + adjacent loss_model.refit_once write-side mirror of d954bc5 + 1 new wiki page + architecture co-commit (wave-parallel with 05.5-01)
+- [ ] 05.5-03-PLAN.md — Revert _PERTURBATION_WHITELIST patch + binding ship-gate baseline re-run + verdict classification (PASS/FAIL/FLAG) against unchanged Phase 05.3 band + phase SUMMARY documenting 6-site enumeration + STATE/ROADMAP closure
 
 **Inherited artifacts (do NOT re-derive)**:
   - Phase 05.4 commits (Bug A/B/C-write/D): `87c677c`, `c0b3342`, `d954bc5`, `5417c93`, `eea5b7e`, `696a0e8`
