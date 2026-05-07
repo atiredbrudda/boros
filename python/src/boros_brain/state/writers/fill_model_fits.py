@@ -83,19 +83,40 @@ def insert_fit_artifact(sqlite_path: Path, artifact: FitArtifact) -> None:
     )
 
 
-def get_latest_fit(sqlite_path: Path, market_id: str, side: str) -> FitArtifact | None:
-    """Return the most-recent-by-fit_window_end_ts artifact for (market_id, side)."""
+def get_latest_fit(
+    sqlite_path: Path,
+    market_id: str,
+    side: str,
+    *,
+    current_chain_ts: int | None = None,
+) -> FitArtifact | None:
+    """Return the most-recent-by-fit_window_end_ts artifact for (market_id, side).
+
+    Args:
+        sqlite_path: Path to state SQLite DB.
+        market_id: Market identifier (e.g. ``BINANCE-ETHUSDT-25SEP2026``).
+        side: ``"long"`` or ``"short"``.
+        current_chain_ts: Optional chain-time upper bound. ``None`` = live mode
+            (unbounded SELECT — absolute latest by ``fit_window_end_ts DESC``).
+            Backtest replay MUST pass the current tick's ``chain_ts`` to prevent
+            look-ahead bias from cross-run artifact accumulation. See
+            ``[[fill-model-predict-look-ahead-read-path]]``.
+    """
+    base_sql = (
+        "SELECT run_id, fit_window_start_ts, fit_window_end_ts, market_id, side, "
+        "covariate_whitelist, beta, beta_stderr, "
+        "log_likelihood, deviance, aic, n_observations, converged, fit_status, "
+        "gof_ks_pval, gof_lr_vs_null, event_index_coverage, created_at "
+        "FROM fill_model_fits "
+        "WHERE market_id = ? AND side = ?"
+    )
+    params: tuple[object, ...] = (market_id, side)
+    if current_chain_ts is not None:
+        base_sql += " AND fit_window_end_ts <= ?"
+        params = (market_id, side, int(current_chain_ts))
+    base_sql += " ORDER BY fit_window_end_ts DESC LIMIT 1"
     with open_connection(sqlite_path) as conn:
-        row = conn.execute(
-            """SELECT run_id, fit_window_start_ts, fit_window_end_ts, market_id, side,
-                      covariate_whitelist, beta, beta_stderr,
-                      log_likelihood, deviance, aic, n_observations, converged, fit_status,
-                      gof_ks_pval, gof_lr_vs_null, event_index_coverage, created_at
-               FROM fill_model_fits
-               WHERE market_id = ? AND side = ?
-               ORDER BY fit_window_end_ts DESC LIMIT 1""",
-            (market_id, side),
-        ).fetchone()
+        row = conn.execute(base_sql, params).fetchone()
     if row is None:
         return None
     return FitArtifact(

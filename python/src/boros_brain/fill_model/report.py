@@ -37,6 +37,9 @@ def write_fill_model_report(
     fits: list[dict[str, object]] = []
     for mkt in config.markets:
         for side in ("long", "short"):
+            # Operator path — current_chain_ts=None correct (wall-clock fallback per
+            # [[fill-model-predict-look-ahead-read-path]]). Site #6 in Phase 05.5
+            # read-site enumeration (default-None preserves byte-identical behavior).
             fit = get_latest_fit(Path(config.infra.sqlite_path), mkt.market_id, side)
             if fit is not None:
                 fits.append(

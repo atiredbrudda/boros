@@ -2475,12 +2475,12 @@ edges:
   - from: brain.state.writers.fill_model_fits
     to: state.fill_model_fits
     type: reads
-    notes: "get_latest_fit — ORDER BY fit_window_end_ts DESC LIMIT 1"
+    notes: "get_latest_fit — ORDER BY fit_window_end_ts DESC LIMIT 1; chain-ts upper bound via current_chain_ts kwarg (Phase 05.5)"
 
   - from: brain.fill_model.predict
     to: brain.state.writers.fill_model_fits
     type: calls
-    notes: "get_latest_fit — direct SQLite read on 1 Hz hot path"
+    notes: "get_latest_fit — direct SQLite read on 1 Hz hot path; current_chain_ts plumbed from req.current_chain_ts (Phase 05.5)"
 
   - from: brain.fill_model.predict
     to: brain.fill_model.schemas
@@ -2623,11 +2623,11 @@ edges:
   - from: brain.state.writers.loss_grid_artifacts
     to: state.loss_grid_artifacts
     type: reads
-    notes: "get_latest_loss_grid — ORDER BY window_end_ts DESC LIMIT 1"
+    notes: "get_latest_loss_grid — ORDER BY window_end_ts DESC LIMIT 1; chain-ts upper bound via current_chain_ts kwarg (Phase 05.5)"
   - from: brain.loss_model.expected_loss
     to: brain.state.writers.loss_grid_artifacts
     type: calls
-    notes: "sync sub-10ms hot-path read of latest grid"
+    notes: "sync sub-10ms hot-path read of latest grid; current_chain_ts plumbed from req.current_chain_ts (Phase 05.5)"
   - from: brain.loss_model.refit_loop
     to: brain.data.chain_time
     type: calls

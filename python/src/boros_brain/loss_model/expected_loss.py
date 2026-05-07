@@ -7,8 +7,15 @@ Contract:
     - NEVER silently returns 0; coarse_bound uses config.screener.fill_loss_coarse_bound.
     - Grid older than fit_max_staleness_s -> LossModelNoFreshGridError.
     - Unit: PENDLE (matches R_capped in the EV equation).
+    - Backtest replay: ``req.current_chain_ts`` is plumbed into ``get_latest_loss_grid``
+      as the SQL upper bound on ``window_end_ts`` (Phase 05.5). Future-dated artifacts
+      from cross-run accumulation are now invisible at the read layer.
+    - Phase-4 contract amendment (Option A, Phase 05.5): the post-filter
+      ``grid_age_s < 0`` branch is unreachable from a correct backtest. If it fires,
+      it raises ``RuntimeError`` (instead of the old silent ``grid_age_s = 0.0``
+      coerce) — surfaces real clock-rollback or stored-artifact corruption.
 
-Design-locked. Any change to this signature is a Phase-4 breaking change.
+Design-locked v2 — see [[loss-model-expected-loss-look-ahead-read-path]].
 
 T-03-03 / T-03-04 mitigations: explicit n_samples == 0 branch routes to
 coarse_bound; every fallback emits ``loss_model.sparse_cell_fallback`` so the
@@ -87,7 +94,13 @@ def expected_loss(
     if req.time_to_maturity_s < 0:
         raise ValueError(f"negative tau: {req.time_to_maturity_s}")
 
-    artifact: LossGridArtifact | None = get_latest_loss_grid(sqlite_path, req.market_id, req.side)
+    # Load latest grid (chain-ts upper bound — Phase 05.5 look-ahead fix at read layer)
+    artifact: LossGridArtifact | None = get_latest_loss_grid(
+        sqlite_path,
+        req.market_id,
+        req.side,
+        current_chain_ts=req.current_chain_ts,
+    )
     if artifact is None:
         log.warning(
             "loss_model.no_fresh_grid",
@@ -99,16 +112,28 @@ def expected_loss(
 
     grid_age_s = float(req.current_chain_ts - artifact.window_end_ts)
     if grid_age_s < 0:
-        # Future-dated artifact (clock skew) — treat as fresh, log warning.
-        log.warning(
-            "loss_model.future_dated_grid",
+        # Phase 05.5 contract amendment (Option A): post-fix this branch is
+        # unreachable from a correct backtest because the SQL filter excludes
+        # window_end_ts > current_chain_ts. Remaining triggers are real bugs —
+        # live-mode clock rollback, or a bootstrap artifact persisted with a
+        # future window end. Surface them via RuntimeError instead of the old
+        # silent grid_age_s = 0.0 coerce. See
+        # [[loss-model-expected-loss-look-ahead-read-path]].
+        log.error(
+            "loss_model.expected_loss_negative_age_after_filter",
             market_id=req.market_id,
             side=req.side,
             window_end_ts=artifact.window_end_ts,
             current_chain_ts=req.current_chain_ts,
             grid_age_s=grid_age_s,
         )
-        grid_age_s = 0.0
+        raise RuntimeError(
+            f"negative grid_age_s={grid_age_s} after chain-ts filter — "
+            f"clock skew or stored artifact corruption "
+            f"(market_id={req.market_id}, side={req.side}, "
+            f"window_end_ts={artifact.window_end_ts}, "
+            f"current_chain_ts={req.current_chain_ts})"
+        )
 
     if grid_age_s > _get_loss_model_config(config).fit_max_staleness_s:
         log.warning(
