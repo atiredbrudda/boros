@@ -289,12 +289,29 @@ def build_features_table(
             window_start_ts=window_start_ts,
             window_end_ts=window_end_ts,
         )
-        # Write an empty parquet to maintain the path contract
+        # Write an empty parquet to maintain the path contract.
+        # Phase 05.5 Bug: DuckDB fetchnumpy() returns Object-dtype arrays for empty
+        # result sets, which polars cannot write to parquet. Use an explicit schema
+        # so the empty parquet is always written with the correct column types.
+        # [[fill-model-predict-look-ahead-read-path]] — related fix at the read layer.
+        _EMPTY_SCHEMA = {
+            "market_id": pl.String,
+            "side": pl.String,
+            "bin_start": pl.Float64,
+            "trade_count": pl.Int64,
+            "basis_spread": pl.Float64,
+            "imbalance": pl.Float64,
+            "sin_settlement": pl.Float64,
+            "cos_settlement": pl.Float64,
+            "ewma_vol": pl.Float64,
+            "bin_duration_s": pl.Float64,
+        }
+        empty_df = pl.DataFrame(schema=_EMPTY_SCHEMA)
         out_path = out_root / f"market_id={market_id}" / f"window_end_ts={window_end_ts}"
         out_path.mkdir(parents=True, exist_ok=True)
         empty_path = out_path / "features.parquet"
-        df.write_parquet(str(empty_path))
-        return FeatureSet(path=empty_path, row_count=0, column_names=list(df.columns))
+        empty_df.write_parquet(str(empty_path))
+        return FeatureSet(path=empty_path, row_count=0, column_names=list(empty_df.columns))
 
     # Hive-partition by market_id; write via polars native (no pyarrow dependency).
     # One parquet file per (market_id, side, window_end_ts) partition.
